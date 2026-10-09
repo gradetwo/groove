@@ -20922,3 +20922,29 @@ describe("the grid's editing actions", () => {
   ⭐ **验收** ✓：`legato`／`sampler`／`sampleGraph`／`offlineAudio` 相关 **20 文件 113 条全绿** ✓；`lint` ✓、`docs:check` ✓。
   ⏳ **还差一次"真浏览器听/量"的复核** ✓（下一轮）：播一个按键、在按与抬的瞬间抓实时窗，确认**跳变消失** ✓
     （我的 `probe-chooser-hit.mjs` 那类探针可复用：抓 `getFloatTimeDomainData` 窗并算最大相邻跳变 ✓）。
+
+### 八百四十六、📥 **收到第五份评测包（线上 v2.35.7 实测）＋ 已按它的"一行可修项"修掉两处我自己的半成品**（2026-10-09 ✓）
+
+  ⭐ **包** ✓：`/tmp/groove-online-WebUI-報告包-20261009.tar.gz` ✓（136 行 MD ＋ 15 张截图 ✓，1920×1080 桌面 ✓、跳过手机端 ✓、**直接打线上** ✓）。
+  ⭐ **它确认的（我的修复在线上有效 ✓）** ✓：**P1-1 chooser 彻底修好** ✓（portal ✓、`z-60` ✓、挂在 body ✓、
+    315 个选项 `elementFromPoint` 抽查 **6/6 命中自身** ✓、真鼠标点第 4 项后 1611 ms 面板关闭且 chip 更新 ✓）；
+    **P2-3 gate 背板** ✓（点 backdrop 1542 ms 后消失 ✓，之后 Create 5808 ms 进 studio ✓）；
+    **P2-4 文案** ✓（`planned 4 active steps · 4 notes` ✓）；**P3 Quantize / "64"** ✓；**零 pageerror** ✓。
+  ⭐ **它纠正的两处** ✓：①track row 上的 "Sy ⌄" **不是**被截断的乐器名 ✗，而是 **kind 选择器** ✓（选项是 𝄞 ♪ ▦ ≈ ▸ ✓）；
+    ②"Arpeggio" 拼写**没错** ✓（前一版截图误读 ✓）；③**乐器列表其实有分组** ✓（All 315 / Acoustic Drums 2 /
+    Acoustic Piano 4 / Bass 53 / Guitar 9 / Mallets & Bells 54 / Orchestral 116 / Organ 2 … ✓），
+    前一版说"无分组"是因为查了 `instrument-cat-*` ✗（本仓库是 `instrument-category-*` ✓）⇒ **分组成立 ✓，只剩术语问题** ✓。
+  ⭐ **本轮我修的两处（都是"我的修复只做了一半" ✓，报告给了根因 ✓）** ✓：
+    · **hover 背景从未生效** ✗ —— 根因：`hover:bg-[var(--d-surface,rgba(255,255,255,0.06))]` ✗
+      **Tailwind 不生成带逗号 fallback 的任意值** ✓ ⇒ 边框变色、背景仍是 `rgba(0,0,0,0)` ✓。
+      **同类形状全仓 6 处** ✗（`TrackListV2` / `ArrangementLaneV2` / `NewProjectPanelV2` / `ArrangementViewV2`×3 ✓）
+      ⇒ 全部改成 **`bg-[var(--d-surface)]`** ✓（token 本来就被每套皮肤定义 ✓，`check:skins` 就是这条保证 ✓）；
+    · **判据** ✓：新增 `src/test/tailwindArbitraryValues.test.ts` ✓——**任何 `[var(--x, …)]` 形状一律为红** ✓
+      （修前这 6 处会全部命中 ✓ ⇒ 能红 ✓）。
+  ⏳ **报告里还没做的（下一轮按顺序）** ✓：①**track 系 testid 仍重复 4 个** ✓
+    （`track-list-add` / `track-synth-2` / `track-gain-synth-2` / `track-gain-value-synth-2` ✓ ⇒ 套用 instrument 的
+    `-header` 方案 ✓）；②**chip 宽度仍截断** ✓（实测 track-row **143×28**、header **112×28** ✓；
+    我台账里写的 152px 是**在 1512px 下量的列表副本** ✓ ⇒ 两处数字都对但**不是同一处** ✓，这里更正口径 ✓）；
+    ③P3 的 **"Listen" 与 Play 重复** ✓（报告建议删一个 ✓）、空状态两行标题堆叠 ✓、kind 选择器里的大小写 ✓
+    （"Synth" vs "sampler" 的根因就是它 ✓）；④`FILE` 保留的理由与两份报告不同 ✓（我按一致性保留 ✓，已记账 ✓）。
+  ⭐ **验收** ✓：`lint` ✓、`docs:check` ✓、`check:css` ✓、`check:skins` ✓；受影响 4 个测试文件 **36 条全绿** ✓。

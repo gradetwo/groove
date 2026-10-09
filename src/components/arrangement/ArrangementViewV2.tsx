@@ -1051,7 +1051,7 @@ export function ArrangementViewV2({ currentSong, songId, capture, bar = 0, playe
    * already uses for hover, and `transition-colors` makes it read as feedback rather than a jump.
    */
   const toolButton =
-    "h-11 shrink-0 rounded border border-[rgb(var(--d-line))] px-2 text-xs text-text transition-colors hover:border-[rgb(var(--d-accent))]/60 hover:bg-[var(--d-surface,rgba(255,255,255,0.06))] disabled:opacity-50";
+    "h-11 shrink-0 rounded border border-[rgb(var(--d-line))] px-2 text-xs text-text transition-colors hover:border-[rgb(var(--d-accent))]/60 hover:bg-[var(--d-surface)] disabled:opacity-50";
   /**
    * ⭐ The same button while the transport is running, in the project's own active-control idiom: the accent as the
    * fill and `--d-on-accent` as the ink — exactly the pair the editor tabs and the Loop/Snap switches use, so the
@@ -2003,7 +2003,7 @@ export function ArrangementViewV2({ currentSong, songId, capture, bar = 0, playe
                    * drifted a pixel per track. An inset shadow draws the same line without taking a pixel of layout.
                    */
                   style={{ height: "var(--arr-track-h, 96px)", boxShadow: "inset 0 -1px 0 rgb(var(--d-line))" }}
-                  className={track.id === selectedTrackId ? "bg-[var(--d-surface,rgba(255,255,255,0.06))]" : ""}
+                  className={track.id === selectedTrackId ? "bg-[var(--d-surface)]" : ""}
                 >
                   <TrackHeaderV2
                     track={track}
@@ -2090,7 +2090,7 @@ export function ArrangementViewV2({ currentSong, songId, capture, bar = 0, playe
        * (§6.2): one `NoteEvent[]`, two readings, one at a time, and switching views must not move the playhead, scroll
        * the arrangement or change the selection. What is above is the switch; this is the editor.
        */}
-      <div data-testid="arrangement-detail" className="flex flex-col gap-2 rounded border border-[rgb(var(--d-line))] bg-[var(--d-surface,rgba(255,255,255,0.04))] p-3">
+      <div data-testid="arrangement-detail" className="flex flex-col gap-2 rounded border border-[rgb(var(--d-line))] bg-[var(--d-surface)] p-3">
         {selected === undefined ? (
           // Said rather than left blank, so an empty panel reads as "nothing selected" instead of "something is broken".
           <p>{t("arrangement_detail_empty")}</p>
