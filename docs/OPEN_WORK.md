@@ -21364,3 +21364,28 @@ describe("the grid's editing actions", () => {
     若**不支持** ⇒ 走 A（新增 `synthPreset` 字段 ✓），并把"drumkit 的音色"留到后续 ✓。
     本轮**刻意不改代码** ✓：⑧ 是本批唯一动模型/播放语义的一项 ✓，按目标里"先量先设计再动模型"的口径 ✓，
     先把这条设计摊开给你看 ✓。
+
+### 八百六十九、🔎 **剩余项⑧的**决定性读数**：模型**故意**不让非 sampler 轨带 `sample`——所以"只放开 chip"是死路，正确设计是"把 `sample` 的适用范围扩到 drumkit ＋ 给 synth 一个预设字段"**（2026-10-10 ✓）
+
+  ⭐ **一条 grep 定案 ✓**（`kind === "sampler"` 的所有出现 ✓，排除测试 ✓）**——每一处都读 ✓** ✓：
+
+| 位置 | 代码 | 含义 |
+| --- | --- | --- |
+| `src/data/arrangementEdits.ts:207` | `const sample = kind === "sampler" ? (track.sample ?? { assetId: DEFAULT_SAMPLER_ASSET }) : undefined` | **建轨时非 sampler 轨根本不给 `sample`** ✗（模型层就否定） |
+| `src/data/arrangementEdits.ts:597` | `track.id === trackId && track.kind === "sampler" ? { …sample } : track` | `set_arrangement_track_asset` 对别的 kind **原样返回** ⇒ **静默无效** ✗ |
+| `src/components/arrangement/TrackHeaderV2.tsx:84` | chip 门槛 | 表头不给入口 ✗ |
+| `src/components/arrangement/TrackListV2.tsx:149` | 同上 | 列表副本也不给 ✗ |
+| `ArrangementViewV2.tsx:2154 / 2169 / 2194` | 虚拟键盘面板按 `selected.kind === "sampler" && selected.sample` 决定可用性 | 键盘也按同一条件 ✗ |
+
+  ⭐ **因此上一轮设想的 B（只放开 chip）**不成立** ✗** ✓：即便把门槛改了 ✓，`setTrackAsset` **也不会写入** ✗
+    ⇒ 用户会得到一个**选得上、听不出**的控件 ✗✗ —— 正是评测最反感的那一类"看着能用实则空转" ✓。
+    **这就是"先设计再动模型"的价值** ✓：省掉一次"看起来完成、实则无效"的改动 ✓。
+  ⭐ **修正后的设计（我的建议 ✓）** ✓——把"音色"按 kind 各归其位 ✓：
+    · **drumkit 轨** ✓：**把 `sample` 的适用范围从 `sampler` 扩到 `drumkit`** ✓——鼓组本来就是**采样资产** ✓
+      （`virtuosity-drums-basic` ✓ 就是现成的 kit ✓），语义自然 ✓；要改的正是上表那 5 处（模型 2 处 ＋ UI 3 处 ✓），
+      并**先量播放路径**（渲染路由是靠 `track.sample` **存在**来决定走 sampler 音源，还是**也要判 kind** ✗ ——
+      这一点仍是唯一未测项 ✓，测法：给 drumkit 轨写入 assetId ⇒ 看渲染出的**时长/频谱**是否变成该 kit ✓）。
+    · **synth 轨** ✓：新增 `track.synthPreset?: string` ✓（取值来自既有的 `DEFAULT_SYNTH_PRESETS` ✓），
+      缺省时**沿用今天"按名字/角色推导"的行为** ✓ ⇒ 老工程零迁移成本 ✓。
+  ⭐ **本轮仍然不改代码** ✓（把设计钉死、把唯一未知项标出来 ✓）；**下一件可执行的是那条播放路径测量** ✓，
+    它一旦给出"路由只看 `sample` 是否存在" ✓，drumkit 那半就是"2 处模型 ＋ 3 处 UI ＋ 判据"的**可逆小改** ✓。
