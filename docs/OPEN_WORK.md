@@ -20729,3 +20729,28 @@ describe("the grid's editing actions", () => {
   ⭐ 诚实标注 ✓：这条是一个**布局阈值**问题（窄到一定程度本来就会换行 ✓），
     我修的**不是**"让工具栏永不换行" ✗，而是"**让新来的提示不要占据工具栏的行**" ✓——
     与工具栏注释里那条既有立场（宁换行、不压小目标 ✓）一致 ✓。
+
+### 八百三十六、📥 **收到第四份独立评测包（`/tmp/groove-5968057a-WebUI-报告包-20261009.tar.gz`，针对 v2.35.6 / `5968057a`）**（2026-10-09 ✓）
+
+  ⭐ **包内容** ✓：`groove-5968057a-WebUI-20261009.md`（215 行 ✓）＋ **22 张截图** ✓（1512px / 1920px 桌面 ✓，
+    按用户指示**跳过手机端** ✓）。方法：Playwright ＋ 真 Chromium ✓，构建带 `VITE_SAMPLE_ROOT` 镜像 ✓，tsc ＋ vite build 通过 ✓。
+  ⭐ **它确认了我上一轮的修复** ✓：§九.4"**Toolbar 修復生效**：1512px 下 Import/Export 回到 FX 行（y=231），hint 獨佔一行" ✓✓。
+  ⭐ **P1（功能受損，两件都在我碰过的代码里 ⇒ 必须优先 ✓）** ✓：
+    · **P1-1 音源 chooser 的选项列表被 `arrangement-detail` 遮住 ⇒ 点不到** ✗ ——
+      `elementFromPoint` 证据 ✓：面板本体 352×287 位置正确 ✓、315 个选项在 DOM 里 ✓（每个 24px ✓），
+      但选项位置被 detail 区**不透明背景**盖住 ✓；报告的根因判断是
+      "**`z-50` 被困在 sticky `z-10` 祖先的 stacking context 里**" ✓ ——
+      ⚠️ **这是我在 `da0e80d` 把 chooser 改成浮层时引入的回归** ✓（此前它是行内渲染 ✗ 不会跑到 detail 下面 ✓），
+      而报告也说清了黑盒测试此前用 DOM click 绕过 hit-test ✓ 所以没被发现 ✓。
+    · **P1-2 音源 chip 仅 112×17px** ✗（桌面 1920px 同样 ✓）＋ 文本被截断成 "Virtuosity Drums — …" ✓
+      —— 与我 F12 那批"触控目标"是同一条线的遗漏 ✓（chip 只有 `text-[10px]` ＋ `px-1` ✓）。
+  ⭐ **P2（四件 ✓）** ✓：工具栏按钮**无 hover 反馈** ✓（实测 hover 前后 `backgroundColor` 都是 `rgba(0,0,0,0)` ✓）；
+    **`instrument-open-*` / `instrument-slot-*` 各出现 2 次** ✗（同一条轨在 `TrackListV2` 与 `TrackHeaderV2` 里各渲染一份 ✓）；
+    **audio gate 拦 `/new` 的 Create** ✓（我修掉了 tour ✓，gate 仍在 ✓——报告认为 gate 不该挡导航/新建 ✓）；
+    **"planned 4 active step(s) · 4 note(s)"** 的程序员式复数 ✓（我 F13 的文案 ✓ 需改成人话 ✓）。
+  ⭐ **P3（七件 ✓）** ✓：轨道 tab 大小写 "Synth"/"sampler" 不一致 ✓、"Quantise" 英式拼写 ✓、
+    无标签控件（橙色方块 / "64" / "FILE" ✓）、空状态两行标题堆叠 ✓、1512px 下方 ~300px 空白 ✓、
+    乐器名是开发者术语（"arco 3vel" ✓）且**无分组** ✓、宽屏下区段标签被挤压 ✓。
+  ⭐ **本轮结论（排序 ✓）** ✓：先修 **P1-1**（我的回归 ⇒ 结构性修复：让浮层逃出 sticky 的 stacking context ✓，
+    例如 portal 到 `body` ＋ 按 chip 位置定位 ✓）⇒ 再修 **P1-2**（chip 高度/名称可读 ✓）
+    ⇒ 然后 P2 四件（hover ✓、testid 去重 ✓、gate 不挡新建 ✓、文案 ✓）。
