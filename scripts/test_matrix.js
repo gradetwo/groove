@@ -665,7 +665,16 @@ async function runTestOnTarget(target, baseUrl) {
         }),
         nameWidths: headerRows.map((row) => {
           const id = (row.getAttribute("data-testid") ?? "").replace("arrangement-header-row-", "");
-          const name = document.querySelector(`[data-testid='track-name-${id}']`);
+          /**
+           * ⭐ **The header's copy is the marked one** (2026-10-09): the header column and the track list both draw a track's
+           * name, so the header's ids carry `-header` and one testid names one element. This query asked for the bare id —
+           * which on this route belongs to the list copy, itself inside a collapsed `<details>` — so it measured 0 px and
+           * reported "a track header draws no readable name (widths 0)" on all three engines while the header's own name was
+           * perfectly readable. The bare id stays as the fallback, so the check still works wherever only the list exists.
+           */
+          const name =
+            document.querySelector(`[data-testid='track-name-${id}-header']`) ??
+            document.querySelector(`[data-testid='track-name-${id}']`);
           return name ? Math.round(box(name).width) : 0;
         }),
       };
