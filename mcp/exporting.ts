@@ -128,7 +128,11 @@ export function loudnessReport(genreId?: string): Record<string, unknown> {
     bars: BASELINE.bars,
     repeats: BASELINE.repeats,
     limiter: BASELINE.limiter,
-    note: "Measured by `npm run check:loudness` through the app's own offline renderer (BS.1770-4 gated loudness).",
+    source: "committed-baseline",
+    note:
+      "This is the repository's committed baseline, measured by `npm run check:loudness` through the app's own offline " +
+      "renderer (BS.1770-4 gated loudness). It is not a measurement of this session, and `generatedAt` is the day that " +
+      "baseline was recorded — a render's own reply reports the loudness of the audio it just produced.",
   };
   if (!genreId) {
     const lufs = Object.values(BASELINE.genres).map((row) => row.arrangedLufs);

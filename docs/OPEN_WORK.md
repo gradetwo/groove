@@ -21209,3 +21209,24 @@ describe("the grid's editing actions", () => {
     标签已消除真正的困惑 ✓；你若想过滤，改一行 ✓）。
   ⭐ **验收** ✓：相关 4 个测试文件 **58 条全绿** ✓；`typecheck`／`lint`／`docs:check`／`check:css` ✓；
     草稿文件已更新为"决定"版 ✓（`docs/INSTRUMENT_NAME_MAP_DRAFT.md` ✓）。
+
+### 八百六十一、✅ **MCP 深测（v2.35.9）两个 P2：未知参数不再静默丢弃、响度报告自报来源**（2026-10-10 ✓）
+
+  ⭐ **报告的依据（两份新报告 ✓）** ✓：`~/reports/groove-v2.35.9-MCP深測-報告包-20261010.tar.gz` ✓（99 行 ✓）
+    ＋ `~/reports/groove-yanshi-Web功能測試-20261010.tar.gz` ✓（98 行 ✓）。**好消息** ✓：
+    Web 全功能走查 **12 项全过、零 pageerror** ✓，v2.35.7 的每一项残留（chooser／chip／hover／testid／gate／文案／
+    Listen／Quantize／"64"）都被**实测确认真修且无回退** ✓；MCP **12/12 通过** ✓，创作闭环走通（32.6 s 成品 ✓）。
+  ⭐ **#1 未知参数静默丢弃（报告 P2-1 ✓）** ✓：`export_arrangement_midi` 传 `path` 而非
+    `outputDir`＋`filename` ✓ ⇒ **zod 无声删掉该键** ✗，文件落到服务端临时目录 ✓。
+    **修法** ✓：`mcp/toolKit.ts` 新增 **`unknownArguments(inputSchema, args)`** ✓（"这个工具没声明的键"只有一个答案 ✓），
+    由 **server 的工具包装层**统一调用 ✓ ⇒ 回包追加 **`unknownArgs: [...]` ＋ `unknownArgsNote`（人话说明被忽略）** ✓；
+    未声明键为 0 时**行为与之前逐字相同** ✓（不打扰正常调用 ✓）。
+  ⭐ **#2 响度报告时间戳"陈旧"（报告 P2-2 ✓）** ✓：`generatedAt: 2026-09-26` ✓ —— 查代码确认它读的是
+    **已提交的 genre 基线** ✓（`mcp/exporting.ts` 的 `BASELINE.generatedAt` ✓）⇒ **数据没错、表述不清** ✓。
+    **修法** ✓：回包新增 **`source: "committed-baseline"`** ✓，并把 `note` 写成三句 ✓：
+    这是仓库里**已提交的基线** ✓、**不是本次会话的实测** ✓、`generatedAt` 是**基线记录那天** ✓、
+    要看本次音频的响度请用**渲染自己的回包** ✓。
+  ⭐ 判据 ✓（`src/test/mcpUnknownArguments.test.ts` 4 例 ✓）：不认识 `path` 会被点名 ✓、声明齐了则**安静** ✓、
+    包装层**必须**调用它并把结果放进回包 ✓（防止以后只加在某个工具里 ✓）、
+    响度报告**必须**是 `committed-baseline` 且 note 解释 `generatedAt` 的来源 ✓。
+  ⭐ **验收** ✓：`check:mcp`（68 项 ✓）、`typecheck`、`lint`、`docs:check` 全过 ✓；新判据 4 条绿 ✓。

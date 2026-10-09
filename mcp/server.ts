@@ -16,6 +16,7 @@ import type { RequestHandlerExtra } from "@modelcontextprotocol/sdk/shared/proto
 import type { ServerNotification, ServerRequest } from "@modelcontextprotocol/sdk/types.js";
 import { PROMPTS, RESOURCES, TOOLS, failure, json } from "./registry";
 import { installRendererLifecycle } from "./render/worker";
+import { unknownArguments } from "./toolKit";
 import { createRenderProgress } from "./render/progress";
 import { installStdioGuards } from "./stdioChannel";
 
@@ -99,7 +100,18 @@ export function createServer(): McpServer {
           if (result && typeof result === "object" && "content" in (result as Record<string, unknown>)) {
             return result as { content: Array<{ type: "text"; text: string }> };
           }
-          return json(result);
+          /**
+           * ⭐ **Say which arguments this tool never declared** (MCP deep test of v2.35.9): `path` instead of
+           * `outputDir` + `filename` was dropped by the schema without a word, and the file went to a temporary directory
+           * the caller never named. A reply that echoes the ignored keys is the difference between a mystery and a typo.
+           */
+          const unknown = unknownArguments(tool.inputSchema, (args ?? {}) as Record<string, unknown>);
+          if (unknown.length === 0) return json(result);
+          const warned =
+            result && typeof result === "object"
+              ? { ...(result as Record<string, unknown>), unknownArgs: unknown, unknownArgsNote: `this tool does not declare ${unknown.join(", ")} — those arguments were ignored` }
+              : { result, unknownArgs: unknown, unknownArgsNote: `${tool.name} does not declare ${unknown.join(", ")} — those arguments were ignored` };
+          return json(warned);
         } catch (error) {
           return failure(`${tool.name} failed: ${(error as Error).message}`);
         }

@@ -353,6 +353,20 @@ export function situationsByPart(
   return Object.keys(byPart).length === 0 ? undefined : byPart;
 }
 
+/**
+ * ⭐ **The arguments a tool does not declare** (MCP deep test, 2026-10-09: `export_arrangement_midi` was called with `path`
+ * instead of `outputDir` + `filename`; zod dropped the unknown key without a word and the file landed in the server's
+ * temporary directory). A caller cannot see a key that was silently removed, so the reply has to say it — a warning costs
+ * one field and turns a mystery into a sentence.
+ */
+export function unknownArguments(
+  inputSchema: Record<string, unknown>,
+  args: Record<string, unknown>
+): string[] {
+  const declared = new Set(Object.keys(inputSchema));
+  return Object.keys(args).filter((key) => !declared.has(key));
+}
+
 export interface ToolDefinition {
   name: string;
   title: string;
