@@ -21230,3 +21230,17 @@ describe("the grid's editing actions", () => {
     包装层**必须**调用它并把结果放进回包 ✓（防止以后只加在某个工具里 ✓）、
     响度报告**必须**是 `committed-baseline` 且 note 解释 `generatedAt` 的来源 ✓。
   ⭐ **验收** ✓：`check:mcp`（68 项 ✓）、`typecheck`、`lint`、`docs:check` 全过 ✓；新判据 4 条绿 ✓。
+
+### 八百六十二、✅ **剩余项②：`describe_arrangement` 可以按 `format: "json"` 回答数据**（2026-10-10 ✓）
+
+  ⭐ **报告依据** ✓（MCP 深测 P3-3 ✓、§五.2 ✓）：AI 创作者要拿 `trackId` 只能**从散文里人肉找** ✓，
+    而且没有 `list_tracks` 这类结构化工具 ✓ ⇒ 下一句调用得靠猜 ✓。
+  ⭐ **修法（投影，不是第二套实现 ✓）** ✓：`summariseArrangement` **本来就**产出
+    `{arrangementId, trackCount, tracks[{id,name,kind,sound,steps,takes,muted}], problems}` ✓
+    ⇒ `describeMcpArrangement(id, format?)` 在 `format === "json"` 时**直接返回这个对象** ✓；
+    **默认仍是字符串** ✓ ⇒ 既有调用**一字不变** ✓（这是刻意的：不破坏任何现有客户端 ✓）。
+    工具的 `inputSchema` 增加可选 `format: z.enum(["text","json"])` ✓，描述写明 `json` 会返回哪些字段 ✓。
+  ⭐ 判据 ✓（并入 `src/test/mcpUnknownArguments.test.ts` ✓，共 5 例 ✓）：默认**必须是字符串**且含 `arrangementId` ✓、
+    `json` **必须是对象** ✓、`tracks` 每项**必须**有 `id`/`name`/`kind`/`sound` ✓（正是"不用解析散文"所需的字段 ✓）、
+    `problems` 也随数据返回 ✓。
+  ⭐ **验收** ✓：`check:mcp`（68 项 ✓）、`typecheck`、`lint`、`docs:check` 全过 ✓。

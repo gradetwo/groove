@@ -1765,9 +1765,16 @@ export function flattenMcpArrangement(
 }
 
 /** One line per track, for a caller reading a log rather than parsing a summary. */
-export function describeMcpArrangement(arrangementId: string): string {
+export function describeMcpArrangement(arrangementId: string, format?: "text" | "json"): string | Record<string, unknown> {
   const arrangement = requireArrangement(arrangementId);
   const summary = summariseArrangement(arrangementId, arrangement);
+  /**
+   * ⭐ **The same facts, as data** (MCP deep test of v2.35.9: a creator had to read a track's id out of the prose to call
+   * the next tool, and there was no `list_tracks` to ask instead). `summariseArrangement` already builds every field the
+   * text is made of — id, name, kind, sound, steps, takes, muted — so this is a projection, not a second implementation,
+   * and the text keeps its place as the default: every existing caller still gets a string.
+   */
+  if (format === "json") return summary as unknown as Record<string, unknown>;
   const lines = summary.tracks.map((track) => {
     const parts = [`${track.id}  ${track.name} (${track.kind})`];
     /**

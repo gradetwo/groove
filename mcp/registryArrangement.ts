@@ -55,10 +55,14 @@ export const ARRANGEMENT_TOOLS: ToolDefinition[] = [
     title: "Describe an arrangement",
     description: "One line per track, for reading rather than parsing — including what each track sounds with, so a synth preset is not mistaken for a recorded instrument.",
     readOnly: true,
-    inputSchema: { arrangementId: z.string() },
+    inputSchema: {
+      arrangementId: z.string(),
+      /** ⭐ `json` answers with the same facts as data, so a client need not parse the prose for a trackId. */
+      format: z.enum(["text", "json"]).optional().describe("`json` returns the summary as data (tracks with id, name, kind, sound, steps, takes); omitted or `text` keeps the readable sentence"),
+    },
     handler: (args) => {
       try {
-        return describeMcpArrangement(String(args.arrangementId));
+        return describeMcpArrangement(String(args.arrangementId), args.format as "text" | "json" | undefined);
       } catch (error) {
         return failure((error as Error).message);
       }

@@ -42,4 +42,29 @@ describe("what the loudness report says it is", () => {
     expect(note, "and the reply says where a real measurement comes from").toMatch(/render/);
     expect(typeof report.generatedAt, "the baseline's own date is still reported").toBe("string");
   });
+
+describe("describe_arrangement as data", () => {
+  it("⭐ answers the same facts as JSON, and keeps the text as the default", async () => {
+    const { createMcpArrangement, describeMcpArrangement } = await import("../../mcp/arrangement");
+    const created = createMcpArrangement({ templateId: "drums-bass" }) as { arrangementId: string };
+    const text = describeMcpArrangement(created.arrangementId);
+    expect(typeof text, "the default is still the readable summary").toBe("string");
+    expect(String(text)).toContain(created.arrangementId);
+
+    const data = describeMcpArrangement(created.arrangementId, "json") as Record<string, unknown>;
+    expect(typeof data, "and `json` is an object, not a string").toBe("object");
+    const tracks = data.tracks as Array<Record<string, unknown>>;
+    expect(Array.isArray(tracks), "with tracks").toBe(true);
+    expect(tracks.length, "the template's tracks").toBeGreaterThan(1);
+    for (const track of tracks) {
+      // ⭐ The fields the prose carries, so a client can call the next tool without parsing it.
+      expect(typeof track.id).toBe("string");
+      expect(typeof track.name).toBe("string");
+      expect(typeof track.kind).toBe("string");
+      expect(track.sound, "and what it sounds with").toBeTruthy();
+    }
+    expect(Array.isArray(data.problems), "problems travel as data too").toBe(true);
+  });
+});
+
 });
