@@ -215,7 +215,7 @@ function Region({
           drawn over the next lane. `touch-none` only when the block can actually be dragged: a report must not stop
           the lane from scrolling under a finger.
         */
-        className={`relative shrink-0 overflow-hidden rounded border border-[rgb(var(--d-line))] bg-[var(--d-surface)] text-left ${
+        className={`relative shrink-0 overflow-hidden rounded border border-[rgb(var(--d-line))] bg-white/5 text-left ${
           onRange === undefined ? "" : "cursor-grab touch-none"
         }`}
         /*

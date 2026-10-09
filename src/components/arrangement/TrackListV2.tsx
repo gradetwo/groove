@@ -121,7 +121,7 @@ export function TrackListV2({ arrangement, onAddTrack, onRemoveTrack, onToggle, 
         {arrangement.tracks
           .filter((track) => !hidden.has(track.id))
           .map((track) => (
-            <li key={track.id} data-testid={`track-${track.id}`} data-depth={depthOf(track, arrangement.tracks)} className="flex items-center gap-2 px-2 py-1 rounded bg-[var(--d-surface)]" style={{ marginLeft: `${depthOf(track, arrangement.tracks) * 16}px` }}>
+            <li key={track.id} data-testid={`track-${track.id}`} data-depth={depthOf(track, arrangement.tracks)} className="flex items-center gap-2 px-2 py-1 rounded bg-white/5" style={{ marginLeft: `${depthOf(track, arrangement.tracks) * 16}px` }}>
               <span className="min-w-32 text-text">{track.kind === "folder" ? "▸ " : ""}{track.name}</span>
               {/* ⭐ The kind is changeable, which the owner asked for: a track's type is a decision, not an identity. The component only reports the choice — what happens to the fields the old kind owned is `changeTrackKind`'s business. */}
               <select

@@ -144,7 +144,7 @@ export function NewProjectPanelV2({ onCreate }: NewProjectPanelV2Props) {
             type="button"
             aria-pressed={selected === card.id}
             data-testid={`template-${card.id}`}
-            className={`flex flex-col items-start gap-1 p-4 rounded border text-left h-full ${selected === card.id ? "border-[rgb(var(--d-accent))] bg-[rgb(var(--d-accent-soft))] text-[rgb(var(--d-on-accent))]" : "border-[rgb(var(--d-line))] bg-[var(--d-surface)]"}`}
+            className={`flex flex-col items-start gap-1 p-4 rounded border text-left h-full ${selected === card.id ? "border-[rgb(var(--d-accent))] bg-[rgb(var(--d-accent-soft))] text-[rgb(var(--d-on-accent))]" : "border-[rgb(var(--d-line))] bg-white/5"}`}
             onClick={() => chooseCard(card.id)}
           >
             <strong>{card.name}</strong>
