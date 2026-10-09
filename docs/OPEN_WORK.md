@@ -21433,3 +21433,25 @@ describe("the grid's editing actions", () => {
     ②调用点把 `track.synthPreset` 传进这个函数 ✓（引擎 ＋ 报告两处 ✓）；③**synth 轨**的 chip（用预设表当选项 ✓，
     与 sampler 的 chip 同一处但不同来源 ✓）；④判据：**写入后渲染/报告必须反映出该预设** ✓（可红 ✓）。
   ⭐ **验收** ✓：新判据 3 条绿 ✓；`typecheck`／`lint`／`docs:check` ✓。
+
+### 八百七十二、🟢 **剩余项⑧-b 第二片：模型半只有**一个字段**——`setTrackInstrument` 落地（并且发现"要走的路比想象的短"）**（2026-10-10 ✓）
+
+  ⭐ **读数改变了方案（重要 ✓）** ✓：先追调用链 ✓——
+    · `resolveInstrumentPreset(instrument, trackId)` 有**三个**调用点 ✓（`WavExporter:1543` ✓、`AudioEngine:2563` ✓、`2647` ✓），
+      它们手上都是 **track 对象** ✓；
+    · 而 **v2 轨本来就有 `instrument` 字段** ✓（`src/types/arrangementV2.ts:87` ✓），
+      并且 `useSequencerStore.ts:234` 已经把它映射进 lane ✓（`instrument: track.instrument` ✓）；
+    · `resolveInstrumentPresetKey` 的**第一步**就是**对预设 key 的精确（忽略大小写）匹配** ✓✓。
+    ⇒ **结论：合成器轨只要在 `instrument` 里写上 `warmPad`，它今天就已经按 `warmPad` 发声** ✓
+    ⇒ ⑧ 缺的**不是模型字段** ✗，而是**没有任何控件能写这个字段** ✓✓ —— 缺的是 **writer ＋ UI** ✓。
+    这比上一轮设想的"新增 `synthPreset` ＋ 传参 ＋ 迁移"**小得多** ✓（也正是"先量后改"的价值 ✓）。
+  ⭐ **本片实现 ✓**：`src/data/arrangementEdits.ts` 新增 **`setTrackInstrument(arrangement, trackId, instrument)`** ✓——
+    **只写 `kind === "synth"` 的轨** ✓（鼓轨的音色是**角色/内置套鼓** ✓、sampler 是 `sample` ✓
+    ⇒ 往它们身上写乐器名就会造出"看着能用"的空控件 ✓，这正是本项目拒绝的 ✓）；
+    **空名字被忽略** ✓（不会把一条轨变成无声 ✓）。
+  ⭐ 判据 ✓（`src/test/synthPresetChoice.test.ts` 扩到 **6 例** ✓）：写入后 `instrument === "warmPad"` ✓ **且解析器随后真的听成 `warmPad`** ✓
+    （把模型与声音接在一起 ✓，而不是只测字段 ✓）；对 **drumkit／sampler／fx／folder** 一律**拒写** ✓；
+    空白名字**不生效** ✓。
+  ⭐ **下一片（下一次 ✓）** ✓：**UI**——synth 轨的 chip/选择器（选项来自 `DEFAULT_SYNTH_PRESETS` ✓，显示可读名 ✓），
+    接上 `setTrackInstrument` ✓ ＋ 判据"**选了就写进模型**" ✓；鼓轨按 ⑧-a 的结论**给文案而不是控件** ✓。
+  ⭐ **验收** ✓：新判据 6 条绿 ✓；`typecheck`／`lint`／`docs:check` ✓。

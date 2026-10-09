@@ -590,6 +590,27 @@ export function setTrackNoteLength(arrangement: ArrangementV2, trackId: string, 
   return { ...arrangement, notesByTrack: { ...(arrangement.notesByTrack ?? {}), [trackId]: setNoteLength(notes, at, lengthBeats) } };
 }
 
+/**
+ * ⭐ **Point a synth track at a preset** (fifth Web evaluation of v2.35.9, P2: *"非 sampler 軌道沒有樂器切換入口"*).
+ *
+ * This is the whole of the model half, and it is smaller than it looked. A synth track already carries `instrument`, and
+ * `resolveInstrumentPresetKey`'s **first** step is an exact, case-insensitive match against the preset keys — so a synth
+ * track that names `warmPad` in `instrument` already sounds through `warmPad`, with nothing for the engine to learn. The
+ * evaluation's gap is that no control could write that field, not that the field was missing.
+ *
+ * Only a `synth` track is touched: a drumkit's sound is its role (one built-in kit), and a sampler's is its `sample`, so
+ * writing an instrument name onto either would be the "looks like it works" control this project refuses.
+ */
+export function setTrackInstrument(arrangement: ArrangementV2, trackId: string, instrument: string): ArrangementV2 {
+  const wanted = instrument.trim();
+  return {
+    ...arrangement,
+    tracks: arrangement.tracks.map((track) =>
+      track.id === trackId && track.kind === "synth" && wanted !== "" ? { ...track, instrument: wanted } : track
+    ),
+  };
+}
+
 export function setTrackSample(arrangement: ArrangementV2, trackId: string, assetId: string): ArrangementV2 {
   return {
     ...arrangement,

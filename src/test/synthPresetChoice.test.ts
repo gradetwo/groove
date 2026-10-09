@@ -29,3 +29,36 @@ describe("a synth track's preset, when one is chosen", () => {
     expect(resolveInstrumentPresetKey(undefined, "unknown-role")).toBe(GLOBAL_DEFAULT_PRESET_KEY);
   });
 });
+
+/**
+ * ⭐ **And the model half, which turned out to be one field.** A synth track already carries `instrument`, and the resolver's
+ * first step is an exact match against the preset keys — so naming `warmPad` there is already heard. What was missing was a
+ * writer, which is what the evaluation's *"沒有樂器切換入口"* actually describes.
+ */
+describe("pointing a synth track at a preset", () => {
+  const track = (kind: string, id = "t1", instrument = "Bass") => ({ id, name: "Bass", kind, instrument }) as never;
+  const arrangement = (tracks: unknown[]) => ({ tracks }) as never;
+
+  it("⭐ writes the instrument onto a synth track", async () => {
+    const { setTrackInstrument } = await import("../data/arrangementEdits");
+    const after = setTrackInstrument(arrangement([track("synth")]), "t1", "warmPad") as { tracks: Array<{ instrument?: string }> };
+    expect(after.tracks[0]?.instrument).toBe("warmPad");
+    // ⭐ And the resolver then hears it, because its first step is the exact key match.
+    expect(resolveInstrumentPresetKey(after.tracks[0]?.instrument, "bass")).toBe("warmPad");
+  });
+
+  it("⭐ refuses to write it onto a drumkit or a sampler, whose sound is not a preset", async () => {
+    const { setTrackInstrument } = await import("../data/arrangementEdits");
+    for (const kind of ["drumkit", "sampler", "fx", "folder"]) {
+      const after = setTrackInstrument(arrangement([track(kind)]), "t1", "warmPad") as { tracks: Array<{ instrument?: string }> };
+      expect(after.tracks[0]?.instrument, `${kind} keeps its instrument`).toBe("Bass");
+    }
+  });
+
+  it("ignores an empty name rather than blanking the track's sound", async () => {
+    const { setTrackInstrument } = await import("../data/arrangementEdits");
+    const after = setTrackInstrument(arrangement([track("synth")]), "t1", "   ") as { tracks: Array<{ instrument?: string }> };
+    expect(after.tracks[0]?.instrument).toBe("Bass");
+  });
+});
+
