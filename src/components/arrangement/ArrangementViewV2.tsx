@@ -1045,7 +1045,13 @@ export function ArrangementViewV2({ currentSong, songId, capture, bar = 0, playe
   }
 
   /** A transport button. 44 px tall like everything else in the bar: the arrangement is a phone surface too. */
-  const toolButton = "h-11 shrink-0 rounded border border-[rgb(var(--d-line))] px-2 text-xs text-text disabled:opacity-50";
+  /**
+   * ⭐ **A button says it is a button when the pointer is on it** (fourth evaluation, P2-1: measured `backgroundColor`
+   * unchanged on hover, so the surface gave no feedback at all). The tint is the surface token the rest of the editor
+   * already uses for hover, and `transition-colors` makes it read as feedback rather than a jump.
+   */
+  const toolButton =
+    "h-11 shrink-0 rounded border border-[rgb(var(--d-line))] px-2 text-xs text-text transition-colors hover:border-[rgb(var(--d-accent))]/60 hover:bg-[var(--d-surface,rgba(255,255,255,0.06))] disabled:opacity-50";
   /**
    * ⭐ The same button while the transport is running, in the project's own active-control idiom: the accent as the
    * fill and `--d-on-accent` as the ink — exactly the pair the editor tabs and the Loop/Snap switches use, so the
@@ -1473,7 +1479,8 @@ export function ArrangementViewV2({ currentSong, songId, capture, bar = 0, playe
             */}
           {played !== undefined && (
             <span data-testid="arrangement-played" className="text-[10px] text-text opacity-70">
-              planned {played} active step(s) · {noteEventCount} note(s)
+              {t("arrangement_played_steps", { steps: played })} {played === 1 ? t("arrangement_played_step") : t("arrangement_played_steps_plural")} ·{" "}
+              {t("arrangement_played_notes", { notes: noteEventCount })} {noteEventCount === 1 ? t("arrangement_played_note") : t("arrangement_played_notes_plural")}
             </span>
           )}
           {preparing && (

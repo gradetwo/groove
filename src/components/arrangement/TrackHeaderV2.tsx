@@ -165,6 +165,8 @@ export function TrackHeaderV2({
       {canPlayInstrument && (
         <span data-control="instrument" className="min-w-0 max-w-[7rem]">
           <InstrumentBrowserV2
+          /** ⭐ The header copy, marked so one testid has one element (fourth evaluation P2-2). */
+          scope="header"
             trackId={track.id}
             trackName={track.name}
             {...(track.sample?.assetId ? { assetId: track.sample.assetId } : {})}

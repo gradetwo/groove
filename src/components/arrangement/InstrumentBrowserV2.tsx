@@ -31,9 +31,29 @@ export interface InstrumentBrowserV2Props {
   /** Which track's panel is open. */
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  /**
+   * ⭐ **Which copy of the chip this is** (fourth evaluation, P2-2: `instrument-slot-*` and `instrument-open-*` each
+   * appeared twice, because the same track renders this control both in the header column and in the track list).
+   *
+   * The **list copy keeps the bare id** — it is the one the evaluation measured, the probes query and the criteria name —
+   * and the header copy is marked `header`. Two elements with one testid make an automated locator pick arbitrarily, which
+   * is exactly the kind of silent ambiguity this project refuses elsewhere.
+   */
+  scope?: "header" | "row";
 }
 
-export function InstrumentBrowserV2({ trackId, trackName, assetId, instruments, onChangeInstrument, open, onOpenChange }: InstrumentBrowserV2Props) {
+export function InstrumentBrowserV2({
+  trackId,
+  trackName,
+  assetId,
+  instruments,
+  onChangeInstrument,
+  open,
+  onOpenChange,
+  scope = "row",
+}: InstrumentBrowserV2Props) {
+  /** ⭐ One id per element: the header owns the bare one, the list copy carries `-row`. */
+  const suffix = scope === "header" ? "-header" : "";
   const { t } = useLanguage();
   const current = instruments.find((instrument) => instrument.assetId === assetId);
   /**
@@ -82,16 +102,23 @@ export function InstrumentBrowserV2({ trackId, trackName, assetId, instruments, 
   }, [open]);
 
   return (
-    <div data-testid={`instrument-slot-${trackId}`} ref={slotRef} className="relative flex min-w-0 flex-col gap-1">
+    <div data-testid={`instrument-slot-${trackId}${suffix}`} ref={slotRef} className="relative flex min-w-0 flex-col gap-1">
       <button
         type="button"
         // The name says which track it belongs to, which is what makes the chip findable by a screen reader in a
         // column of identical-looking chips.
         aria-label={`${trackName} instrument`}
         aria-expanded={open}
-        data-testid={`instrument-open-${trackId}`}
+        data-testid={`instrument-open-${trackId}${suffix}`}
         onClick={() => onOpenChange(!open)}
-        className="min-w-0 truncate rounded border border-[rgb(var(--d-line))] px-1 text-left text-[10px] text-text"
+        /**
+         * ⭐ **A real target height, and the full name on demand** (fourth evaluation, P1-2: measured 112×17 px on a 1920
+         * desktop too, with "Virtuosity Drums — Basic Kit" cut to "Virtuosity Drums — …"). 17 px is below anything a
+         * pointer can be expected to hit; the column is narrow, so the name is truncated on purpose and the title carries
+         * it whole.
+         */
+        title={current ? current.name : t("instrument_choose")}
+        className="min-h-11 sm:min-h-7 min-w-0 truncate rounded border border-[rgb(var(--d-line))] px-1 text-left text-[10px] text-text transition-colors hover:border-[rgb(var(--d-accent))]/60"
       >
         {/*
           The track's instrument by name, or the invitation to choose one when it plays none yet.
@@ -110,7 +137,7 @@ export function InstrumentBrowserV2({ trackId, trackName, assetId, instruments, 
            * the chip's own rectangle, clamped to the viewport, so the panel is on screen and clickable wherever the row is.
            */
           <div
-            data-testid={`instrument-panel-${trackId}`}
+            data-testid={`instrument-panel-${trackId}${suffix}`}
             role="dialog"
             aria-label={`${trackName} instrument`}
             style={{ left: anchor.left, top: anchor.top, width: anchor.width, maxHeight: anchor.maxHeight }}
@@ -120,7 +147,7 @@ export function InstrumentBrowserV2({ trackId, trackName, assetId, instruments, 
               <span className="min-w-0 truncate text-[10px] uppercase tracking-[0.12em] text-text-dim">{trackName}</span>
               <button
                 type="button"
-                data-testid={`instrument-panel-close-${trackId}`}
+                data-testid={`instrument-panel-close-${trackId}${suffix}`}
                 aria-label={t("close")}
                 onClick={() => onOpenChange(false)}
                 className="min-h-11 min-w-11 shrink-0 rounded text-xs text-text-dim hover:text-text sm:min-h-0 sm:min-w-0"

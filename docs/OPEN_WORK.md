@@ -20754,3 +20754,27 @@ describe("the grid's editing actions", () => {
   ⭐ **本轮结论（排序 ✓）** ✓：先修 **P1-1**（我的回归 ⇒ 结构性修复：让浮层逃出 sticky 的 stacking context ✓，
     例如 portal 到 `body` ＋ 按 chip 位置定位 ✓）⇒ 再修 **P1-2**（chip 高度/名称可读 ✓）
     ⇒ 然后 P2 四件（hover ✓、testid 去重 ✓、gate 不挡新建 ✓、文案 ✓）。
+
+### 八百三十七、🔧 **第四份评测的后续动作：三件做好、两件**没达到**（如实记录，因此**不**发版）**（2026-10-09 ✓）
+
+  ⭐ **做好并有读数的** ✓：
+    · **工具栏 hover**（P2-1 ✓）：`toolButton` 加 `transition-colors hover:border-accent/60 hover:bg-[var(--d-surface,…)]` ✓
+      ——报告实测"hover 前后 `backgroundColor` 都是 `rgba(0,0,0,0)`" ✓ ⇒ 现在有反馈 ✓；
+    · **文案**（P2-4 ✓）：`planned N active step(s) · M note(s)` ⇒ 走字典的**真复数**
+      （新增 6 个键 `arrangement_played_steps/step/steps_plural/notes/note/notes_plural` ✓，中英各一 ✓）
+      ⇒ 例：`planned 4 active steps · 4 notes` ✓（i18n / 中文覆盖 / 移动触控判据 **19 条全绿** ✓）；
+    · **testid 去重**（P2-2 ✓）：同一条轨在**表头列**与**轨道列表**各渲染一份 chip ✗ ⇒
+      让**列表那份保留裸 id**（评测、探针、既有判据都用它 ✓），**表头那份加 `-header`** ✓ ⇒ **一个 id 一个元素** ✓，
+      且无需改动任何既有定位 ✓（chooser/表面判据 **26 条全绿** ✓）；
+    · **chip 高度**（P1-2 的一半 ✓）：实测 **112×17 → 152×28**（1512px ✓）、手机 **高 44** ✓，
+      并加 `title`（完整乐器名 ✓）与 hover 边框 ✓。
+  ⚠️ **没达到的两件（因此**不**发 2.35.7 ✓）** ✗：
+    · **P1-1 仍未验证修好** ✗：portal ✓（`parentIsBody: true` ✓）、`z-index 60` ✓、315 个选项在 DOM ✓ ——
+      但面板**仍被画在视口外** ✗（实测 `y=1656`（850 高视口）与 `y=1877`（844 高）✗，“`elementFromPoint` 为 null” ✗）
+      ⇒ **我加的视口钳制在构建产物里没有生效** ✗（需要下一轮查：是 `place()` 在滚动前算的 ✗、还是 style 被覆盖 ✗），
+      **绝不能**在"点不到"还没解决时说它修好了 ✓；
+    · **chip 在手机上只有 10px 宽** ✗（高 44 ✓）：表头列把它压扁了 ✗ ⇒ P1-2 只解决了一半 ✓。
+  ⚠️ **第三件我决定**不做**（说明理由 ✓）** ✗：**P2-3 audio gate 挡 `/new` 的 Create** ——
+    gate 在 `App.tsx` 里**包住整个 RouterProvider** ✓ ⇒ 要按路由跳过它，就得把 gate 挪进路由之内 ✗
+    （结构性改动 ✓）⇒ 我不在长会话末尾做这种改动 ✓，留给下一轮**先量**再动 ✓。
+  ⭐ **本轮提交** ✓：见下（工具链：`typecheck` ✓、`lint` ✓、`docs:check` ✓、`check:css` ✓、build ✓ 全过 ✓）。
