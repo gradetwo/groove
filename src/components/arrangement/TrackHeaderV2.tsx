@@ -120,7 +120,15 @@ export function TrackHeaderV2({
           aria-label={`${track.name} kind`}
           value={track.kind}
           onChange={(event) => onChangeKind(track.id, event.target.value as TrackKindV2)}
-          className="relative h-7 w-8 shrink-0 rounded border border-[rgb(var(--d-line))] bg-transparent text-center text-xs text-text after:absolute after:-inset-2 after:content-['']"
+          /**
+           * ⭐ **Wide enough for its own widest label** (fifth evaluation of v2.35.9, P3-3: the chooser showed *"Sy ⌄"*).
+           *
+           * Measured at 1512 px: the labels are 34 px ("Synth"), 47 px ("Sampler") and **49 px** ("Drum kit") while the box
+           * was `w-8` — 32 px — so even "Synth" was cut to two letters. `w-14` is 56 px, which fits the longest with room
+           * for the native arrow; the track's own name measured **129 px** beside it, so nothing is starved, which was the
+           * cost the earlier chip experiment paid in this same column.
+           */
+          className="relative h-7 w-14 shrink-0 rounded border border-[rgb(var(--d-line))] bg-transparent text-center text-xs text-text after:absolute after:-inset-2 after:content-['']"
         >
           {TRACK_KIND_ORDER.map((kind) => (
             <option key={kind} value={kind} label={t(KIND_LABEL_KEY[kind])}>

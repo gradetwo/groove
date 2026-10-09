@@ -153,4 +153,19 @@ describe("mobile touch targets", () => {
     expect(view, "and the header's add button too").toContain('data-testid="track-list-add-header"');
   });
 
+
+  it("⭐ the kind chooser is wide enough to say what it is", () => {
+    /**
+     * ⭐ **Fifth evaluation of v2.35.9, P3-3**: the chooser showed *"Sy ⌄"* / *"D ⌄"*. Measured at 1512 px — the labels are
+     * 34 px ("Synth"), 47 px ("Sampler") and **49 px** ("Drum kit") while the box was `w-8`, which is 32 px, so even
+     * "Synth" was cut to two letters. `w-14` is 56 px and the closed state now shows "Sampler" whole; the track's own name
+     * measured 129 px → 105 px beside it, still an order of magnitude above the 8 px the release matrix requires.
+     */
+    const header = source("components/arrangement/TrackHeaderV2.tsx");
+    const select = header.slice(header.indexOf("data-control=\"kind\""), header.indexOf("data-control=\"kind\"") + 900);
+    expect(select, "the chooser fits its widest label").toMatch(/w-14/);
+    expect(select, "and no longer the 32px box that clipped even 'Synth'").not.toMatch(/h-7 w-8/);
+    expect(header, "its options still carry the localised names").toContain("KIND_LABEL_KEY");
+  });
+
 });
