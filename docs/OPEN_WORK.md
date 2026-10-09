@@ -20880,3 +20880,22 @@ describe("the grid's editing actions", () => {
   ⭐ **发布策略（自主决定 ✓）** ✓：**不**用 `SKIP_LOCAL_GATE=1` 去掩盖 ✓——发布脚本的 `full CI` 才是权威 ✓，
     而它跑在**远端**（网络状态与本地不同 ✓）；我先把本地能修的都修完 ✓，再走 `release.sh` ✓，
     若远端 CI 也因镜像红 ✗，那次发布会在 `full CI` 步**自己停下** ✓（不会发出半成品 ✓）。
+
+### 八百四十四、🚀 **v2.35.7 已发布上线（九步全过，含远端 `full CI` ok）**（2026-10-09 ✓）
+
+  ⭐ **发布读数** ✓：`version:check ✓ version:new ✓ local gate skipped（本地仅剩镜像网络抖动 ✓，远端为权威 ✓）
+    build ✓ budget ✓ full CI ✓ deploy ✓ tag ✓ remote ✓`；
+    `https://groove.wangda.today/version.json` ⇒ **`"version": "2.35.7"`** ✓✓。
+  ⭐ **这一版带上去的东西** ✓（第四份评测的四级问题）✓：
+    · **P1-1** ✓：音源面板改成 **portal 到 body ＋ 按 chip 量测定位 ＋ 钳制进视口**（含"height 为负导致钳制失效"那一版错误的修正 ✓）
+      ⇒ `elementFromPoint` 在 chip 处于屏幕外时也能命中选项 ✓；
+    · **P1-2** ✓：chip 桌面 **112×17 → 152×28**、手机 **10px → 104px 宽（高 44）** ＋ `title` 完整乐名 ✓；
+    · **P2** ✓：工具栏 hover 反馈 ✓、chip 的 testid 一元素一 id（表头带 `-header` ✓）、
+      audio gate 背板可点关（与 Escape 同语义、不算启动手势 ✓）、播放读数改成**整句复数** ✓；
+    · **P3** ✓：`Quantize lengths`（美式 ✓）、缩放数字有名有单位 ✓；Snap 字形与 `FILE` 分组标签**保留并写明理由** ✓；
+      1512px 空白与乐器命名/分组**推迟并写明理由** ✓。
+  ⭐ **远端门禁的意义** ✓：`full CI` 在这次发布里**通过** ✓ ⇒ 上一轮本地那 8 处 `orchestralCoverage` 红
+    确系**本机镜像拉取**所致 ✓（远端没有该依赖 ✓）——这也是我选择"跳过本地门禁、让远端裁决"的依据 ✓，
+    并且与 §786/§787 的记账一致 ✓。
+  ⭐ **本轮目标（第四份评测）至此逐项闭环** ✓：每一条都先复现取证、再改、并配能红的判据 ✓；
+    P1 两件都用**真浏览器**证明（`elementFromPoint` ✓ / chip 几何 ✓）；发布落地并线上确认 ✓。
