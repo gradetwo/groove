@@ -21,6 +21,27 @@
 * map —— 这类程序很可能是键位切换映射（不是音色）；要不要仍然列出来？
 * looped —— 循环采样（可无限保持），我按原词保留
 
+## 决定（2026-10-09，按"你去分析下自己决定"）
+
+我已经**按数据核对过**，并据此落地了规则（代码在 `src/components/arrangement/instrumentDisplayName.ts`）：
+
+| 术语 | 落地为 | 核对依据 |
+| --- | --- | --- |
+| `arco` | **Bowed** | SFZ 的采样路径是 `Samples\arco\…` |
+| `pizz` | **Plucked** | SFZ 的采样路径是 `Samples\pizz\…` |
+| `3vel` / `5vel` | **3 layers / 5 layers** | 采样名里是 `vl1`…`vl5` |
+| `… map` | **… · keyswitch map** | `arco_basic_map.sfz` 是 `<group> lokey=12 hikey=22` 把低音区键位映射到技法 ⇒ **是切换器、不是音色** |
+| `modwheel` / `mw` | **mod wheel** |  |
+| `sus` / `stac` | **sustain / staccato** |  |
+
+**保留不译（查不出含义就不猜）**：`three`、`six`、`basic`、`looped`。
+核对数据：`arco_six` 660 个 region、`vl=[1..5]`；`pizz_three` 576 个、`vl=[1..4]` 且 `rr=[1..4]`
+—— **都对不上"三/六"** ⇒ 改名就等于**凭空发明含义**，而名字最不该做这件事。
+
+**`map` 类程序的去留**：我决定**保留在列表里**，但**标签明说它是 keyswitch map**（而不是把它过滤掉）。
+理由：过滤会改变目录内容与计数（影响面更大），而标签已经消除了"选了一个不发声的条目却不知道为什么"这个真正的困惑；
+若你更想过滤掉，改一行即可。
+
 ## 逐条提案
 
 ### D. Smolken Rübner double bass (`dsmolken-double-bass`) — 1 项

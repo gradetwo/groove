@@ -21190,3 +21190,22 @@ describe("the grid's editing actions", () => {
     ⇒ **四处 chip 全部零截断** ✓（之前"表头 40px 被裁"的问题按你的方案消失 ✓）。
   ⭐ 判据 ✓（`instrumentDisplayName.test.ts` 6 例 ✓）：去掉库前缀 ✓、无前缀的名字原样 ✓、只切第一处 ✓、
     尾段为空则保留 ✓、**连字符不切** ✓、以及"**chip 必须用它、`title` 必须仍是全名**" ✓（回退即红 ✓）。
+
+### 八百六十、✅ **乐器显示名：按数据核对后落地规则（"three/six"不猜、`map` 明说）**（2026-10-09 ✓）
+
+  ⭐ **你的指示** ✓："按你建议来；three 那些我也不知道原来意思，你去分析下自己决定" ✓。
+  ⭐ **我分析了什么（都从**库自己的数据**取 ✓，经镜像 ✓）** ✓：
+    · `arco` / `pizz` ⇒ 采样路径就是 `Samples\arco\…` 与 `Samples\pizz\…` ✓ ⇒ **Bowed / Plucked** ✓；
+    · `3vel` / `5vel` ⇒ 采样名 `vl1…vl5` ✓ ⇒ **3 layers / 5 layers** ✓；
+    · `… map` ⇒ **`arco_basic_map.sfz` 是 `<group> lokey=12 hikey=22` 把低音区键位映射到技法** ✓
+      ⇒ **是切换器、不是音色** ✓ ⇒ 标签写成 **"· keyswitch map"** ✓（不再让人选到一个不发声却不知为何的条目 ✓）；
+    · **`three` / `six` 查不出** ✗：`arco_six` 660 region、`vl=[1..5]` ✓；`pizz_three` 576、`vl=[1..4]`＋`rr=[1..4]` ✓
+      —— 都对不上"三/六" ⇒ **保留原词、不猜** ✓（`basic`、`looped` 同 ✓）。
+  ⭐ **落地** ✓：规则进 `src/components/arrangement/instrumentDisplayName.ts` ✓（**只译核对过的词** ✓、
+    去库前缀 ✓、**只在带空格的破折号上切** ✓、连字符不动 ✓、首字母大写 ✓）；
+    判据 `instrumentDisplayName.test.ts` 扩到 **9 例** ✓（含"必须翻译核对过的词" ✓、
+    "`map` 必须写明是 keyswitch map" ✓、"**`three`/`six` 必须原样保留**" ✓——最后这条正是防我以后手贱去猜 ✓）。
+  ⭐ **`map` 去留的决定（我做的 ✓）** ✓：**保留在列表里但标明** ✓（过滤会改动目录与计数、影响面更大 ✓；
+    标签已消除真正的困惑 ✓；你若想过滤，改一行 ✓）。
+  ⭐ **验收** ✓：相关 4 个测试文件 **58 条全绿** ✓；`typecheck`／`lint`／`docs:check`／`check:css` ✓；
+    草稿文件已更新为"决定"版 ✓（`docs/INSTRUMENT_NAME_MAP_DRAFT.md` ✓）。
