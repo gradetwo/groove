@@ -467,8 +467,8 @@ describe("the Score tab's MusicXML entries", () => {
     expect(bass.instrument).toBeUndefined();
     expect(bass.kind).toBe("synth");
     // The DOM agrees: the header's own kind control for the piano reads "sampler".
-    expect((screen.getByTestId(`track-kind-${piano.id}`) as HTMLSelectElement).value).toBe("sampler");
-    expect((screen.getByTestId(`track-kind-${bass.id}`) as HTMLSelectElement).value).toBe("synth");
+    expect((screen.getByTestId(`track-kind-${piano.id}-header`) as HTMLSelectElement).value).toBe("sampler");
+    expect((screen.getByTestId(`track-kind-${bass.id}-header`) as HTMLSelectElement).value).toBe("synth");
     // And the report says the mapping landed, and names the track left a synthesizer with the next step attached.
     const report = screen.getByTestId("arrangement-file-report").textContent ?? "";
     expect(report).toContain("1 imported track(s) are now sampler tracks playing the recording you chose");

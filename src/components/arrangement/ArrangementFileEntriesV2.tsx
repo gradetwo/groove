@@ -129,7 +129,13 @@ onImportFile,
         {exportOpen && (
           <div
             data-testid="arrangement-export-items"
-            className="absolute right-0 top-full z-50 mt-1.5 w-56 divide-y divide-line/40 rounded-xl border border-line-strong bg-[#0f1118] py-1 font-['JetBrains_Mono'] text-xs shadow-[0_16px_36px_rgba(0,0,0,0.9)]"
+            /**
+             * ⭐ **The skin's surface, not a literal** (measured 2026-10-09: the menu was opaque — `rgb(15,17,24)` — and on
+             * top at both 390 and 1920 px, so the reported "text mixed with the background" is not reproduced; what the
+             * measurement did find is that this panel was the one surface on the route painting a hardcoded `#0f1118`
+             * instead of the palette, which is what makes it clash on any skin that is not dark).
+             */
+            className="absolute right-0 top-full z-50 mt-1.5 w-56 divide-y divide-line/40 rounded-xl border border-line-strong bg-panel py-1 font-['JetBrains_Mono'] text-xs shadow-[0_16px_36px_rgba(0,0,0,0.9)]"
           >
             <div className="space-y-0.5 p-1">
               <button type="button" data-testid="arrangement-export-midi" onClick={run(onExportMidi)} className={ITEM}>
