@@ -21244,3 +21244,23 @@ describe("the grid's editing actions", () => {
     `json` **必须是对象** ✓、`tracks` 每项**必须**有 `id`/`name`/`kind`/`sound` ✓（正是"不用解析散文"所需的字段 ✓）、
     `problems` 也随数据返回 ✓。
   ⭐ **验收** ✓：`check:mcp`（68 项 ✓）、`typecheck`、`lint`、`docs:check` 全过 ✓。
+
+### 八百六十三、✅ **剩余项③：`melody_to_track`——把 `generate_melody` 的平行数组直接写成某条轨的音符**（2026-10-10 ✓）
+
+  ⭐ **报告依据** ✓（MCP 深测 §五.3、§六.2 ✓）："和弦鋪底、bass 進行都得手算音符" ✓、
+    "`generate_melody` 返回平行數組（steps/pitch/velocity/gate 四個等長數組，需手動 zip），無'旋律直寫入軌'工具；
+    創作者要自己拼 `startBeats = i*0.5`" ✓ —— 而这**不是猜谜** ✓：`mcp/melody.ts` 自己就有
+    **`STEPS_PER_BAR = 16`** ✓（十六分音符网格 ✓）⇒ 一步 = 1/16 小节 ✓、gate 与 steps **同一单位** ✓。
+  ⭐ **修法（一条纯函数 ＋ 一个工具 ✓）** ✓：
+    · `mcp/melody.ts` 新增 **`melodyNotes(melody, beatsPerStep = 4 / STEPS_PER_BAR)`** ✓——
+      默认值**由常量推导**（而非另写一遍 ✓，两者不会漂移 ✓）；`startBeats = steps[i] × beatsPerStep` ✓、
+      `lengthBeats = max(gate[i], 1) × beatsPerStep` ✓（**下限一个 step** ✓ ⇒ gate 为 0 也仍然发声 ✓，
+      且下限随网格缩放 ✓）、`pitch`/`velocity` 原样 ✓；取**四个数组的最短长度** ✓（不写出 undefined 音高 ✓）。
+    · `mcp/registryExamples.ts` 新增工具 **`melody_to_track`** ✓：输入 `arrangementId` ＋ `trackId` ＋ 四个数组 ✓
+      ＋ 可选 `beatsPerStep` ✓ ⇒ 经**既有的 `addMcpTrackNotes`** 写入 ✓（因此**自动继承 F04 的"未知轨道被拒绝"** ✓
+      与"超长音符会被点名" ✓），回包附 `notes` 数量 ✓；空输入**明确报错**而不是静默写 0 个 ✓。
+  ⭐ 判据 ✓（`src/test/melodyToTrack.test.ts` 5 例 ✓）：`[0,4,8]`＋`gate[2,4,1]` ⇒
+    `{0,0.5}`／`{1,1}`／`{2,0.25}` ✓（十六分网格 ✓）、自定义 `beatsPerStep` 生效 ✓、
+    **gate 为 0 仍至少一个 step** ✓、数组不等长时按最短 ✓、以及"**工具必须经 `melodyNotes` 转换并经
+    `addMcpTrackNotes` 写入**" ✓（防止以后绕开那道拒绝未知轨道的门 ✓）。
+  ⭐ **验收** ✓：`check:mcp`（68 项 ✓）、`typecheck`、`lint`、`docs:check` 全过 ✓；新判据 5 条绿 ✓。

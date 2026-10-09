@@ -4,7 +4,8 @@
 import { examplesFor, listExamples } from "./examples";
 import { loudnessReport } from "./exporting";
 import { findGenre, getGenre, suggestProgression } from "./library";
-import { generateMelody } from "./melody";
+import { generateMelody, melodyNotes } from "./melody";
+import { addMcpTrackNotes } from "./arrangement";
 import { comparePatterns } from "./pattern";
 import { validateProsody } from "./prosody";
 import { ToolDefinition, failure } from "./toolKit";
@@ -54,6 +55,47 @@ export const EXAMPLE_TOOLS: ToolDefinition[] = [
           syllables: args.syllables as string[] | undefined,
           threshold: args.threshold as number | undefined,
         });
+      } catch (error) {
+        return failure((error as Error).message);
+      }
+    },
+  },
+  {
+    /**
+     * ⭐ **The step between the two halves of a creation loop** (MCP deep test of v2.35.9: harmony and melody generators
+     * exist, but "和弦鋪底、bass 進行都得手算音符" — the arranging in between was arithmetic the caller did by hand).
+     *
+     * This takes exactly what `generate_melody` returns and puts it on a track, so the arrays never have to be zipped and
+     * `startBeats` never has to be guessed.
+     */
+    name: "melody_to_track",
+    title: "Write a generated melody onto a track",
+    description:
+      "Put a melody onto a track: pass the lane-shaped arrays `generate_melody` returned (steps, pitch, velocity, gate) and they become notes. A step is a sixteenth of a bar, the grid this project uses, so `startBeats` is `steps[i] * 0.25` and a gate of 4 is a quarter note. Pass `beatsPerStep` only when the melody is not on that grid. The track must exist; an unknown trackId is refused rather than written past. Returns how many notes were written.",
+    readOnly: false,
+    inputSchema: {
+      arrangementId: z.string().describe("the arrangement to edit"),
+      trackId: z.string().describe("the track to write onto; get it from describe_arrangement with `format: \"json\"`"),
+      steps: z.array(z.number()).describe("the melody's step positions, from generate_melody"),
+      pitch: z.array(z.number().int()).describe("its MIDI pitches, same length"),
+      velocity: z.array(z.number()).describe("its velocities (1–127), same length"),
+      gate: z.array(z.number()).describe("its lengths **in steps**, same length"),
+      beatsPerStep: z.number().positive().optional().describe("default 0.25 — a sixteenth of a bar in 4/4, the grid generate_melody writes on"),
+    },
+    handler: (args) => {
+      try {
+        const notes = melodyNotes(
+          {
+            steps: args.steps as number[],
+            pitch: args.pitch as number[],
+            velocity: args.velocity as number[],
+            gate: args.gate as number[],
+          },
+          args.beatsPerStep as number | undefined
+        );
+        if (notes.length === 0) return failure("the melody carries no notes: steps, pitch, velocity and gate must all be non-empty and the same length");
+        const result = addMcpTrackNotes(String(args.arrangementId), String(args.trackId), notes);
+        return { ...(result as unknown as Record<string, unknown>), notes: notes.length };
       } catch (error) {
         return failure((error as Error).message);
       }

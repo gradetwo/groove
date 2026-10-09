@@ -54,6 +54,34 @@ export interface GeneratedMelody {
   statistics: { notes: number; slots: number; distinctPitches: number; intervalRange: [number, number] };
 }
 
+/**
+ * ⭐ **A generated melody, as notes on a track** (MCP deep test of v2.35.9, §五.3 and §六.2).
+ *
+ * `generate_melody` answers with four parallel arrays and the creator was left to zip them and work out the grid:
+ * *"創作者要自己拼 `startBeats = i*0.5`"*. The grid is not a guess — `STEPS_PER_BAR = 16` is this file's own constant, so a
+ * step is a sixteenth and a beat is `4 / STEPS_PER_BAR`. `gate` is in the same steps as `steps`, which is what the arrays'
+ * own doc means by "lane-shaped … ready to drop onto a track".
+ *
+ * A caller may still say `beatsPerStep` when their melody is not on this grid; the default is derived from the constant
+ * rather than restated, so the two cannot drift.
+ */
+export function melodyNotes(
+  melody: Pick<GeneratedMelody, "steps" | "pitch" | "velocity" | "gate">,
+  beatsPerStep: number = 4 / STEPS_PER_BAR
+): Array<{ pitch: number; startBeats: number; lengthBeats: number; velocity: number }> {
+  const count = Math.min(melody.steps.length, melody.pitch.length, melody.velocity.length, melody.gate.length);
+  const notes = [];
+  for (let index = 0; index < count; index += 1) {
+    notes.push({
+      pitch: melody.pitch[index]!,
+      startBeats: Number((melody.steps[index]! * beatsPerStep).toFixed(6)),
+      lengthBeats: Number((Math.max(melody.gate[index]!, 1) * beatsPerStep).toFixed(6)),
+      velocity: melody.velocity[index]!,
+    });
+  }
+  return notes;
+}
+
 const SCALES = { major: [0, 2, 4, 5, 7, 9, 11], minor: [0, 2, 3, 5, 7, 8, 10] } as const;
 const CONTOURS = ["arch", "valley", "rising", "falling"] as const;
 const STEPS_PER_BAR = 16; // sixteenths, the grid everything else in this project uses
