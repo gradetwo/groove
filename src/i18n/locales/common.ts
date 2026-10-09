@@ -111,15 +111,14 @@ export const commonMessages = {
   /**
    * ⭐ **Real plurals, not "(s)"** (fourth evaluation, P2-4: "程序員式 (s) 複數").
    *
-   * The two counts are different things and can differ (F13's own note): `steps` counts non-zero steps, `notes` counts the
-   * arrangement's notes, so a chord onset makes them diverge legitimately.
+   * ⚠️ **The whole phrase is one key, not a count plus a word**: composing "4 note" with a separate "notes" produced
+   * "4 note notes" — a defect the suite caught on the first run. The two counts are also different things and can differ
+   * (F13's own note): steps count non-zero steps, notes count the arrangement's notes.
    */
-  arrangement_played_steps: { en: "planned {steps} active", zh: "计划发声 {steps} 个活跃" },
-  arrangement_played_step: { en: "step", zh: "步" },
-  arrangement_played_steps_plural: { en: "steps", zh: "步" },
-  arrangement_played_notes: { en: "{notes} note", zh: "{notes} 个音符" },
-  arrangement_played_note: { en: "note", zh: "音符" },
-  arrangement_played_notes_plural: { en: "notes", zh: "音符" },
+  arrangement_played_step_single: { en: "planned {steps} active step", zh: "计划发声 {steps} 个活跃步" },
+  arrangement_played_step_plural: { en: "planned {steps} active steps", zh: "计划发声 {steps} 个活跃步" },
+  arrangement_played_note_single: { en: "{notes} note", zh: "{notes} 个音符" },
+  arrangement_played_note_plural: { en: "{notes} notes", zh: "{notes} 个音符" },
   arrangement_import_done: { en: "Imported {filename} — {tracks} track(s), {notes} note(s)", zh: "已导入 {filename}——{tracks} 条轨道、{notes} 个音符" },
   arrangement_import_failed: { en: "Import failed: {error}", zh: "导入失败：{error}" },
   /**

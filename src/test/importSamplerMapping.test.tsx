@@ -132,7 +132,11 @@ const eightPartMidi = () => {
 const slotTrackIds = (prefix: "instrument-slot-" | "instrument-open-") =>
   new Set(
     [...document.querySelectorAll(`[data-testid^="${prefix}"]`)].map((element) =>
-      element.getAttribute("data-testid")!.replace(prefix, "")
+      /**
+       * ⭐ **The header's copy is marked, the list's is not** (fourth evaluation P2-2: one testid per element), so the
+       * marker is stripped here: this helper asks "which tracks have a slot", not which copy answered.
+       */
+      element.getAttribute("data-testid")!.replace(prefix, "").replace(/-header$/, "")
     )
   );
 

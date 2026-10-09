@@ -1479,8 +1479,13 @@ export function ArrangementViewV2({ currentSong, songId, capture, bar = 0, playe
             */}
           {played !== undefined && (
             <span data-testid="arrangement-played" className="text-[10px] text-text opacity-70">
-              {t("arrangement_played_steps", { steps: played })} {played === 1 ? t("arrangement_played_step") : t("arrangement_played_steps_plural")} ·{" "}
-              {t("arrangement_played_notes", { notes: noteEventCount })} {noteEventCount === 1 ? t("arrangement_played_note") : t("arrangement_played_notes_plural")}
+              {played === 1
+                ? t("arrangement_played_step_single", { steps: played })
+                : t("arrangement_played_step_plural", { steps: played })}{" "}
+              ·{" "}
+              {noteEventCount === 1
+                ? t("arrangement_played_note_single", { notes: noteEventCount })
+                : t("arrangement_played_note_plural", { notes: noteEventCount })}
             </span>
           )}
           {preparing && (

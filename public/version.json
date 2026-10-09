@@ -1,25 +1,29 @@
 {
-  "version": "2.35.6",
-  "releaseDate": "2026-10-08",
+  "version": "2.35.7",
+  "releaseDate": "2026-10-09",
   "changelogCount": 10,
   "latest": {
-    "version": "2.35.6",
+    "version": "2.35.7",
     "date": "2026-10-09",
     "category": "fix",
     "title": {
-      "zh": "修复新建工程页点击无反应",
-      "en": "Fixes the new-project page whose Create button did nothing"
+      "zh": "音源面板可点、chip 可读、门禁与文案修复",
+      "en": "A clickable instrument panel, a readable chip, and gate and copy fixes"
     },
     "highlights": [
       {
-        "zh": "新建工程页点击“创建”没有反应：新手引导的遮罩盖在页面上，把点击吃掉了。",
-        "en": "On the new-project page, pressing Create did nothing: the first-run tour's overlay covered the page and swallowed the click."
+        "zh": "音源选择面板改为浮动层并钳制进视口，选项不再被下方详情区盖住、可以点选。",
+        "en": "The instrument panel is a floating layer clamped into the viewport, so its options are no longer covered by the detail area below."
       },
       {
-        "zh": "引导不再在新建工程页自动弹出，仍可从帮助里随时打开，其它页面行为不变。",
-        "en": "The tour no longer opens itself on the new-project route; it is still available from Help, and other routes behave as before."
+        "zh": "音源 chip 桌面从 112×17 变为 152×28，手机从 10px 宽变为 104px，并可看到完整乐名。",
+        "en": "The instrument chip grew from 112×17 to 152×28 on desktop and from 10px wide to 104px on a phone, with the full name on hover."
+      },
+      {
+        "zh": "工具栏按钮有了悬停反馈；轨道 chip 的测试标识不再重复；播放提示改用正确单复数。",
+        "en": "Toolbar buttons respond to hover, a track's chip no longer shares its test id with the header's copy, and the transport readout uses real plurals."
       }
     ],
-    "truncated": false
+    "truncated": true
   }
 }

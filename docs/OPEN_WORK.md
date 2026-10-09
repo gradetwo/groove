@@ -20850,3 +20850,17 @@ describe("the grid's editing actions", () => {
       **`instrument-category-*`** ✓（命名不同 ✓）⇒ 需要先复现"分组是否真的没显示" ✓；
       而"`arco 3vel` 这类名字改成人类语言"要动**目录数据/命名策略** ✓ ⇒ 另开一件做 ✓。
   ⭐ 验收 ✓：`typecheck` ✓、`lint` ✓、`docs:check` ✓；中文覆盖／触控／chooser 判据 **24 条全绿** ✓。
+
+### 八百四十二、🐛 **`verify` 抓到我自己刚引入的 6 处红，已修（都是本轮的连带）**（2026-10-09 ✓）
+
+  ⭐ **失败与根因（读数 ✓）** ✓：
+    · **"planned 0 active steps · 4 note notes"** ✗ —— 我把句子拆成"计数键 ＋ 复数词"✗ ⇒ "note" 出现两次 ✓
+      ⇒ 改成**整句一个键** ✓：`arrangement_played_step_single/plural`（含 "planned" ✓）与
+      `arrangement_played_note_single/plural` ✓ ⇒ 现在输出 `planned 0 active steps · 4 notes` ✓；
+    · **找不到名为 "Quantise lengths" 的按钮** ✗ —— 正是我 P3-2 改成美式拼写 ✓ ⇒ 更新该判据为 "Quantize lengths" ✓；
+    · **`expected 16 to be 8`** ✗ —— `importSamplerMapping` 的辅助函数把 `instrument-slot-*` 后缀当轨道 id ✓，
+      而我 P2-2 给**表头那份**加了 `-header` ✗ ⇒ 集合变成 16 ✓ ⇒ 在该辅助函数里 strip `-header` ✓
+      （它的语义本就是"哪些轨道有槽位"✓，不是"哪一份副本回答的"✓）。
+  ⭐ **验收** ✓：7 个受影响测试文件 **56 条全绿** ✓；`lint` ✓、`docs:check` ✓、`check:css` ✓。
+  ⭐ **教训（写下）** ✓：这三处都是**本轮改动自身的连带**（文案拆键、拼写改名、testid 去重 ✓），
+    而它们**只有跑全量才暴露** ✓ ⇒ 再次印证"改完必须跑一次全量" ✓，不靠单文件绿就发版 ✓。

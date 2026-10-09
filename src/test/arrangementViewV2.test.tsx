@@ -100,7 +100,7 @@ describe("the play button and the engine seam", () => {
     await screen.findByTestId("arrangement-played");
     const label = screen.getByTestId("arrangement-played").textContent ?? "";
     expect(label).toMatch(/planned 0 active step/);
-    expect(label, "the notes are shown beside the steps, so the two numbers cannot be confused").toMatch(/note\(s\)/);
+    expect(label, "the notes are shown beside the steps, so the two numbers cannot be confused").toMatch(/4 notes/);
   });
 });
 
@@ -181,7 +181,7 @@ describe("the arrangement a host hands in, and what the host is told", () => {
     const seeded = arrangementSeededFromGenre("new", Object.values(GENRES_MAP)[0]!);
     renderView(<ArrangementViewV2 songId="new" capture={noCapture} initialArrangement={seeded} />);
     expect(screen.getByRole("button", { name: "Ramp velocity" })).toBeDefined();
-    expect(screen.getByRole("button", { name: "Quantise lengths" })).toBeDefined();
+    expect(screen.getByRole("button", { name: "Quantize lengths" })).toBeDefined();
   });
 
   it("⭐ a genre project arrives with the genre's notes, not only its tracks", () => {
