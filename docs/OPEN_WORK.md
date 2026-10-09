@@ -21455,3 +21455,19 @@ describe("the grid's editing actions", () => {
   ⭐ **下一片（下一次 ✓）** ✓：**UI**——synth 轨的 chip/选择器（选项来自 `DEFAULT_SYNTH_PRESETS` ✓，显示可读名 ✓），
     接上 `setTrackInstrument` ✓ ＋ 判据"**选了就写进模型**" ✓；鼓轨按 ⑧-a 的结论**给文案而不是控件** ✓。
   ⭐ **验收** ✓：新判据 6 条绿 ✓；`typecheck`／`lint`／`docs:check` ✓。
+
+### 八百七十三、✅ **剩余项⑧-a 落地：鼓轨**说明自己是什么**，而不是要一个它永远用不上的 sampler**（2026-10-10 ✓）
+
+  ⭐ **依据 ✓**（上一轮的决定性读数 ✓ `sampledAssetForLane` ✓）：鼓 lane 自带的 `sample` 是**播放层故意拒绝**的 ✓
+    （"returning an asset here would silently turn **a kit lane into one note**" ✓），鼓轨的音色是**角色 × 内置一套鼓** ✓
+    ⇒ 对鼓轨**没有"乐器"可选** ✓ ⇒ **诚实的答案是说明，而不是一个按了不响的选择器** ✓。
+  ⭐ **实现 ✓**：新增 i18n `keyboard_needs_drumkit` ✓（en ✓／zh ✓ 各一句 ✓），
+    在虚拟键盘面板把原来的**二选一**改成**三选一** ✓：
+    sampler → `keyboard_needs_instrument` ✓、**drumkit → `keyboard_needs_drumkit`** ✓、其余 → `keyboard_needs_sampler` ✓。
+    文案点明"用**内置套鼓** ✓、选的是**角色**（底鼓/军鼓/踩镲 ✓）**而不是采样乐器**" ✓。
+  ⭐ 判据 ✓（并入 `arrangementViewV2` ✓，该文件 21 例 ✓）：`keyboard_needs_drumkit` **必须存在** ✓、
+    en **必须**提到 "built-in kit" ✓ 与 "roles" ✓、zh **必须**说"内置套鼓" ✓、
+    面板**必须**有 `drumkit → keyboard_needs_drumkit` 这一分支 ✓、且 **sampler 仍走自己的键** ✓（防止顺手删掉 ✓）。
+  ⭐ **验收** ✓：`arrangementViewV2`（21 ✓）与 `chineseInterfaceCoverage` 全绿 ✓；`typecheck`／`lint`／`docs:check` ✓。
+  ⏳ **⑧ 剩下的最后一片（下一次 ✓）** ✓：**synth 轨的预设选择器 UI** ——
+    模型（`setTrackInstrument` ✓）与解析（显式 key 优先 ✓）都已就绪 ✓，只差控件与接线 ✓。

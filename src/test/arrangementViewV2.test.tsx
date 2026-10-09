@@ -528,4 +528,25 @@ describe("transposing a marked span", () => {
     expect(view, "it is the summary of a disclosure").toMatch(/<summary[^>]*>\s*\{t\("arrangement_track_list_summary"/);
   });
 
+
+  it("⭐ a drum track is told what it is, not asked for a sampler it can never use", () => {
+    /**
+     * ⭐ **Fifth Web evaluation of v2.35.9, P2** (*"非 sampler 軌道沒有樂器切換入口"*), answered by reading the playback path:
+     * `sampledAssetForLane` refuses a **drum** lane's own `sample` on purpose — *"returning an asset here would silently
+     * turn a kit lane into one note"* — and a drum track's sound is its **role** against **one built-in kit**. So the honest
+     * answer is a sentence, not a chooser that cannot sound.
+     */
+    const locale = readFileSync(resolve(__dirname, "../i18n/locales/common.ts"), "utf8");
+    const at = locale.indexOf("keyboard_needs_drumkit:");
+    expect(at, "the sentence exists").toBeGreaterThan(-1);
+    const block = locale.slice(at, at + 360);
+    expect(block, "English names the built-in kit").toMatch(/built-in kit/i);
+    expect(block, "and says roles are what you pick").toMatch(/roles/);
+    expect(block, "Chinese says the same").toMatch(/内置套鼓/);
+
+    const view = readFileSync(resolve(__dirname, "../components/arrangement/ArrangementViewV2.tsx"), "utf8");
+    expect(view, "a drumkit track gets its own message").toMatch(/selected\.kind === "drumkit"[\s\S]{0,80}keyboard_needs_drumkit/);
+    expect(view, "and a sampler still gets its own").toContain("keyboard_needs_instrument");
+  });
+
 });

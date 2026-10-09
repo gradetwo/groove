@@ -2191,7 +2191,15 @@ export function ArrangementViewV2({ currentSong, songId, capture, bar = 0, playe
                 }}
               />
             ) : (
-              <p className="text-xs text-text opacity-70">{t(selected.kind === "sampler" ? "keyboard_needs_instrument" : "keyboard_needs_sampler")}</p>
+              <p className="text-xs text-text opacity-70">
+                {t(
+                  selected.kind === "sampler"
+                    ? "keyboard_needs_instrument"
+                    : selected.kind === "drumkit"
+                      ? "keyboard_needs_drumkit"
+                      : "keyboard_needs_sampler"
+                )}
+              </p>
             )}
           </>
         )}

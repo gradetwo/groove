@@ -272,6 +272,17 @@ export const commonMessages = {
   roll_selection_velocity: { en: "Selected", zh: "选中" },
   keyboard_needs_instrument: { en: "This sampler track needs an instrument before it can sound", zh: "这条采样器轨道还没有选乐器，试听不会有声音" },
   keyboard_needs_sampler: { en: "Select a sampler track to play it", zh: "选中一条采样器轨道才能试听" },
+  /**
+   * ⭐ **A drum track says what it is, instead of being asked for a sampler** (fifth Web evaluation of v2.35.9, P2:
+   * *"非 sampler 軌道沒有樂器切換入口"*). Reading the playback path settled what that gap is for drums: `sampledAssetForLane`
+   * **refuses** a drum lane's own `sample` on purpose — "returning an asset here would silently turn a kit lane into one
+   * note" — and a drum track's sound is its **role** against **one built-in kit**. So there is no instrument to choose, and
+   * saying so is the honest answer; offering a chooser would be the empty control this project refuses.
+   */
+  keyboard_needs_drumkit: {
+    en: "This drum track plays the built-in kit: pick its roles (kick, snare, hat) rather than a sample",
+    zh: "这条鼓轨用的是内置套鼓：选的是它的角色（底鼓、军鼓、踩镲），而不是采样乐器",
+  },
   template_blank_desc: { en: "Blank, with one track already typed the way you choose", zh: "空白，但已经有一条你选好类型的轨道" },
   // The phone shell's navigation vocabulary (`nav_learn`/`nav_tools`/`nav_you`, `mobile_nav_label`,
   // `mobile_unsaved_dot`, `mobile_more_*`, `mobile_action_*`) was deleted with the shell
