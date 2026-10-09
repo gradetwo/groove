@@ -21414,3 +21414,22 @@ describe("the grid's editing actions", () => {
       ⇒ 需要内容（采样库）配合 ✓。
   ⭐ **本轮仍不改代码 ✓**（把"哪条路是真的"钉死 ✓）；**下一步**建议落 **⑧-b**（synth 预设选择器 ✓，可逆、零迁移 ✓），
     并将 **⑧-a** 作为"鼓轨的现实结论"写进 UI 文案与台账 ✓。
+
+### 八百七十一、🟢 **剩余项⑧-b 第一片落地：合成器轨的**预设可以被明确指定**（解析层 ✓，模型与 UI 留下一片）**（2026-10-10 ✓）
+
+  ⭐ **为什么先做解析层（择优 ✓）** ✓：读完 `src/audio/instrumentPresets.ts` 后确认 ✓——
+    合成器轨今天**没有"选中的预设"这个字段** ✗，音色由 `resolveInstrumentPresetKey(instrument, trackId)` ✓
+    **从名字/角色推导** ✓，而且**引擎与报告都读同一个函数** ✓（注释写明"resolution lives here once and both the engine
+    and the report read it" ✓）⇒ 想真正"换音色"必然要经过它 ✓ ⇒ **先把它的入口做对，再接模型与 UI** ✓，
+    这样每一步都可单独验证 ✓（而不是一次性大改 ✗）。
+  ⭐ **这一片改了什么 ✓**：`resolveInstrumentPresetKey(instrument, trackId, presetKey?)` ✓ ——
+    新增**可选**第三参与**最后**位置 ✓ ⇒ **既有调用一字不变** ✓；
+    **显式选择优先** ✓，但**必须是本 build 真有的 key** ✓，否则**忽略** ✓
+    （理由写在注释里：来自别的 build 的工程**仍必须能出声** ✓ —— 这条正是"不产生空控件"的同一原则 ✓）。
+  ⭐ 判据 ✓（`src/test/synthPresetChoice.test.ts` 3 例 ✓）：**显式选择胜过名字与角色** ✓、
+    **未知 key 被忽略且结果与不传时逐字相同** ✓（两个断言 ✓）、**不传时行为零变化** ✓（`lead → analogLead` ✓、
+    陌生角色 → `GLOBAL_DEFAULT_PRESET_KEY` ✓）。
+  ⭐ **下一片（下一次继续 ✓）** ✓：①模型加 `track.synthPreset?: string` ✓（老工程缺省 ⇒ 走今天的推导 ✓）；
+    ②调用点把 `track.synthPreset` 传进这个函数 ✓（引擎 ＋ 报告两处 ✓）；③**synth 轨**的 chip（用预设表当选项 ✓，
+    与 sampler 的 chip 同一处但不同来源 ✓）；④判据：**写入后渲染/报告必须反映出该预设** ✓（可红 ✓）。
+  ⭐ **验收** ✓：新判据 3 条绿 ✓；`typecheck`／`lint`／`docs:check` ✓。

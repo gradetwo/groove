@@ -242,7 +242,19 @@ function trackRolePresetKey(trackId: string | undefined): string | undefined {
  *                   undefined or empty — both fall back to the role default.
  * @param trackId    the track's `track_id` (kick/snare/hihat/percussion/bass/chords/lead/fx).
  */
-export function resolveInstrumentPresetKey(instrument: string | undefined, trackId: string): string {
+export function resolveInstrumentPresetKey(
+  instrument: string | undefined,
+  trackId: string,
+  /**
+   * ⭐ **An explicit choice, when the track carries one** (fifth Web evaluation of v2.35.9, P2: *"非 sampler 軌道沒有樂器切換
+   * 入口"*). A synth track's sound is a preset, and until now the preset was **derived** from the track's instrument name and
+   * role — there was nowhere to say "this track uses `warmPad`". The parameter is optional and last, so every existing call
+   * is unchanged, and an unknown key is ignored rather than trusted: a project that names a preset this build does not have
+   * must still make a sound.
+   */
+  presetKey?: string
+): string {
+  if (presetKey && DEFAULT_SYNTH_PRESETS[presetKey]) return presetKey;
   const raw = (instrument || "").trim();
 
   const exact = raw ? exactPresetKey(raw) : undefined;
