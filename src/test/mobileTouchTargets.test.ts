@@ -115,4 +115,18 @@ describe("mobile touch targets", () => {
     expect(hint, "the hint comes before the toolbar, not inside it").toBeLessThan(toolbar);
   });
 
+
+  it("⭐ the instrument slot keeps a readable width on a phone", () => {
+    /**
+     * Measured (fourth evaluation, P1-2's second half): with `min-w-0` alone the slot was squeezed to **10 px** by the
+     * other controls in the row — a 44 px-tall chip that was effectively invisible. A minimum width on the phone gives the
+     * instrument's name somewhere to live (measured 104 px after the change), and from `sm:` the slot yields again.
+     */
+    const browser = readFileSync(resolve(__dirname, "../components/arrangement/InstrumentBrowserV2.tsx"), "utf8");
+    const at = browser.indexOf("ref={slotRef}");
+    expect(at, "the slot exists").toBeGreaterThan(-1);
+    expect(browser.slice(Math.max(0, at - 300), at + 300), "a phone width it can be read at").toMatch(/min-w-\[6\.5rem\]/);
+    expect(browser.slice(Math.max(0, at - 300), at + 300), "and the wide layout unchanged").toMatch(/sm:min-w-0/);
+  });
+
 });

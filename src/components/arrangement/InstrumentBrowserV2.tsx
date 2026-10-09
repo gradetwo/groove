@@ -108,7 +108,18 @@ export function InstrumentBrowserV2({
   }, [open]);
 
   return (
-    <div data-testid={`instrument-slot-${trackId}${suffix}`} ref={slotRef} className="relative flex min-w-0 flex-col gap-1">
+    /**
+     * ⭐ **The slot keeps a readable width on a phone** (fourth evaluation, P1-2's second half; measured 2026-10-09).
+     *
+     * With `min-w-0` alone the slot was squeezed to **10 px** by the other controls in the row — the chip was there, 44 px
+     * tall, and effectively invisible. A minimum width on the phone gives the instrument name somewhere to live; from `sm:`
+     * the column is wide enough already and the slot goes back to yielding.
+     */
+    <div
+      data-testid={`instrument-slot-${trackId}${suffix}`}
+      ref={slotRef}
+      className="relative flex min-h-11 min-w-[6.5rem] flex-col gap-1 sm:min-h-0 sm:min-w-0"
+    >
       <button
         type="button"
         // The name says which track it belongs to, which is what makes the chip findable by a screen reader in a
