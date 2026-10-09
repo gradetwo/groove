@@ -80,17 +80,23 @@ export function InstrumentBrowserV2({
       const width = Math.min(352, window.innerWidth - 16);
       const left = Math.max(8, Math.min(rect.left, window.innerWidth - width - 8));
       const below = rect.bottom + 4;
-      // ⭐ Below the chip when it fits, above it when it does not, never taller than the space that is left.
-      const maxHeight = Math.max(180, Math.min(560, window.innerHeight - below - 12));
-      const wanted = maxHeight >= 220 ? below : Math.max(8, rect.top - 4 - 320);
       /**
-       * ⭐ **And clamped into the viewport whatever the chip's own position is** (measured: with the chip far down a long
-       * track list, anchoring to it drew the panel at y=1891 in an 844 px viewport — off screen, `elementFromPoint` null).
-       * A panel whose job is to be clicked must be visible even when the control that opened it is not.
+       * ⭐ **Clamp the panel into the viewport, and derive its height from where it ended up** (measured, fourth evaluation).
+       *
+       * The first version of this computed the height from `wanted` — the position the chip asked for — and then clamped
+       * with it. With the chip far down a long track list that height went **negative**: the panel was written at
+       * `top: 1656px` in an 850 px viewport with `maxHeight: -818px` (an invalid length, so the browser dropped it), which
+       * is why the first fix changed nothing and why `elementFromPoint` over its options returned `null` — nothing was
+       * clickable because nothing was on screen.
+       *
+       * A pane whose job is to be clicked must be visible even when the control that opened it is not: `top` is clamped
+       * against a *minimum* usable height, and the height then follows from `top`, never the other way round.
        */
-      const height = maxHeight >= 220 ? maxHeight : Math.min(320, window.innerHeight - wanted - 12);
-      const top = Math.max(8, Math.min(wanted, window.innerHeight - height - 8));
-      setAnchor({ left, top, width, maxHeight: Math.min(height, window.innerHeight - top - 8) });
+      const minimumPanel = 180;
+      const wanted = below + 140 <= window.innerHeight ? below : Math.max(8, rect.top - 4 - 320);
+      const top = Math.max(8, Math.min(wanted, Math.max(8, window.innerHeight - minimumPanel - 8)));
+      const maxHeight = Math.max(minimumPanel, Math.min(560, window.innerHeight - top - 8));
+      setAnchor({ left, top, width, maxHeight });
     };
     place();
     window.addEventListener("resize", place);

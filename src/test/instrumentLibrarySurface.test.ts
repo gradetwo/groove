@@ -70,4 +70,21 @@ describe("the instrument chooser's layer", () => {
   });
 });
 
+
+  it("⭐ clamps the panel into the viewport and derives its height from where it landed", () => {
+    /**
+     * ⭐ **Measured, then pinned** (fourth evaluation P1-1). The first attempt clamped using a height computed from the
+     * chip's own (off-screen) position: with the chip at y=1980 in an 850 px viewport the height went **negative**, the
+     * panel was written at `top: 1656px` with `maxHeight: -818px` (invalid, so dropped), and nothing about the options was
+     * clickable — `elementFromPoint` returned `null`. Clamping `top` against a usable minimum and letting the height follow
+     * puts the same panel at y=662 with 180 px of itself on screen, and the option under the pointer is the option.
+     */
+    const source = readFileSync(resolve(__dirname, "../components/arrangement/InstrumentBrowserV2.tsx"), "utf8");
+    expect(source, "a minimum usable height exists").toMatch(/minimumPanel/);
+    expect(source, "top is clamped against it").toMatch(/Math\.min\(wanted, Math\.max\(8, window\.innerHeight - minimumPanel - 8\)\)/);
+    expect(source, "and the height follows from the clamped top").toMatch(/maxHeight = Math\.max\(minimumPanel, Math\.min\(560, window\.innerHeight - top - 8\)\)/);
+    // ⭐ The shape that produced a negative height must not come back.
+    expect(source, "no height is derived from the wanted position").not.toMatch(/innerHeight - wanted/);
+  });
+
 });

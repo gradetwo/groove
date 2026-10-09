@@ -20778,3 +20778,28 @@ describe("the grid's editing actions", () => {
     gate 在 `App.tsx` 里**包住整个 RouterProvider** ✓ ⇒ 要按路由跳过它，就得把 gate 挪进路由之内 ✗
     （结构性改动 ✓）⇒ 我不在长会话末尾做这种改动 ✓，留给下一轮**先量**再动 ✓。
   ⭐ **本轮提交** ✓：见下（工具链：`typecheck` ✓、`lint` ✓、`docs:check` ✓、`check:css` ✓、build ✓ 全过 ✓）。
+
+### 八百三十八、✅✅✅ **P1-1 真正修好并用报告自己的判据证明（`elementFromPoint` 命中选项）**（2026-10-09 ✓）
+
+  ⭐ **先找出"钳制为何没生效"（读数决定 ✓）** ✓：探针打印出**输入与输出**后一眼可见 ——
+    chip 在视口外（`top 1980`（850 高）✓），而面板的**内联样式**是 **`top: 1656px` ＋ `maxHeight` 为空** ✗。
+    顺着公式一算就明白了 ✓：旧代码用**由 chip 位置推出的高度**去钳制 ✓ ⇒
+    `height = min(320, 850 - 1656 - 12) = -818` ✗ ⇒
+    ① `top` 的钳制失去意义 ✓（`min(1656, 850-(-818)-8) = 1656` ✗）；② `maxHeight: -818px` **不是合法长度** ⇒ 被浏览器丢弃 ⇒ 样式表里为空 ✓。
+    ⇒ **第一版钳制等于没做** ✓，而报告说的"点不到"也就原样存在 ✓。
+  ⭐ **修法（一行逻辑，方向反过来 ✓）** ✓：**先钳制 `top`（对着一个可用的最小高度 ✓），高度再由 `top` 推出** ✓——
+    `wanted = below + 140 <= innerHeight ? below : max(8, rect.top - 4 - 320)` ✓；
+    `top = clamp(wanted, 8, innerHeight - 180 - 8)` ✓；`maxHeight = max(180, min(560, innerHeight - top - 8))` ✓。
+  ⭐ **验证（报告自己的方法 ✓，`scratch/probe-chooser-hit.mjs` ✓）** ✓：
+
+| 视口 | chip 位置 | 面板（内联 top / maxHeight） | 在视口内 | `elementFromPoint` 命中 |
+| --- | --- | --- | --- | --- |
+| 1512×850 | top **1980**（视口外 ✗） | **662px / 180px** ✓ | **是** ✓ | **`button[instrument-option-virtuosity-drums-basic]`** ✓✓ |
+| 390×844 | top **2201**（视口外 ✗） | **656px / 180px** ✓ | **是** ✓ | **同一个按钮** ✓✓ |
+
+    ⇒ 报告 P1-1 的原始判据（"选项位置被别的元素覆盖 ⇒ 点不到" ✓）现在**反过来成立**：**最上层就是选项** ✓，
+    而且是在 **chip 本身都在屏幕外**这种最坏情况下 ✓。
+  ⭐ 判据 ✓（`instrumentLibrarySurface` 增至 8 例 ✓）：必须存在 `minimumPanel` ✓、`top` 必须对着它钳制 ✓、
+    高度必须**由 `top` 推出** ✓，且**旧形状 `innerHeight - wanted` 不得回来** ✓（回归即红 ✓）。
+  ⭐ **用户指示"发版不要着急"** ✓ ⇒ 我把 P1-1 的证明落库 ✓，**继续**把 P1-2 剩下的一半（手机 chip 仅 10px 宽 ✓）
+    与 P2-3（gate 挡 `/new`）做完再考虑发版 ✓。
