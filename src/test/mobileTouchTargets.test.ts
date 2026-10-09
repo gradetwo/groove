@@ -129,4 +129,20 @@ describe("mobile touch targets", () => {
     expect(browser.slice(Math.max(0, at - 300), at + 300), "and the wide layout unchanged").toMatch(/sm:min-w-0/);
   });
 
+
+  it("⭐ the track header's ids are marked, so the list and the header cannot share a testid", () => {
+    /**
+     * Measured online (fifth evaluation, P2-2): `track-list-add`, `track-synth-2`, `track-gain-synth-2` and
+     * `track-gain-value-synth-2` each appeared **twice**, because the studio draws a track's controls both in the header
+     * column and in the track list. The instrument chip was fixed that way first; this applies the same scheme to the
+     * whole header, and the DOM now counts **178 testids over 178 elements — no duplicates** (`probe-duplicate-testids`).
+     */
+    const header = source("components/arrangement/TrackHeaderV2.tsx");
+    const ids = [...header.matchAll(/data-testid=\{`(track-[^`]+)`\}/g)].map((match) => match[1]);
+    expect(ids.length, "the header draws track controls").toBeGreaterThan(10);
+    for (const id of ids) expect(id, `${id} carries the marker`).toMatch(/-header`?$/);
+    const view = source("components/arrangement/ArrangementViewV2.tsx");
+    expect(view, "and the header's add button too").toContain('data-testid="track-list-add-header"');
+  });
+
 });

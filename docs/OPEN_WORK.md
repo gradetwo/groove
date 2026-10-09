@@ -20948,3 +20948,17 @@ describe("the grid's editing actions", () => {
     ③P3 的 **"Listen" 与 Play 重复** ✓（报告建议删一个 ✓）、空状态两行标题堆叠 ✓、kind 选择器里的大小写 ✓
     （"Synth" vs "sampler" 的根因就是它 ✓）；④`FILE` 保留的理由与两份报告不同 ✓（我按一致性保留 ✓，已记账 ✓）。
   ⭐ **验收** ✓：`lint` ✓、`docs:check` ✓、`check:css` ✓、`check:skins` ✓；受影响 4 个测试文件 **36 条全绿** ✓。
+
+### 八百四十七、✅ **剩余项①：track 系重复 testid 清零（DOM 计数 **178 个 testid / 178 个元素，零重复**）**（2026-10-09 ✓）
+
+  ⭐ **复现（第五份报告的实测 ✓）** ✓：`track-list-add` / `track-synth-2` / `track-gain-synth-2` /
+    `track-gain-value-synth-2` **各出现 2 次** ✗ —— 因为 studio 把一条轨的控件**既画在表头列、又画在轨道列表**里 ✓。
+  ⭐ **修法（套用 instrument chip 已经验证过的方案 ✓）** ✓：把 **`TrackHeaderV2` 里全部 18 个 `track-*` id
+    统一加 `-header`** ✓（`track-<id>-header` / `track-gain-<id>-header` / `track-kind-<id>-header` … ✓），
+    表头列那个加轨按钮改成 **`track-list-add-header`** ✓，**列表那份继续用裸 id** ✓
+    （既有定位与探针都指向它 ✓，与 §八百三十七 的 chip 方案一致 ✓）。
+  ⭐ **验证（报告自己的方法 ✓，`scratch/probe-duplicate-testids.mjs` ✓）** ✓：1920×1080 建面后统计 ⇒
+    **`totalTestids: 178`、`elementsWithTestid: 178`、`duplicates: []`** ✓✓（修前那 4 个就在这里 ✓）。
+  ⭐ 判据 ✓（`mobileTouchTargets` 增至 9 例 ✓）：表头文件里**每一个** `track-*` testid **必须**以 `-header` 结尾 ✓、
+    表头加轨按钮**必须**是 `track-list-add-header` ✓（回退即红 ✓）；
+    并同步更新 `arrangementTrackHeader.test.tsx` 的定位为带标记的 id ✓（14 条全绿 ✓）。

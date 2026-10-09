@@ -1977,7 +1977,7 @@ export function ArrangementViewV2({ currentSong, songId, capture, bar = 0, playe
            * beside the add buttons and each header was a row out of step with its own region — the measured defect
            * this row's position is the fix for. Above both columns they start at the same y by construction.
            */}
-          <div data-testid="track-list-add" className="flex flex-wrap items-center gap-1 border-b border-[rgb(var(--d-line))] p-1">
+          <div data-testid="track-list-add-header" className="flex flex-wrap items-center gap-1 border-b border-[rgb(var(--d-line))] p-1">
             {TRACK_KIND_ORDER.map((kind) => (
               <button key={kind} type="button" data-testid={`track-add-${kind}`} className="min-h-[44px] rounded border border-[rgb(var(--d-line))] px-1 text-[10px] text-text" onClick={() => onAddTrack(kind, kind)}>
                 + {t(KIND_LABEL_KEY[kind])}

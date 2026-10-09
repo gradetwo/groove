@@ -85,7 +85,7 @@ export function TrackHeaderV2({
 
   return (
     <div
-      data-testid={`track-${track.id}`}
+      data-testid={`track-${track.id}-header`}
       data-depth={depth}
       data-kind={track.kind}
       /*
@@ -110,13 +110,13 @@ export function TrackHeaderV2({
       {/* Identity: what this track *is*, led by the name. */}
       <div data-row="identity" className="flex min-w-0 items-center gap-1">
       {/* 1 — the colour strip. The brief's first item, and the only thing that identifies a track without reading. */}
-      <span data-control="color" data-testid={`track-color-${track.id}`} aria-hidden="true" className="h-8 w-1 shrink-0 rounded" style={{ background: color }} />
+      <span data-control="color" data-testid={`track-color-${track.id}-header`} aria-hidden="true" className="h-8 w-1 shrink-0 rounded" style={{ background: color }} />
 
       {/* 2 — the kind icon, which is also the kind chooser: a track's type is a decision, not an identity. */}
       {onChangeKind ? (
         <select
           data-control="kind"
-          data-testid={`track-kind-${track.id}`}
+          data-testid={`track-kind-${track.id}-header`}
           aria-label={`${track.name} kind`}
           value={track.kind}
           onChange={(event) => onChangeKind(track.id, event.target.value as TrackKindV2)}
@@ -129,7 +129,7 @@ export function TrackHeaderV2({
           ))}
         </select>
       ) : (
-        <span data-control="kind" data-testid={`track-kind-${track.id}`} aria-hidden="true" className="w-4 shrink-0 text-center text-xs text-text opacity-80">
+        <span data-control="kind" data-testid={`track-kind-${track.id}-header`} aria-hidden="true" className="w-4 shrink-0 text-center text-xs text-text opacity-80">
           {KIND_ICON[track.kind]}
         </span>
       )}
@@ -143,14 +143,14 @@ export function TrackHeaderV2({
             type="button"
             aria-label={`${track.name} ${track.collapsed ? t("expand") : t("fold")}`}
             aria-expanded={!track.collapsed}
-            data-testid={`track-fold-${track.id}`}
+            data-testid={`track-fold-${track.id}-header`}
             onClick={() => onToggleCollapse(track.id, !track.collapsed)}
             className="h-7 w-6 shrink-0 rounded text-xs text-text opacity-80"
           >
             {track.collapsed ? "▸" : "▾"}
           </button>
         )}
-        <span data-testid={`track-name-${track.id}`} className="min-w-[2.5rem] truncate text-xs text-text" style={{ flex: "1 1 2rem" }} title={track.name}>
+        <span data-testid={`track-name-${track.id}-header`} className="min-w-[2.5rem] truncate text-xs text-text" style={{ flex: "1 1 2rem" }} title={track.name}>
           {track.name}
         </span>
       </span>
@@ -192,12 +192,12 @@ export function TrackHeaderV2({
             step={0.5}
             value={gain}
             aria-label={t("track_volume_label", { name: track.name })}
-            data-testid={`track-gain-${track.id}`}
+            data-testid={`track-gain-${track.id}-header`}
             onChange={(event) => onChangeGain(track.id, Number(event.target.value))}
             className="w-14 accent-[rgb(var(--d-accent))]"
           />
         )}
-        <span data-testid={`track-gain-value-${track.id}`} className="w-10 text-right font-['JetBrains_Mono'] text-[9px] text-text opacity-70">
+        <span data-testid={`track-gain-value-${track.id}-header`} className="w-10 text-right font-['JetBrains_Mono'] text-[9px] text-text opacity-70">
           {gain.toFixed(1)}
         </span>
       </span>
@@ -214,7 +214,7 @@ export function TrackHeaderV2({
           data-control="arm"
           aria-label={t("track_arm_label", { name: track.name })}
           aria-pressed={Boolean(track.armed)}
-          data-testid={`track-arm-${track.id}`}
+          data-testid={`track-arm-${track.id}-header`}
           onClick={() => onToggleArm(track.id, !track.armed)}
           className={`arr-head-desktop-only h-5 w-5 shrink-0 rounded-full border text-[9px] leading-none ${
             track.armed ? "border-danger bg-danger text-[rgb(var(--d-on-accent))]" : "border-[rgb(var(--d-line))] text-text"
@@ -234,7 +234,7 @@ export function TrackHeaderV2({
             data-control="solo"
             aria-label="S"
             aria-pressed={Boolean(track.soloed)}
-            data-testid={`track-solo-${track.id}`}
+            data-testid={`track-solo-${track.id}-header`}
             onClick={() => onToggle(track.id, "soloed", !track.soloed)}
             className={`arr-head-desktop-only h-5 w-5 shrink-0 rounded text-[9px] ${
               track.soloed ? "bg-[rgb(var(--d-accent))] text-[rgb(var(--d-accent-ink))]" : "border border-[rgb(var(--d-line))] text-text"
@@ -247,7 +247,7 @@ export function TrackHeaderV2({
             data-control="mute"
             aria-label="M"
             aria-pressed={Boolean(track.muted)}
-            data-testid={`track-mute-${track.id}`}
+            data-testid={`track-mute-${track.id}-header`}
             onClick={() => onToggle(track.id, "muted", !track.muted)}
             className={`arr-head-desktop-only h-5 w-5 shrink-0 rounded text-[9px] ${
               track.muted ? "bg-[rgb(var(--d-accent))] text-[rgb(var(--d-accent-ink))]" : "border border-[rgb(var(--d-line))] text-text"
@@ -267,7 +267,7 @@ export function TrackHeaderV2({
         subtrees that a criterion can address separately instead of one ambiguous query.
       */}
       {onToggle && (
-        <details className="arr-head-msr relative shrink-0" data-testid={`track-msr-${track.id}`}>
+        <details className="arr-head-msr relative shrink-0" data-testid={`track-msr-${track.id}-header`}>
           <summary
             aria-label={t("track_msr_label", { name: track.name })}
             className="flex h-11 w-11 cursor-pointer list-none items-center justify-center rounded border border-[rgb(var(--d-line))] text-[10px] text-text"
@@ -280,7 +280,7 @@ export function TrackHeaderV2({
                 type="button"
                 aria-label={t("track_arm_label", { name: track.name })}
                 aria-pressed={Boolean(track.armed)}
-                data-testid={`track-arm-touch-${track.id}`}
+                data-testid={`track-arm-touch-${track.id}-header`}
                 onClick={() => onToggleArm(track.id, !track.armed)}
                 className={`h-11 w-11 rounded-full border text-[10px] ${track.armed ? "border-danger bg-danger text-[rgb(var(--d-on-accent))]" : "text-text"}`}
               >
@@ -291,7 +291,7 @@ export function TrackHeaderV2({
               type="button"
               aria-label={t("track_solo_label", { name: track.name })}
               aria-pressed={Boolean(track.soloed)}
-              data-testid={`track-solo-touch-${track.id}`}
+              data-testid={`track-solo-touch-${track.id}-header`}
               onClick={() => onToggle(track.id, "soloed", !track.soloed)}
               className={`h-11 w-11 rounded text-[10px] ${track.soloed ? "bg-[rgb(var(--d-accent))] text-[rgb(var(--d-accent-ink))]" : "text-text"}`}
             >
@@ -301,7 +301,7 @@ export function TrackHeaderV2({
               type="button"
               aria-label={t("track_mute_label", { name: track.name })}
               aria-pressed={Boolean(track.muted)}
-              data-testid={`track-mute-touch-${track.id}`}
+              data-testid={`track-mute-touch-${track.id}-header`}
               onClick={() => onToggle(track.id, "muted", !track.muted)}
               className={`h-11 w-11 rounded text-[10px] ${track.muted ? "bg-[rgb(var(--d-accent))] text-[rgb(var(--d-accent-ink))]" : "text-text"}`}
             >
@@ -314,7 +314,7 @@ export function TrackHeaderV2({
       {/* 8 — the level meter, last as Bitwig's order has it. It is a **picture**: nothing measures a live level on
           this route, so the bar shows unity and the slot is where real metering will land. aria-hidden, because a
           decorative bar with a number in it would be read as a measurement it is not. */}
-      <span data-control="meter" data-testid={`track-meter-${track.id}`} aria-hidden="true" className="flex h-8 w-1.5 shrink-0 items-end overflow-hidden rounded-sm bg-[rgb(var(--d-line))]">
+      <span data-control="meter" data-testid={`track-meter-${track.id}-header`} aria-hidden="true" className="flex h-8 w-1.5 shrink-0 items-end overflow-hidden rounded-sm bg-[rgb(var(--d-line))]">
         <span className="block w-full" style={{ height: "70%", background: color }} />
       </span>
 
@@ -323,7 +323,7 @@ export function TrackHeaderV2({
           type="button"
           data-control="remove"
           aria-label={t("track_remove_label", { name: track.name })}
-          data-testid={`track-remove-${track.id}`}
+          data-testid={`track-remove-${track.id}-header`}
           onClick={() => onRemoveTrack(track.id)}
           /**
            * ⭐ **A 44 px hit area that costs the layout nothing** (third evaluation F12, corrected by the e2e gate).

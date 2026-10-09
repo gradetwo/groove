@@ -89,39 +89,39 @@ describe("the track header's controls", () => {
      * rather than a wall of buttons. The mute and solo letters **are** the names, because `M` and `S` are what a
      * professional's hands know and what the surrounding criteria address them by.
      */
-    expect(screen.getByTestId("track-mute-t1").getAttribute("aria-label")).toBe("M");
-    expect(screen.getByTestId("track-solo-t1").getAttribute("aria-label")).toBe("S");
-    expect(screen.getByTestId("track-mute-t1").getAttribute("aria-pressed")).toBe("false");
-    expect(screen.getByTestId("track-arm-t1").getAttribute("aria-label")).toMatch(/Keys/);
-    expect(screen.getByTestId("track-gain-t1").getAttribute("aria-label")).toMatch(/Keys/);
+    expect(screen.getByTestId("track-mute-t1-header").getAttribute("aria-label")).toBe("M");
+    expect(screen.getByTestId("track-solo-t1-header").getAttribute("aria-label")).toBe("S");
+    expect(screen.getByTestId("track-mute-t1-header").getAttribute("aria-pressed")).toBe("false");
+    expect(screen.getByTestId("track-arm-t1-header").getAttribute("aria-label")).toMatch(/Keys/);
+    expect(screen.getByTestId("track-gain-t1-header").getAttribute("aria-label")).toMatch(/Keys/);
     // The header itself is a toolbar named after its track, which is the role the brief's §7 asks for.
-    expect(screen.getByTestId("track-t1").getAttribute("role")).toBe("toolbar");
-    expect(screen.getByTestId("track-t1").getAttribute("aria-label")).toMatch(/Keys/);
+    expect(screen.getByTestId("track-t1-header").getAttribute("role")).toBe("toolbar");
+    expect(screen.getByTestId("track-t1-header").getAttribute("aria-label")).toMatch(/Keys/);
   });
 
   it("reports a level change against the track it belongs to", () => {
     const { handlers } = renderHeader();
-    fireEvent.change(screen.getByTestId("track-gain-t1"), { target: { value: "-6" } });
+    fireEvent.change(screen.getByTestId("track-gain-t1-header"), { target: { value: "-6" } });
     expect(handlers.onChangeGain).toHaveBeenCalledWith("t1", -6);
     // The number is beside the slider, so a position is not the only way to read a level: 0 dB is unity here.
-    expect(screen.getByTestId("track-gain-value-t1").textContent).toBe("0.0");
+    expect(screen.getByTestId("track-gain-value-t1-header").textContent).toBe("0.0");
   });
 
   it("reports mute, solo and record-arm as model flags rather than deciding them itself", () => {
     const { handlers } = renderHeader();
-    fireEvent.click(screen.getByTestId("track-mute-t1"));
+    fireEvent.click(screen.getByTestId("track-mute-t1-header"));
     expect(handlers.onToggle).toHaveBeenCalledWith("t1", "muted", true);
-    fireEvent.click(screen.getByTestId("track-solo-t1"));
+    fireEvent.click(screen.getByTestId("track-solo-t1-header"));
     expect(handlers.onToggle).toHaveBeenCalledWith("t1", "soloed", true);
-    fireEvent.click(screen.getByTestId("track-arm-t1"));
+    fireEvent.click(screen.getByTestId("track-arm-t1-header"));
     expect(handlers.onToggleArm).toHaveBeenCalledWith("t1", true);
   });
 
   it("shows the state the model holds, so the header cannot disagree with it", () => {
     renderHeader({ track: track({ muted: true, soloed: true, armed: true }) });
-    expect(screen.getByTestId("track-mute-t1").getAttribute("aria-pressed")).toBe("true");
-    expect(screen.getByTestId("track-solo-t1").getAttribute("aria-pressed")).toBe("true");
-    expect(screen.getByTestId("track-arm-t1").getAttribute("aria-pressed")).toBe("true");
+    expect(screen.getByTestId("track-mute-t1-header").getAttribute("aria-pressed")).toBe("true");
+    expect(screen.getByTestId("track-solo-t1-header").getAttribute("aria-pressed")).toBe("true");
+    expect(screen.getByTestId("track-arm-t1-header").getAttribute("aria-pressed")).toBe("true");
   });
 });
 
