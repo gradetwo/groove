@@ -118,7 +118,16 @@ export function InstrumentBrowserV2({
     <div
       data-testid={`instrument-slot-${trackId}${suffix}`}
       ref={slotRef}
-      className="relative flex min-h-11 min-w-[6.5rem] flex-col gap-1 sm:min-h-0 sm:min-w-0"
+      /**
+       * ⭐ **The minimum width belongs to the row copy only** (measured by CI's browser matrix, 2026-10-09: *"a track header
+       * draws no readable name … (widths 0)"* on Chromium, Firefox **and** WebKit).
+       *
+       * The header column is a fixed, narrow strip that already carries the kind chooser, the level, the pan and the meter;
+       * the header's own comment records that this is exactly how the track's **name** once got squeezed to zero. Reserving
+       * 6.5rem here pushed it back to zero — so the reservation is scoped to the list, where the row has the width, and the
+       * header keeps yielding (its chip is truncated on purpose and carries the full name in `title`).
+       */
+      className={`relative flex flex-col gap-1 ${scope === "row" ? "min-h-11 min-w-[6.5rem] sm:min-h-0 sm:min-w-0" : "min-h-11 sm:min-h-0"}`}
     >
       <button
         type="button"

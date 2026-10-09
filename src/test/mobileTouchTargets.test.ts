@@ -125,10 +125,16 @@ describe("mobile touch targets", () => {
      * instrument's name somewhere to live (measured 104 px after the change), and from `sm:` the slot yields again.
      */
     const browser = readFileSync(resolve(__dirname, "../components/arrangement/InstrumentBrowserV2.tsx"), "utf8");
-    const at = browser.indexOf("ref={slotRef}");
+    const at = browser.indexOf("className={`relative flex flex-col gap-1");
     expect(at, "the slot exists").toBeGreaterThan(-1);
-    expect(browser.slice(Math.max(0, at - 300), at + 300), "a phone width it can be read at").toMatch(/min-w-\[6\.5rem\]/);
-    expect(browser.slice(Math.max(0, at - 300), at + 300), "and the wide layout unchanged").toMatch(/sm:min-w-0/);
+    /**
+     * ⭐ **Scoped to the row copy** — the first version applied it to both and CI's browser matrix caught the cost on all
+     * three engines: *"a track header draws no readable name (widths 0)"*. The header column is narrow and already carries
+     * the kind, level, pan and meter, so reserving width there starves the name.
+     */
+    const slot = browser.slice(Math.max(0, at - 100), at + 500);
+    expect(slot, "the row copy reserves a readable width").toMatch(/scope === "row" \? "min-h-11 min-w-\[6\.5rem\]/);
+    expect(slot, "and the header copy does not").toMatch(/: "min-h-11 sm:min-h-0"/);
   });
 
 

@@ -21110,3 +21110,22 @@ describe("the grid's editing actions", () => {
   ⭐ **教训（写下 ✓）**：凡是**批量改标识**，必须**跑一次全量**再发 ✗——
     我这次是"本地挑几个文件绿 + 远端 CI 才是权威"的组合救了场 ✓，代价是一次失败的发布 ✓。
   ⏳ **下一步 ✓**：重跑 `release.sh` 发 **2.35.8**（版本与 changelog 已就绪 ✓ 183 字 ✓），并核对线上 ✓。
+
+### 八百五十六、🚨 **第三次 CI 红（这次是浏览器矩阵）：我给的槽位最小宽度**把表头的轨道名压成了 0**——已修为"只给列表副本"**（2026-10-09 ✓）
+
+  ⭐ **现场 ✓**：`release.sh` 第三次停在 `full CI` ✓，失败步骤是
+    **`X Cross-Browser & Cross-Device Test Matrix (Desktop browsers)`** ✗；`gh run view 37926524610 --log-failed` 读到
+    **三个引擎同一句话** ✓：**"a track header draws no readable name … (widths 0)"** ✗（Chromium／Firefox／WebKit ✓）。
+  ⭐ **根因（我上一件的连带 ✓）** ✓：item ②/手机那半我给音源槽位加了 `min-w-[6.5rem]`（104px ✓）✗，
+    而**表头列是固定窄条** ✓，里面已经有 kind 选择器、电平、声像、表头电平表 ✓
+    ——表头文件**自己的注释**就记着这条历史："the header's controls needed 262 px inside a 240 px column, so the track's
+    **name was squeezed to zero width**" ✓✓ ⇒ 我把它**又推回了 0** ✗。
+  ⭐ **修法 ✓**：把最小宽度**限定在列表副本** ✓（`scope === "row"` ✓ 才加 `min-h-11 min-w-[6.5rem]` ✓），
+    **表头保持让位** ✓（它的 chip 按设计截断 ✓ 并带 `title` 完整名 ✓）⇒ 判据也随之改为
+    "**行副本必须保留最小宽度、表头副本必须不带**" ✓（能红 ✓）。
+  ⭐ **验收 ✓**：5 个相关测试文件全绿 ✓、`lint`／`docs:check`／`check:css` ✓。
+  ⭐ **三次 CI 红的共同教训（写入台账 ✓）** ✓：
+    ①**批量改标识** ⇒ 必须跑全量（漏了 `track-msr-*` 等判据 ✓）；
+    ②**颜色 token** ⇒ 必须 `rgb(var(...))` 或透明度工具类（`bg-white/5` ✓）；
+    ③**在固定窄列里加最小宽度** ⇒ 会挤掉别的元素（这里是轨名 ✓）。
+    三条都只有**远端全量**能抓住 ✓ ⇒ 发版前**等远端绿**是这里唯一可靠的裁判 ✓。
