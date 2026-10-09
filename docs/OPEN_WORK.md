@@ -21337,3 +21337,30 @@ describe("the grid's editing actions", () => {
     jsdom 里没有 ⇒ 函数**提前返回**、压根没走到降级分支 ✓ ⇒ 测试里补上 `AudioWorkletNode` 桩后才真正覆盖 ✓
     （"测试没红也没绿"这类**空覆盖**正是判据要防的 ✓）。
   ⭐ **验收** ✓：新判据 2 条绿 ✓；`typecheck`／`lint`／`docs:check` ✓。
+
+### 八百六十八、📐 **剩余项⑧：非 sampler 轨没有换乐器入口——先量清楚，再给两种设计（本轮**不动模型**）**（2026-10-10 ✓）
+
+  ⭐ **报告依据** ✓（Web 功能测试 §三 P2 ✓）：`canPlayInstrument = track.kind === "sampler"` ✓
+    ⇒ Drums+Bass 模板的 **drumkit/synth 轨完全没有 chip** ✗，要换音色只能用 Samplers 模板 ✓。
+  ⭐ **先量现状（读数 ✓）** ✓：
+    1. **门槛就一行** ✓：`TrackHeaderV2.tsx:84` —— `track.kind === "sampler" && onChangeInstrument && instruments.length > 0` ✓；
+       chip 本体（`InstrumentBrowserV2` ✓）读的是 **`track.sample?.assetId`** ✓。
+    2. **synth 轨的"音色"其实是**预设**而不是资产** ✓：`src/audio/instrumentPresets.ts` ✓ 有
+       `DEFAULT_SYNTH_PRESETS` ✓（来自 `PolySynth` ✓）、`INSTRUMENT_PRESET_ALIASES`（**按乐器名/角色映射** ✓）、
+       `TRACK_ROLE_DEFAULT_PRESET_KEYS` ✓ 与 `GLOBAL_DEFAULT_PRESET_KEY = "analogLead"` ✓
+       ⇒ 合成器轨今天**没有"选中的预设"这个字段** ✗，音色是**从名字/角色推出来的** ✓。
+    3. **模型里 `sample` 是 kind 无关的** ✓（`track.sample?.assetId` 在表头里不判 kind ✓），
+       但**播放路径**是否对 drumkit/synth 轨也走 sampler 音源 ✗ —— **这一条本轮没测** ✗，是设计取舍的关键未知 ✓。
+  ⭐ **两种设计（各自代价写清 ✓）** ✓：
+    · **A｜给 synth 轨一个**预设选择器**（复用现有预设表 ✓）** ✓：需要在模型上**新增字段**（如
+      `track.synthPreset?: string` ✓）＋ 迁移（老工程没有该字段 ⇒ 落到"按名字/角色推导"的既有行为 ✓）
+      ⇒ **动模型与 schema** ✓，但换来"合成器轨能换音色"这件事**真正成立** ✓。**代价中等、可逆** ✓。
+    · **B｜只放开**drumkit**轨的 chip（把它当作可挂 sampler 资产 ✓）** ✓：只改
+      `canPlayInstrument` 的判断 ✓（**不动模型** ✓）；**风险**是播放路径可能**忽略** drumkit 轨的 `sample` ✗
+      ⇒ 会出现"选得上、听不出" ✗✗（正是评测最反感的一类"看起来能用的空控件" ✓）
+      ⇒ **放行前必须先量播放路径**（一条探针即可：给 drumkit 轨设 assetId，量渲染出来的频谱/时长 ✓）。
+  ⭐ **我的建议顺序（择优 ✓）** ✓：**先做 B 的"播放路径测量"** ✓（便宜 ✓ 且它决定 B 是否可行 ✓），
+    若播放路径**已经**支持 ⇒ B 是"一行改动 + 判据" ✓，性价比最高 ✓；
+    若**不支持** ⇒ 走 A（新增 `synthPreset` 字段 ✓），并把"drumkit 的音色"留到后续 ✓。
+    本轮**刻意不改代码** ✓：⑧ 是本批唯一动模型/播放语义的一项 ✓，按目标里"先量先设计再动模型"的口径 ✓，
+    先把这条设计摊开给你看 ✓。
