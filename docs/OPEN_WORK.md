@@ -21318,3 +21318,22 @@ describe("the grid's editing actions", () => {
   ⭐ 判据 ✓（并入 `mobileTouchTargets` ✓）：选择器必须带 `w-14` ✓、**不得**再是 `h-7 w-8` ✓、
     选项仍须经 `KIND_LABEL_KEY` 取本地化名字 ✓（回退即红 ✓）。
   ⭐ **验收** ✓：`mobileTouchTargets`／`arrangementTrackHeader`／`arrangementGrid` 全绿 ✓；`lint`／`docs:check` ✓。
+
+### 八百六十七、✅ **剩余项⑦：那条"worklet 没加载"不是噪音，是**降级说明**——但**同一原因只该说一次**（2026-10-10 ✓）
+
+  ⭐ **先找到它（不猜 ✓）** ✓：`src/audio/InsertCompressor.ts:124` ✓ ——
+    原文是 `"[InsertCompressor] the channel strip keeps the host compressor: the worklet module did not load:"` ✓
+    ＋ 原因（`name: message` ✓）。它**不是**第三方/浏览器噪音 ✗，而是**我们自己的**降级说明 ✓：
+    某个 strip 加载不了项目自带的 worklet 时，**保留宿主 `DynamicsCompressorNode`** ✓ ⇒ 声音不会丢 ✓，而且**明说** ✓。
+    代码本来就已经是 "resolves `false` — and says why, **once**" ✓（`console.warn` ✓ 不是 error ✓，按上下文缓存 ✓）。
+  ⭐ **真正的"噪音"在哪（读数 ✓）** ✓：它按 **context** 去重 ✓，而 **headless 渲染每次都是新 context** ✗
+    ⇒ 同一个失败**每渲一次就说一次** ✓ ⇒ 报告看到"汙染日誌" ✓ ——**重复**才是问题，消息本身是对的 ✓。
+  ⭐ **修法（按**原因**去重，而不是按上下文 ✓）** ✓：模块级 `reportedFallbacks: Set<string>` ＋
+    `firstTimeSaying(reason)` ✓ ⇒ **同一原因只说一次** ✓、**新原因照旧会被听到** ✓；
+    消息里补一句"— said once per distinct reason; every later context with the same failure stays quiet" ✓。
+  ⭐ 判据 ✓（`src/test/insertCompressorLogOnce.test.ts` 2 例 ✓）：**同一原因三次不同上下文 ⇒ 只 1 行** ✓、
+    **换成新原因 ⇒ 仍然 1 行**（不被旧原因静音 ✓）。⚠️ 写这条时还被上了一课 ✓：
+    第一版测试**静默通过 0 次** ✗——因为 `audioWorkletAvailable` 先问 `AudioWorkletNode` 是否存在 ✓，
+    jsdom 里没有 ⇒ 函数**提前返回**、压根没走到降级分支 ✓ ⇒ 测试里补上 `AudioWorkletNode` 桩后才真正覆盖 ✓
+    （"测试没红也没绿"这类**空覆盖**正是判据要防的 ✓）。
+  ⭐ **验收** ✓：新判据 2 条绿 ✓；`typecheck`／`lint`／`docs:check` ✓。

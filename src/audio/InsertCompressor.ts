@@ -98,6 +98,24 @@ interface InsertCompressorLoad {
   loaded: boolean;
 }
 
+/**
+ * ⭐ **A fallback is said once per distinct reason, not once per context** (MCP deep test of v2.35.9: a render farm's log
+ * filled with `[InsertCompressor] … the worklet module did not load`, which the report filed as noise).
+ *
+ * The message itself is right and stays: a strip that cannot load the project's worklet keeps the host compressor, and
+ * silence about that would be worse than the line. What told the reader nothing was repetition — a headless render builds a
+ * fresh context every time, the same failure came back, and the same sentence came with it. Keying the note on the
+ * **reason** keeps a new failure audible while the known one stops shouting.
+ */
+const reportedFallbacks = new Set<string>();
+
+/** True the first time this reason is seen; the caller then does the speaking. */
+function firstTimeSaying(reason: string): boolean {
+  if (reportedFallbacks.has(reason)) return false;
+  reportedFallbacks.add(reason);
+  return true;
+}
+
 const loads = new WeakMap<BaseAudioContext, InsertCompressorLoad>();
 
 /**
@@ -120,10 +138,14 @@ export function ensureInsertCompressorWorklet(ctx: BaseAudioContext): Promise<bo
       return true;
     },
     (error: unknown) => {
-      console.warn(
-        "[InsertCompressor] the channel strip keeps the host compressor: the worklet module did not load:",
-        error instanceof Error ? `${error.name}: ${error.message}` : String(error)
-      );
+      const reason = error instanceof Error ? `${error.name}: ${error.message}` : String(error);
+      if (firstTimeSaying(`worklet did not load: ${reason}`)) {
+        console.warn(
+          "[InsertCompressor] the channel strip keeps the host compressor: the worklet module did not load:",
+          reason,
+          "— said once per distinct reason; every later context with the same failure stays quiet"
+        );
+      }
       return false;
     }
   );
