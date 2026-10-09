@@ -21015,3 +21015,20 @@ describe("the grid's editing actions", () => {
   ⭐ **验收** ✓：`arrangementViewV2`（20 条 ✓）、`first-run-prompt`、`mobileTouchTargets` 全绿 ✓；`lint` ✓、`docs:check` ✓。
   ⏳ **未做的（写明理由 ✓）** ✓：报告把这两行视为"同一区域的两个标题" ✗ ⇒ 若你要**合并成一行** ✓，
     那是**删掉详情面板的空状态提示**或**把列表折进详情面板** ✗ —— 属版面/信息架构改动 ✓，我不顺手做 ✓。
+
+### 八百五十一、🚫 **剩余项⑤"轨名大小写不一致（Synth vs sampler）"：**未能复现**，并给出它很可能是什么**（2026-10-09 ✓）
+
+  ⭐ **查了什么（都读了 ✓）** ✓：
+    · **字典里的 kind 标签** ✓ 本来就是对的大小写 ✓：`kind_synth: "Synth"` ✓、`kind_sampler: "Sampler"` ✓、
+      `kind_drumkit: "Drum kit"` ✓（`src/i18n/locales/common.ts:70-72` ✓）；
+    · **表头那个 kind 选择器** ✓（`TrackHeaderV2.tsx:117` ✓）用的是**图标**（`KIND_ICON[track.kind]` ✓）
+      与 `label={t(KIND_LABEL_KEY[kind])}` ✓，**没有**裸 `track.kind` 渲染 ✓；它的无 `onChangeKind` 回退分支 ✓
+      也渲染 `KIND_ICON` ✓（不是小写 kind ✓）；
+    · **模板轨名** ✓ 是 `"Sampler 1"` / `"Sampler 2"` ✓（`arrangementEdits.ts:120` ✓），不是小写 ✓。
+  ⭐ **因此结论** ✓：**"sampler" 小写我没能找到来源** ✗。最可能的解释是第五份报告 §二.1 自己那条更正 ✓——
+    那个 32×28 的 `<select>` **只显示所选选项标签的前两个字被裁掉** ✓（"Synth" → **"Sy"** ✗、"Sampler" → **"Sa"** ✗），
+    报告把它与"大小写不一致"混在一起说了 ✓；早先的截图里也确实出现过 **"Sa ⌄"** ✓。
+  ⭐ **处置（不基于误读改版面 ✓）** ✓：**不改代码** ✗，把上面三条证据记下来 ✓；
+    如果"选择器里文字被裁成两个字母"本身要改 ✓，那是一个**小设计选择** ✓，两条路我都能做：
+    **A** 把选择器加宽（32 → 40px ✓，容得下 "Synth" ✓，会略微挪动表头 ✓）；
+    **B** 让闭合态只显示**图标**（需要改 `<option>` 的 label 策略 ✓，各浏览器表现有差异 ✗）。
