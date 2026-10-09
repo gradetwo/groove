@@ -21283,3 +21283,22 @@ describe("the grid's editing actions", () => {
     （`expected 25640 to be less than 10870` ✓）⇒ 补在**第一个**调用点前 ✓ 后才绿 ✓✓。
     判据同时钉住：必须把 reporter 交给渲染器 ✓、必须报 `report(0, …)` ✓、必须提到"会启动浏览器" ✓、**且必须更早** ✓。
   ⭐ **验收** ✓：`check:mcp`（68 项 ✓）、`typecheck`、`lint`、`docs:check` 全过 ✓；新判据绿 ✓。
+
+### 八百六十五、✅ **剩余项⑤：gate"慢"的真相是**本机 579 ms**——报告那 ~6 s 是它沙箱环境；我加的是"慢时解释自己"**（2026-10-10 ✓）
+
+  ⭐ **先量（`scratch/probe-gate-timing.mjs` ✓，真浏览器 ✓，每 100 ms 采一次 ✓）** ✓：
+    · `t=0` ✓：按钮 "Start audio engine"、可用 ✓；
+    · `t≈500 ms` ✓：按钮变 **disabled ＋ "Starting…"** ✓（**已有即时反馈** ✓）；
+    · `t=579 ms` ✓：**gate 消失** ✓。
+    ⇒ **本机整个启动 579 ms** ✓，而报告写的是 "~6s（點擊後 gate 消失；略慢）" ✓
+    ⇒ 差异来自**它自己的环境** ✓（其报告也说明沙箱代理拦截外部资源 ✓，且它自己的计时"含固定等待" ✓）。
+  ⭐ **处置（不假装变快，而是解释 ✓）** ✓：既然正常机器上半秒内就有反馈 ✓，
+    **不做"一上来就道歉"** ✗；只在**真的久**的时候说一句 ✓——
+    `busy` 起 **2.5 s** 后置 `slow` ✓（gate 关闭即复位 ✓），显示：
+    en "Still starting. Your browser may be asking to allow audio, and the first start also loads the instrument catalogue." ✓
+    zh "仍在启动。浏览器可能正在询问是否允许播放音频；首次启动还要加载乐器目录。" ✓
+    —— 正好对应报告担心的"**可能以為沒點上而重複點擊**" ✓。
+  ⭐ 判据 ✓（`src/test/audioGateSlowStart.test.ts` 2 例 ✓）：`slow` **必须是状态**而不是常量 ✓、
+    必须在 `busy` 期间**用 2.5 s 定时器**武装 ✓、句子**只能在 `busy && slow`** 时渲染 ✓、且有独立 testid ✓；
+    以及**中英各要说到两件事**（浏览器询问允许音频 ✓、首次加载乐器目录 ✓）✓。
+  ⭐ **验收** ✓：`audioStartGate`／`audioStartGateA11y`／新判据共 **12 条全绿** ✓；`typecheck`／`lint`／`docs:check` ✓。

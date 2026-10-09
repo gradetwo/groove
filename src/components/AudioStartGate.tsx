@@ -58,6 +58,13 @@ export function AudioStartGate({ children, onStart }: AudioStartGateProps) {
   const { t } = useLanguage();
   const [open, setOpen] = useState(() => !audioGateCompleted());
   const [busy, setBusy] = useState(false);
+  /**
+   * ⭐ **Whether the start has taken long enough to need explaining** (fifth Web evaluation: the gate took ~6 s in its
+   * environment and a person "可能以為沒點上而重複點擊"). Measured on an ordinary machine the whole start is 579 ms, so this
+   * is deliberately not shown up front: it appears only after 2.5 s of actual waiting, and the sentence names the two
+   * things that really take that long.
+   */
+  const [slow, setSlow] = useState(false);
   const [error, setError] = useState<string | null>(null);
   /** Read inside `finally` to decide whether the gate may close: state updates are not visible in the same tick. */
   const errorRef = useRef<string | null>(null);
@@ -76,6 +83,15 @@ export function AudioStartGate({ children, onStart }: AudioStartGateProps) {
    * is why a dismissal is safe rather than a trap. A dismissal while a start is in flight is allowed too — the probe
    * still finishes, and on success it writes the key the same way a completed tap would.
    */
+  useEffect(() => {
+    if (!busy) {
+      setSlow(false);
+      return;
+    }
+    const timer = setTimeout(() => setSlow(true), 2500);
+    return () => clearTimeout(timer);
+  }, [busy]);
+
   useEffect(() => {
     if (!open) return;
     startButtonRef.current?.focus();
@@ -210,6 +226,11 @@ export function AudioStartGate({ children, onStart }: AudioStartGateProps) {
             className="gate-btn"
           >
             {busy ? t("audio_gate_starting") : t("audio_gate_start")}
+            {busy && slow && (
+              <span data-testid="audio-gate-slow" className="block text-[10px] font-normal opacity-80">
+                {t("audio_gate_still_starting")}
+              </span>
+            )}
           </button>
           {error ? (
             <div className="gate-error" data-testid="audio-start-error" role="alert">

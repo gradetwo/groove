@@ -460,6 +460,16 @@ export const commonMessages = {
   audio_gate_label: { en: "Audio start", zh: "开始" },
   audio_gate_start: { en: "Start audio engine", zh: "启动音频引擎" },
   audio_gate_starting: { en: "Starting…", zh: "正在启动…" },
+  /**
+   * ⭐ **Said only when the start is genuinely slow** (measured 2026-10-10: 579 ms on this machine, with "Starting…" already
+   * inside half a second; the evaluation measured ~6 s in a sandbox whose proxy blocks external resources). The report's
+   * complaint was that a person "可能以為沒點上而重複點擊" — a sentence that names the two real causes fixes that without
+   * pretending the wait is shorter than it is.
+   */
+  audio_gate_still_starting: {
+    en: "Still starting. Your browser may be asking to allow audio, and the first start also loads the instrument catalogue.",
+    zh: "仍在启动。浏览器可能正在询问是否允许播放音频；首次启动还要加载乐器目录。",
+  },
   audio_gate_failed: { en: "Startup failed", zh: "启动失败" },
   // ⭐ The debug bundle: collect what a problem needs, then send the file.
   debug_bundle: { en: "Collect debug info", zh: "采集调试信息" },
