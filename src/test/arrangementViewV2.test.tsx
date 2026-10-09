@@ -1,4 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { render, screen, fireEvent, waitFor, within } from "@testing-library/react";
 import React from "react";
 import { ArrangementViewV2 } from "../components/arrangement/ArrangementViewV2";
@@ -508,4 +510,22 @@ describe("transposing a marked span", () => {
       expect(untouched.pitch).toBe(before.pitch);
     }
   });
+
+  it("⭐ the collapsed list's summary reads as a disclosure, not as a second heading", () => {
+    /**
+     * ⭐ **Fifth evaluation, P3** ("空狀態文字堆疊"): the detail panel says "Select a track to see its takes." and, directly
+     * below it, the collapsed track list said "Track list — steps, level and pan (1)" — a bare label under a sentence about
+     * the same column reads as a duplicate heading, and the "(1)" had nothing naming it. It is a `<details>` summary, so it
+     * now says so.
+     */
+    const locale = readFileSync(resolve(__dirname, "../i18n/locales/common.ts"), "utf8");
+    const at = locale.indexOf("arrangement_track_list_summary:");
+    expect(at, "the string exists").toBeGreaterThan(-1);
+    const line = locale.slice(at, at + 260);
+    expect(line, "English names the control").toMatch(/"Show the track list/);
+    expect(line, "and so does Chinese").toMatch(/显示轨道列表/);
+    const view = readFileSync(resolve(__dirname, "../components/arrangement/ArrangementViewV2.tsx"), "utf8");
+    expect(view, "it is the summary of a disclosure").toMatch(/<summary[^>]*>\s*\{t\("arrangement_track_list_summary"/);
+  });
+
 });

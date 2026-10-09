@@ -186,7 +186,12 @@ export const commonMessages = {
    * The old row-based list's disclosure. The grid is the arrangement's editing surface; this list is the one place
    * the per-bar step strip and the pan control exist, so it stays reachable without being a second wall of tracks.
    */
-  arrangement_track_list_summary: { en: "Track list — steps, level and pan ({count})", zh: "轨道列表 —— 步进、电平与声像（{count}）" },
+  /**
+   * ⭐ **Phrased as the disclosure it is** (fifth evaluation, P3: "空狀態文字堆疊" — this summary renders directly below the
+   * detail panel's own empty sentence, so as a bare label it read as a second heading for the same area). It is the
+   * summary of a `<details>`; saying so is what stops the two lines from reading as duplication.
+   */
+  arrangement_track_list_summary: { en: "Show the track list — steps, level and pan ({count})", zh: "显示轨道列表 —— 步进、电平与声像（{count}）" },
   /** ⭐ The detail dock's empty state — it was a hardcoded English sentence in a bilingual app. */
   arrangement_detail_empty: { en: "Select a track to see its takes.", zh: "选一条轨道，这里就会显示它的段落与音符。" },
   /** ⭐ The landing panel's genre filter: 159 chips was a ten-row wall before it existed. */

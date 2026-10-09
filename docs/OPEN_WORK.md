@@ -20999,3 +20999,19 @@ describe("the grid's editing actions", () => {
   ⭐ **验收** ✓：两个测试文件 **19 条全绿** ✓；`typecheck` ✓、`lint` ✓、`docs:check` ✓。
   ⏳ **未做的** ✓：报告同时提的 **"FILE" 区段标签冗余** ✗ —— 我仍按"与 EDIT/TRANSPORT/GRID/FX 一致"**保留** ✓
     （两份报告与我意见不同，理由已记账 ✓，不擅改设计语言 ✓）。
+
+### 八百五十、✅ **剩余项④：空状态"两行标题堆叠"——把折叠列表的摘要改写成**它是折叠控件**（中英各一）**（2026-10-09 ✓）
+
+  ⭐ **复现/读源码 ✓**：两行确实紧挨着 ✓，但它们**不是同一块** ✗：
+    · `arrangement_detail_empty`（"Select a track to see its takes." ✓）是**详情面板的空状态** ✓；
+    · `arrangement_track_list_summary`（"Track list — steps, level and pan (1)" ✓）是
+      **`<details data-testid="arrangement-track-list">` 的 `<summary>`** ✓（一个**折叠控件** ✓）——
+      它被做成**裸标签** ✗ ⇒ 紧跟在上面那句关于同一列的说明之后 ✓，读起来就像**第二个标题** ✓，而"(1)"也没说清是什么的 1 ✓。
+  ⭐ **修法（只改措辞、不动版面 ✓）** ✓：改成**明说它是一个控件** ✓——
+    en `"Show the track list — steps, level and pan ({count})"` ✓／zh `"显示轨道列表 —— 步进、电平与声像（{count}）"` ✓
+    ⇒ 两行不再读成重复标题 ✓（也回应了报告对"(1)"的疑问 ✓）。
+  ⭐ 判据 ✓：新增一例断言 ①en 必须含 `"Show the track list` ✓、②zh 必须含 `显示轨道列表` ✓、
+    ③该字符串**必须是 `<summary>` 的内容** ✓（把它变回裸标签即红 ✓）。
+  ⭐ **验收** ✓：`arrangementViewV2`（20 条 ✓）、`first-run-prompt`、`mobileTouchTargets` 全绿 ✓；`lint` ✓、`docs:check` ✓。
+  ⏳ **未做的（写明理由 ✓）** ✓：报告把这两行视为"同一区域的两个标题" ✗ ⇒ 若你要**合并成一行** ✓，
+    那是**删掉详情面板的空状态提示**或**把列表折进详情面板** ✗ —— 属版面/信息架构改动 ✓，我不顺手做 ✓。
