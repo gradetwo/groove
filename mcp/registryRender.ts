@@ -75,6 +75,15 @@ export const RENDER_TOOLS: ToolDefinition[] = [
             ? { startBar: args.startBar as number, endBar: args.endBar as number }
             : undefined;
         const { flattened, bars } = flattenMcpArrangement(String(args.arrangementId), range);
+        /**
+         * ⭐ **The cold start says something** (MCP deep test of v2.35.9: the first render took **126 s** for 14.6 s of
+         * audio, "用戶視角接近卡死"). Everything before the engine exists is silent: the child process, `chromium.launch()`
+         * and the app's module graph — and for a short piece that silence *is* the render. `ProgressReporter.report`'s own
+         * doc calls this case out ("`total` is omitted … **a cold start**, before a context exists"), so this is the call it
+         * was written for: one phase, at budget 0, before the waiting begins.
+         */
+        ctx?.progress?.report(0, "starting the render engine — a first render in this session also starts a browser, which is the slow part");
+
         const result = await renderStems(flattened.pattern, {
           format: "wav",
           ...(args.sampleRate ? { sampleRate: args.sampleRate as number } : {}),

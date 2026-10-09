@@ -21264,3 +21264,22 @@ describe("the grid's editing actions", () => {
     **gate 为 0 仍至少一个 step** ✓、数组不等长时按最短 ✓、以及"**工具必须经 `melodyNotes` 转换并经
     `addMcpTrackNotes` 写入**" ✓（防止以后绕开那道拒绝未知轨道的门 ✓）。
   ⭐ **验收** ✓：`check:mcp`（68 项 ✓）、`typecheck`、`lint`、`docs:check` 全过 ✓；新判据 5 条绿 ✓。
+
+### 八百六十四、✅ **剩余项④：首渲不再是"沉默的 126 秒"——每个能报进度的渲染都在**等待开始前**先报一句**（2026-10-10 ✓）
+
+  ⭐ **报告依据** ✓（MCP 深测 §二、§四 P3-6 ✓）：**首渲 126 s 只渲出 14.6 s 音频** ✓、
+    "**首渲冷啟動慢**…用戶視角接近卡死" ✓，建议"加進度回調或預熱提示" ✓。
+  ⭐ **先看现状（不重复造 ✓）** ✓：渲染路径**已经**会报两类进度 ✓——`recordings ready: 12 of 40`（warm-up ✓，
+    在 `onAudioLanePreparation` ✓）与 `rendering, N %`（帧计数 ✓）。**但它们在**引擎存在之后**才开始** ✗
+    ⇒ 引擎存在之前的**子进程启动 ＋ `chromium.launch()` ＋ 应用模块图**全程**无声** ✗✓
+    ⇒ 对短曲子来说，**那段时间就是整个渲染** ✓（正是 126 s 的来源 ✓）。
+  ⭐ **修法（用它本来就设计好的那次调用 ✓）** ✓：在**传给渲染器之前**报一次 **phase** ✓——
+    `ctx?.progress?.report(0, "starting the render engine — a first render in this session also starts a browser,
+    which is the slow part")` ✓；而 `ProgressReporter.report` 的注释**自己就点名了这个场景** ✓：
+    "`total` is omitted when the length is not known yet — **a cold start**, before a context exists" ✓✓。
+    落在**两处**：`render_stems`（`registryRender.ts` ✓）与 `render_arrangement`（`registryArrangement.ts` ✓）。
+  ⭐ **判据当场抓到一个真错** ✓（`src/test/renderColdStart.test.ts` ✓）：我第一版把公告插在了
+    `registryArrangement.ts` 的**第二个**渲染调用点之前 ✗ ⇒ 判据里那条"**公告必须早于调用**"直接变红 ✓
+    （`expected 25640 to be less than 10870` ✓）⇒ 补在**第一个**调用点前 ✓ 后才绿 ✓✓。
+    判据同时钉住：必须把 reporter 交给渲染器 ✓、必须报 `report(0, …)` ✓、必须提到"会启动浏览器" ✓、**且必须更早** ✓。
+  ⭐ **验收** ✓：`check:mcp`（68 项 ✓）、`typecheck`、`lint`、`docs:check` 全过 ✓；新判据绿 ✓。

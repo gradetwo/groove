@@ -174,6 +174,12 @@ export const ARRANGEMENT_TOOLS: ToolDefinition[] = [
             : []),
           ...(halfSpan ? [halfSpan] : []),
         ];
+        /**
+         * ⭐ **The cold start says something, at the first call site too** (the criterion above caught this: the message
+         * had been added before the *second* render call in this file, so the first render — the one a caller actually waits
+         * on — still began in silence).
+         */
+        ctx?.progress?.report(0, "starting the render engine — a first render in this session also starts a browser, which is the slow part");
         const result = await renderAudio(flattened.pattern, {
           format: (args.format as "wav" | "mp3") ?? "wav",
           sampleRate: (args.sampleRate as number | undefined) ?? 8000,
@@ -373,6 +379,14 @@ export const ARRANGEMENT_TOOLS: ToolDefinition[] = [
           ...(ctx?.progress ? { progress: ctx?.progress } : {}),
           ...(args.chunks ? { chunks: args.chunks as number } : {}),
         };
+        /**
+         * ⭐ **The cold start says something** (MCP deep test of v2.35.9: the first render took **126 s** for 14.6 s of
+         * audio — "用戶視角接近卡死"). Everything before the engine exists is silent: the child process, `chromium.launch()`
+         * and the app's module graph, and for a short piece that silence *is* the render. `ProgressReporter.report`'s own
+         * doc names this case ("`total` is omitted … **a cold start**, before a context exists"), so this is the call it was
+         * written for: one phase, at budget 0, before the waiting begins.
+         */
+        ctx?.progress?.report(0, "starting the render engine — a first render in this session also starts a browser, which is the slow part");
         const result = await renderAudio(flattened.pattern, renderOptions);
         /**
          * The render's own lane report, not a second derivation: `renderAudio` mixes the lanes and says which ones reached the mix and which could not, and a
