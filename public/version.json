@@ -1,29 +1,29 @@
 {
-  "version": "2.35.9",
+  "version": "2.35.10",
   "releaseDate": "2026-10-09",
   "changelogCount": 10,
   "latest": {
-    "version": "2.35.9",
-    "date": "2026-10-09",
+    "version": "2.35.10",
+    "date": "2026-10-10",
     "category": "feature",
     "title": {
-      "zh": "音源 chip 只显示乐器名，术语改成人话",
-      "en": "Instrument chips name the instrument, and its terms are readable"
+      "zh": "MCP 更好用：轨道数据、旋律落轨、冷启动有进度",
+      "en": "MCP gets data, a melody track, and a cold start that speaks"
     },
     "highlights": [
       {
-        "zh": "音源 chip 只显示乐器名（去掉库前缀），表头上被截断的那一截随之消失。",
-        "en": "An instrument chip now shows the instrument's own name rather than its library's, and the truncation the header suffered is gone."
+        "zh": "describe_arrangement 可以要 JSON 数据，trackId 不必再从散文里找。",
+        "en": "describe_arrangement can answer as data, so a client need not read a track's id out of prose."
       },
       {
-        "zh": "把库自带的术语翻成人话：arco→Bowed、pizz→Plucked、3vel→3 layers，映射类程序标明是键位映射。",
-        "en": "The library's own terms are translated: arco becomes Bowed, pizz becomes Plucked, 3vel becomes 3 layers, and map programs are labelled as keyswitch maps."
+        "zh": "新增 melody_to_track：生成的旋律直接落到轨道，按十六分网格，不必手工拼 startBeats。",
+        "en": "melody_to_track writes a generated melody onto a track on the sixteenth grid, so nobody zips four arrays by hand."
       },
       {
-        "zh": "查不出含义的词（three、six、basic、looped）保持原样——名字不凭空发明意思。",
-        "en": "Words whose meaning the data does not show (three, six, basic, looped) are left exactly as the library writes them."
+        "zh": "渲染冷启动先报一句进度；工具收到不认识的参数会点名；响度报告自称是已提交基线。",
+        "en": "A render announces its cold start, a tool names the arguments it never declared, and the loudness report says it is a committed baseline."
       }
     ],
-    "truncated": false
+    "truncated": true
   }
 }
