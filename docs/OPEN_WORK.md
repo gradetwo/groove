@@ -21471,3 +21471,24 @@ describe("the grid's editing actions", () => {
   ⭐ **验收** ✓：`arrangementViewV2`（21 ✓）与 `chineseInterfaceCoverage` 全绿 ✓；`typecheck`／`lint`／`docs:check` ✓。
   ⏳ **⑧ 剩下的最后一片（下一次 ✓）** ✓：**synth 轨的预设选择器 UI** ——
     模型（`setTrackInstrument` ✓）与解析（显式 key 优先 ✓）都已就绪 ✓，只差控件与接线 ✓。
+
+### 八百七十四、🚨 **`2.35.10` 未发布：远端 CI 红在**四条"接线台账"判据**上——都是我这批切片的**未接完**部分（已定位，下次修）**（2026-10-10 ✓）
+
+  ⭐ **现场 ✓**：`release.sh` 第二次跑到 `full CI FAILED` ✓（`version:check` 那次是 changelog 裁字后未 `version:sync` ✓ 已修 ✓
+    并已推送 ✓）；线上仍是 **2.35.9** ✓（**没发布半成品** ✓）。
+  ⭐ **远端日志（run 38004178653 ✓）逐条点名 ✓——四条全是我这批的**未完成接线** ✓**：
+    1. `expected 'starting the render engine — a first …' to contain 'starting the renderer'` ✗
+       ⇒ **既有判据钉住了冷启动措辞** ✓（我改了文案却没改那条判据 ✓）⇒ 要么对齐 ✗ 要么按键更新判据 ✓（选后者并写明理由 ✓）。
+    2. `expected [ 'melody_to_track' ] to deeply equal []` ✗（出现两次 ✓）
+       ⇒ **新增 MCP 工具必须登记**在工具清单里 ✓（我漏了 ✓）。
+    3. `setTrackInstrument: these operations change the arrangement and **no MCP tool reaches them** — add one, or add them to
+       EXCLUDED with a reason` ✗ ⇒ **改动 arrangement 的操作必须有 MCP 工具可达** ✓（或带理由进 EXCLUDED ✓）。
+    4. `the ledger and the scan disagree. Unreachable today: … **setTrackInstrument** …` ✗
+       ⇒ **UI_LEDGER** 要求：要么**接到 Web 源码**上 ✓（正是我推到下一轮的"synth 预设选择器 UI" ✓✓），
+       要么**带理由登记** ✓（"a wildcard is not a reason" ✓）。
+  ⭐ **结论（诚实 ✓）** ✓：我这批把 ⑧ 拆成"解析层 → 模型层 → UI"三片 ✓，前两片各自可测 ✓，
+    但**项目的台账纪律要求"操作必须可达"** ✓ —— 所以**第三片不是可选项，是这一改动的完成条件** ✓✓
+    （第 4 条判据把这个要求写死了 ✓，这正是它存在的意义 ✓）。
+  ⭐ **下次要做的（按顺序 ✓）** ✓：①对齐/更新那条冷启动措辞判据 ✓；②把 `melody_to_track` 登记进工具清单 ✓；
+    ③**把 `setTrackInstrument` 接上 synth 轨的预设选择器 UI** ✓（或先带明确理由登记 UI_LEDGER ✓，
+    但**首选接线**，因为 ⑧ 的完成条件就是它 ✓）；④重跑 `release.sh` 发 **2.35.10** ✓ 并核对线上 ✓。
