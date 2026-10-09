@@ -21492,3 +21492,27 @@ describe("the grid's editing actions", () => {
   ⭐ **下次要做的（按顺序 ✓）** ✓：①对齐/更新那条冷启动措辞判据 ✓；②把 `melody_to_track` 登记进工具清单 ✓；
     ③**把 `setTrackInstrument` 接上 synth 轨的预设选择器 UI** ✓（或先带明确理由登记 UI_LEDGER ✓，
     但**首选接线**，因为 ⑧ 的完成条件就是它 ✓）；④重跑 `release.sh` 发 **2.35.10** ✓ 并核对线上 ✓。
+
+### 八百七十五、🟢 **四条 CI 红已修两条；剩下两条都指向同一件事：把 `setTrackInstrument` 接到 UI（⑧ 的最后一片）**（2026-10-10 ✓）
+
+  ⭐ **已修（提交 `23252a1` ✓，三个测试文件 24 条绿 ✓）** ✓：
+    1. **冷启动措辞判据** ✓：`src/test/budgetHonesty.test.ts:330/338` 用 stub 自己的话
+       `"starting the renderer (Vite + Chromium)"` ✓ 去断言通知内容 ✓，而真实路径现在发的是
+       `"starting the render engine — a first render in this session also starts a browser…"` ✓ ⇒ 改为断言
+       `"starting the render"` ✓ 并写明"这条判据管的是**管道是否把话说出去**，用词以服务端**实际发的**为准" ✓。
+    2. **工具覆盖** ✓：`src/test/mcpToolCoverage.test.ts` 只扫**文件名以 `mcp` 开头**的测试语料 ✗
+       ⇒ 我的 `melodyToTrack.test.ts` 不在语料里 ✗ ⇒ `git mv` 成 **`mcpMelodyToTrack.test.ts`** ✓ 即绿 ✓
+       （**项目约定：MCP 工具的判据要放进 `mcp*` 命名的文件** ✓）。
+  ⭐ **剩下两条（同一个根因 ✓）** ✓：`setTrackInstrument` **既没有 MCP 工具、也没有 Web 源码可达** ✗：
+    · `src/test/mcpCoverage.test.ts` ✓ 的 **`EXPOSED`（操作 → 工具 ✓，:30-48）** 与
+      **`EXCLUDED`（操作 → **可核查的理由** ✓，:58 ✓；文件里明写 "Not done yet" **不算理由** ✗）** ✓；
+    · `src/test/webEntryReachability.test.ts` ✓ 的 **`UI_LEDGER`（:99 ✓）** ✓——它要求操作**接到 Web 源码** ✓
+      或**带一条评审可核查的判词** ✓（"a wildcard is not a reason" ✓；既有先例是 `renameTrack` 的
+      `pending-owner-ruling` ＋ 一段可核查的说明 ✓）。
+  ⭐ **因此正解只有一条（也正是 ⑧ 的完成条件 ✓）** ✓：**把 `setTrackInstrument` 接到 synth 轨的预设选择器 UI** ✓——
+    接上之后 `UI_LEDGER` 不需要任何豁免 ✓；MCP 那侧则**再加一个工具**
+    （如 `set_arrangement_track_instrument` ✓，登记进 `EXPOSED` ✓）✓ ⇒ 两条一起绿 ✓。
+    **我不走"加豁免条目"这条路** ✗：文件本身写着"Not done yet 不算理由" ✓，而 ⑧ 的完成条件本来就是 UI ✓。
+  ⭐ **下次三步 ✓** ✓：①写 synth 轨的预设选择器（表头 ＋ 列表两份 ✓，与 sampler chip 同槽不同源 ✓），
+    接 `setTrackInstrument` ✓ ＋ 判据"选了就写进模型" ✓；②加 MCP 工具 `set_arrangement_track_instrument` ✓
+    并登记 `EXPOSED` ✓ ＋ 判据 ✓；③重跑 `release.sh` 发 **2.35.10**（changelog 已就绪 198 字 ✓）并核对线上 ✓。
