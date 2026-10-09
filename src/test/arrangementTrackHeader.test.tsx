@@ -128,14 +128,18 @@ describe("the track header's controls", () => {
 describe("the instrument slot on the header", () => {
   it("names what the track plays, not a generic label", () => {
     renderHeader();
+    /**
+     * ⭐ **`-header`, because the surface draws this chip twice** (fourth evaluation P2-2): the header's copy is the marked
+     * one, the track list's keeps the bare id, so one testid names one element. The question here is the header's chip.
+     */
     // The chip is the answer to "what is on this track", which is why it carries the name rather than "instrument".
-    expect(screen.getByTestId("instrument-open-t1").textContent).toContain("Salamander Grand Piano");
+    expect(screen.getByTestId("instrument-open-t1-header").textContent).toContain("Salamander Grand Piano");
   });
 
   it("opens the existing instrument library panel, and closes on a choice", () => {
     const { handlers } = renderHeader();
     expect(screen.queryByTestId("instrument-library")).toBeNull();
-    fireEvent.click(screen.getByTestId("instrument-open-t1"));
+    fireEvent.click(screen.getByTestId("instrument-open-t1-header"));
     // The library is reported to the caller rather than opened locally: whether a panel is open is a fact about the
     // column, not about one slot in it.
     expect(handlers.onLibraryOpenChange).toHaveBeenCalledWith("t1", true);
@@ -150,16 +154,16 @@ describe("the instrument slot on the header", () => {
   it("says nothing about instruments on a track whose kind cannot play one", () => {
     // An `fx` track with an instrument chip would suggest a sound source it does not have.
     renderHeader({ track: track({ kind: "fx", sample: undefined }) });
-    expect(screen.queryByTestId("instrument-open-t1")).toBeNull();
+    expect(screen.queryByTestId("instrument-open-t1-header")).toBeNull();
   });
 
   it("shows no chip when the catalogue offers nothing, rather than a control that opens an empty panel", () => {
     renderHeader({ instruments: [] });
-    expect(screen.queryByTestId("instrument-open-t1")).toBeNull();
+    expect(screen.queryByTestId("instrument-open-t1-header")).toBeNull();
   });
 
   it("says which track the chip belongs to, so a column of chips is navigable", () => {
     renderHeader();
-    expect(screen.getByTestId("instrument-open-t1").getAttribute("aria-label")).toBe("Keys instrument");
+    expect(screen.getByTestId("instrument-open-t1-header").getAttribute("aria-label")).toBe("Keys instrument");
   });
 });
