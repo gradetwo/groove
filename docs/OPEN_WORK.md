@@ -21092,3 +21092,21 @@ describe("the grid's editing actions", () => {
       **A** 做策展映射表（我可以起一份草稿，但每个名字要你过目 ✓）；**B** 显示时补上库/品种前缀（不新增翻译 ✓）。
   ⭐ **至此目标里的 ①–⑧ 全部有读数与处置** ✓；下一件是**跑一次全量 `verify` 并按流程发一版**（2.35.8 ✓），
     随后核对线上 ✓。
+
+### 八百五十五、🚨 **`2.35.8` 没能发布：远端 `full CI` 红——根因是**我改 testid 时漏改的判据**（已修，发布待重跑）**（2026-10-09 ✓）
+
+  ⭐ **现场 ✓**：`release.sh` 停在 `full CI FAILED (exit 1)` ✓，线上仍是 **2.35.7** ✓（**什么都没发布** ✓，脚本按设计拒绝 ✓）。
+    用 `gh run view <id> --log-failed` 读到真正的红 ✓：
+    **`src/test/arrangementGrid.test.tsx (25 tests | 1 failed)`** ✗ —— 报错是
+    `Unable to find an element by: [data-testid="track-msr-sampler-3"]` ✓。
+  ⭐ **根因 ✓**：item ① 给**表头**所有 `track-*` id 加了 `-header` ✓，而我只改了当时跑到的几个测试文件 ✗，
+    **没有跑全量** ✓ ⇒ 漏掉 `arrangementGrid`（`track-msr-*` ✓、`track-arm-touch-*` ✓）与 `arrangementMute` ✗
+    ⇒ 本地"六个文件绿"是**样本太小** ✗，远端全量把它们抓了出来 ✓✓。
+  ⭐ **修法（脚本化，避免再漏 ✓）** ✓：从 `TrackHeaderV2.tsx` **抽出 16 个表头 id 前缀** ✓，
+    对 `src/test/*.tsx` 里所有 `` `${prefix}${local}` `` 形状统一补 `-header` ✓（3 个文件被改 ✓：
+    `trackInstrumentChooser`／`arrangementMute`／`arrangementGrid` ✓），
+    并把 `trackInstrumentChooser` 里"**行内**电平/声像"那两处**还原为裸 id** ✗→✓（它们属于**列表**副本 ✓，我第二轮又改错了一次 ✓）。
+  ⭐ **验收 ✓**：受影响的 **6 个文件 71 条全绿** ✓。
+  ⭐ **教训（写下 ✓）**：凡是**批量改标识**，必须**跑一次全量**再发 ✗——
+    我这次是"本地挑几个文件绿 + 远端 CI 才是权威"的组合救了场 ✓，代价是一次失败的发布 ✓。
+  ⏳ **下一步 ✓**：重跑 `release.sh` 发 **2.35.8**（版本与 changelog 已就绪 ✓ 183 字 ✓），并核对线上 ✓。

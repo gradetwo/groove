@@ -414,7 +414,7 @@ describe("the phone layout does not shrink M/S/R", () => {
       .getAllByTestId(/^arrangement-region-/)
       .find((element) => element.dataset.testid!.includes("arrangement-region-sampler-"))!
       .dataset.testid!.replace("arrangement-region-", "");
-    const compact = screen.getByTestId(`track-msr-${samplerId}`);
+    const compact = screen.getByTestId(`track-msr-${samplerId}-header`);
     expect(compact.tagName).toBe("DETAILS");
     const summary = within(compact).getByText("M/S/R");
     expect(summary.tagName).toBe("SUMMARY");
@@ -424,9 +424,9 @@ describe("the phone layout does not shrink M/S/R", () => {
     expect(summary.className).toContain("w-11");
     // It is one control: exactly one summary, and the three controls it stands in for are inside it, not beside it.
     expect(compact.querySelectorAll("summary")).toHaveLength(1);
-    expect(within(compact).getByTestId(`track-arm-touch-${samplerId}`)).toBeDefined();
-    expect(within(compact).getByTestId(`track-solo-touch-${samplerId}`)).toBeDefined();
-    expect(within(compact).getByTestId(`track-mute-touch-${samplerId}`)).toBeDefined();
+    expect(within(compact).getByTestId(`track-arm-touch-${samplerId}-header`)).toBeDefined();
+    expect(within(compact).getByTestId(`track-solo-touch-${samplerId}-header`)).toBeDefined();
+    expect(within(compact).getByTestId(`track-mute-touch-${samplerId}-header`)).toBeDefined();
   });
 
   it("declares that rule for touch, and keeps the desktop controls for a pointer", () => {

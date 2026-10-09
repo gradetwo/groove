@@ -42,7 +42,7 @@ describe("the track header's mute control", () => {
         onArrangementChange={onArrangementChange}
       />
     );
-    const button = await screen.findByTestId(`track-mute-${trackId}`);
+    const button = await screen.findByTestId(`track-mute-${trackId}-header`);
     // ⭐ Before: the arrangement does not claim the track is muted, and neither does the control.
     expect(button.getAttribute("aria-pressed")).toBe("false");
 
