@@ -24680,3 +24680,27 @@ describe("the grid's editing actions", () => {
     ⇒ `gh run view $rid --json jobs -q '…select(.conclusion=="failure")…'` ✓ 找到失败作业 ✓
     ⇒ `gh run view --job <id> --log | sed 's/\x1b\[[0-9;]*m//g' | grep -aE "Failed Tests|FAIL |AssertionError"` ✓
       取出**真实失败** ✓（这三次都是这样定位的 ✓，不要绕过 CI ✗）。
+
+### 一千零二十六、🚀✅ **v2.36.1 已发布**（2026-10-11 ✓，六条判据全部实测通过 ✓）
+
+  ⭐ **发布脚本输出 ✓**：`full CI ok` ⇒ `deploy ok` ⇒ `tag ok` ⇒ `remote ok` ⇒
+    `✅ deployed and published — now check /version.json against the tag` ⇒ `release exit=0` ✓（脚本累计 18:57 ✓）。
+  ⭐ **逐条验收 ✓** ✓：
+    | 判据 | 证据 |
+    | --- | --- |
+    | ① 远端 CI | run `38094718996` `completed`；脚本 `full CI ok`（`Typecheck, Lint, Unit Tests & Build=success` —— **前三次正是死在这个作业**）✓ |
+    | ② deploy | `deploy ok` ✓ 且线上已在服务新版本 ✓ |
+    | ③ main + tag | `refs/heads/main` = `50aa978` ✓；`refs/tags/v2.36.1` = `80a432a` ✓；`remote ok` ✓ |
+    | ④ 线上版本 | 线上 `version.json` ⇒ **`"version": "2.36.1"`** ✓；线上 `changelog.json` 首条 = **2.36.1** ✓、**93** 中文字符 ✓、无未发布版本号 ✓ |
+    | ⑤ 报告三处修复 | `phoneShellCut` 通过 ✓（懒加载移到其它视图旁、边界未被破坏）；`mobileContrast` **断言** `--m-ink-3` ≥4.5:1，实测 **5.24:1**（卡片 4.88:1，改前 3.95:1）✓；`check:css` 通过 ✓（无硬编码 `text-zinc-500`） |
+    | ⑥ 片段可用 | 线上清单 **155 条** ✓、`engineVersion 2.36.1` ✓、URL 全为 R2 镜像 ✓；**线上 `/m` 真浏览器探针**：`shell: true` ✓、`player: true` ✓、`src` 是 R2 URL ✓、`compare: true` ✓、按下播放后 **`readyState 4 / duration 16.6 / currentTime 5.4 / paused false`** ✓、**零 page error** ✓ |
+  ⭐ **四次尝试才发出，前三次的拦截全是真实失败（都已修 ✓）** ✓：
+    ① `changelogSize` 460 > 200 中文字符 ✓ ⇒ 172／93 ✓；
+    ② `fileSizeBudget` `ENOENT: stat 'dist-repair/…mp3'`（`git add -A` 误提交**临时片段目录 214 文件**、
+      含绝对路径符号链接）✓ ⇒ untrack 五目录 ＋ `.gitignore` ✓；
+    ③ `genreClips` "these clips were cut by another build … 2.36.0"（**我自己建的新鲜度判据**如实报警）✓
+      ⇒ `--merge --engine-version 2.36.1` 重新盖戳（补丁无音频引擎改动 ✓）✓。
+    ⚠️ **教训写死 ✓**：**每次提版本号必须重跑片段那几条判据** ✓ —— 我漏跑过一次，白烧约 25 分钟 CI ✓。
+  ⭐ **一个我自己的节奏教训 ✓（与代码无关但值得记 ✓）**：目标轮次**不消耗墙钟时间** ✓ ——
+    我一度用"每轮偷看一眼"来等 CI ✓，结果 20 秒内连读数次、烧掉大半轮次预算 ✓。
+    正确做法是**在工具调用里真正阻塞等待**（`sleep`／`job_output wait:true`／盯 run 的轮询作业 ✓）。
