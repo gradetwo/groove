@@ -2,6 +2,19 @@
   "bars": 8,
   "clips": [
     {
+      "genreId": "chicago-house",
+      "url": "chicago-house.mp3",
+      "seconds": 16.600023,
+      "bars": 6,
+      "engineVersion": "2.35.11",
+      "recipeVersion": "1",
+      "generatedAt": "2026-10-10",
+      "recordedLanes": 4,
+      "builtInLanes": 4,
+      "warnings": [],
+      "bytes": 400030
+    },
+    {
       "genreId": "future-house",
       "url": "future-house.mp3",
       "seconds": 16.600022675736962,
@@ -96,8 +109,8 @@
     {
       "genreId": "psytrance",
       "url": "psytrance.mp3",
-      "seconds": 48.6,
-      "bytes": 1168030,
+      "seconds": 16.600023,
+      "bytes": 400030,
       "lufs": -8.722535829304128,
       "bars": 6,
       "engineVersion": "2.35.11",
@@ -105,12 +118,7 @@
       "generatedAt": "2026-10-10",
       "recordedLanes": 3,
       "builtInLanes": 5,
-      "warnings": [
-        {
-          "code": "length-out-of-range",
-          "detail": "48.6s is outside the owner's 15\u201330s window"
-        }
-      ]
+      "warnings": []
     },
     {
       "genreId": "hard-trance",
@@ -297,8 +305,8 @@
     {
       "genreId": "ambient-dub",
       "url": "ambient-dub.mp3",
-      "seconds": 96.6,
-      "bytes": 2319716,
+      "seconds": 16.600023,
+      "bytes": 400030,
       "lufs": -12.717896495045073,
       "bars": 6,
       "engineVersion": "2.35.11",
@@ -306,12 +314,7 @@
       "generatedAt": "2026-10-10",
       "recordedLanes": 2,
       "builtInLanes": 6,
-      "warnings": [
-        {
-          "code": "length-out-of-range",
-          "detail": "96.6s is outside the owner's 15\u201330s window"
-        }
-      ]
+      "warnings": []
     },
     {
       "genreId": "footwork",
@@ -1280,8 +1283,8 @@
     {
       "genreId": "microhouse",
       "url": "microhouse.mp3",
-      "seconds": 48.6,
-      "bytes": 1168030,
+      "seconds": 16.600023,
+      "bytes": 400030,
       "lufs": -8.80405807774383,
       "bars": 6,
       "engineVersion": "2.35.11",
@@ -1294,10 +1297,6 @@
         {
           "code": "skipped-lanes",
           "detail": "5 lane(s) had nothing to resolve and are not in the clip"
-        },
-        {
-          "code": "length-out-of-range",
-          "detail": "48.6s is outside the owner's 15\u201330s window"
         }
       ]
     },
