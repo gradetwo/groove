@@ -1,0 +1,24 @@
+{
+  "bars": 8,
+  "clips": [
+    {
+      "genreId": "dub-techno",
+      "url": "dub-techno.mp3",
+      "seconds": 96.6,
+      "bytes": 2319716,
+      "lufs": -8.57046440503894,
+      "bars": 6,
+      "engineVersion": "2.35.11",
+      "recipeVersion": "1",
+      "generatedAt": "2026-10-10",
+      "recordedLanes": 2,
+      "builtInLanes": 6,
+      "warnings": [
+        {
+          "code": "length-out-of-range",
+          "detail": "96.6s is outside the owner's 15–30s window"
+        }
+      ]
+    }
+  ]
+}

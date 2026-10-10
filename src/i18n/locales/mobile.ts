@@ -6,6 +6,13 @@
  * a module that gets rewritten should not have to hunt its strings through the whole dictionary.
  */
 export const mobileMessages = {
+  /** ⭐ The 更多 sheet's own words: referenced by its sheet and both pickers, absent from the ported locale. */
+  mobile_more_close: { en: "Close", zh: "关闭" },
+  mobile_more_title: { en: "More", zh: "更多" },
+
+  /** ⭐ The tab bar's accessible name: referenced by both phone tab bars, absent from the ported locale. */
+  mobile_nav_label: { en: "Phone navigation", zh: "手机导航" },
+
   // Module names: the user's own wording.
   mobile_module_home: { en: "Home", zh: "首页" },
   mobile_module_jam: { en: "Jam", zh: "即兴" },

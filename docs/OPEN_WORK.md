@@ -24224,3 +24224,27 @@ describe("the grid's editing actions", () => {
     · `i18nKeys`：**逐条**找出解析不到的 `t("…")` 字面量 ✓ ⇒ 要么补键 ✓、要么改字面量 ✓。
   ⭐ **为什么这一条重要 ✓**：目标里写着"**本地门禁绿**、远端 CI 为权威" ✓ ⇒
     在把这 3 条清掉之前 ✓，**我不会宣布目标完成** ✓（哪怕功能全都验过了 ✓）——这正是"验收"与"感觉做完了"的区别 ✓。
+
+### 一千零六、🧾 **`i18nKeys` 已绿；`deadExportsBudget` 的账目也点名了（多出 12 个死导出）**（2026-10-10 ✓）
+
+  ⭐ **`i18nKeys`（U-03）✅ 修好 ✓**：它要求"`src/` 下每个字面量 `t("…")` 都能在字典里解析" ✓
+    ⇒ 移植进来的**屏幕引用了三个手机文案键，而移植进来的 locale 里没有** ✗：
+    `mobile_nav_label` ✓（两个手机标签栏的 `aria-label` ✓）、`mobile_more_close` ✓、`mobile_more_title` ✓
+    ⇒ **补齐三键**（各带 en/zh ✓）⇒ **4 例全绿** ✓。
+    ⚠️ 顺带发现 `common.ts:318` 的注释里**已经把这三个键列进"手机导航词汇表"** ✓ ⇒ 说明它们当年**是存在过的** ✓、
+      封存时随手机版一起消失 ✓ ⇒ 这次是"**把该回来的东西补回来**" ✓，不是发明 ✓。
+  ⭐ **`deadExportsBudget` ✗：计数 39 / 上限 27 ⇒ 超出 12** ✓（探针实测 ✓，探针用完即删 ✓）。点名（节选 ✓）✓：
+    `buildStudioSheetGroups`（`MobileStudioSheet.tsx:190` ✓）、
+    `tempoReadoutBudgetPx`／`TRANSPORT_BAR_HEIGHT_PX`（`MobileTransportBar.tsx` ✓）、
+    `DEFAULT_VISIBLE_IDS`／`shortcutBindings`／`bindingKey`（`toolbarTiers.ts` ✓）、
+    `normaliseMobileModule`／`shouldEnterPhoneShell`（`mobileModules.ts` ✓）、
+    `stepDotPosition`／`scrubBpmDelta`（`vinyl/vinylMath.ts` ✓）…… ✓
+    ⇒ **性质 ✓**：这不是"判据坏了" ✗，而是**接回一整面必然带来的账** ✓ ——
+      那些导出当年是**给手机壳自己的其它文件**用的 ✓（或被旧判据用 ✓），而今天**没有任何引用** ✓。
+  ⭐ **处置方向（下一轮做 ✓，且要按仓库的做法 ✓）** ✓：**删掉这个面上确实没人用的导出** ✓
+    （`export const X` ⇒ `const X` ✓，或整段删除 ✓ —— 以 `typecheck` ＋ 这两条门禁为准 ✓），
+    **而不是把上限抬到 39** ✗ —— 无声抬阈值正是这个仓库最反对的事 ✓（它连"哪一条被禁用"都要留记录 ✓）。
+    ⚠️ 但有一条例外值得单议 ✓：`shouldEnterPhoneShell` ✓ 是"**能力判定**"那条规则 ✓
+      （我当初**故意**只做 `/m` 显式入口 ✗、没做自动进入 ✓，所以它今天没人引用 ✓）⇒
+      删它还是留它（并说明"等店主决定自动进入时再用" ✓），我倾向**留** ✓ 但**必须给它一个被判据接受的理由** ✓，
+      而不是靠抬阈值蒙过去 ✗。
