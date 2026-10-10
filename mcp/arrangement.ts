@@ -459,6 +459,12 @@ export interface CreateMcpArrangementInput {
   name?: string;
   /** ⭐ Seed the tracks from this genre's arranged pattern; absent means a blank arrangement. */
   genreId?: string;
+  /**
+   * ⭐ **Ask for the genre's own content, explicitly** (2026-10-10). The surface drops starter notes by default because two
+   * field reports describe receiving notes nobody wrote — that decision stands. A caller cutting a clip from a genre *wants*
+   * that content, and "I want it" has to be a word in the request rather than a surprise in the reply.
+   */
+  withGenreNotes?: boolean;
 }
 
 export function createMcpArrangement(input: CreateMcpArrangementInput = {}): ArrangementSummary {
@@ -490,7 +496,16 @@ export function createMcpArrangement(input: CreateMcpArrangementInput = {}): Arr
    * `sample` is kept — the asset is identity ("a sampler with no instrument would be silent"), not content. The
    * detector in `summariseArrangement` names any starter content that still reaches a reply.
    */
-  const base: ArrangementV2 = { ...seeded, notesByTrack: {}, ...(input.name === undefined ? {} : { name: input.name }) };
+  /**
+   * ⭐ **The one caller that wants the seed says so.** `withGenreNotes` keeps what `arrangementSeededFromGenre` wrote; every
+   * other call still gets an arrangement with no notes at all, which is what the two field reports asked for.
+   */
+  const keepGenreNotes = input.withGenreNotes === true && input.genreId !== undefined;
+  const base: ArrangementV2 = {
+    ...seeded,
+    ...(keepGenreNotes ? {} : { notesByTrack: {} }),
+    ...(input.name === undefined ? {} : { name: input.name }),
+  };
   const id = `arrangement-${++idSequence}`;
   arrangements.set(id, base);
   return summariseArrangement(id, base);

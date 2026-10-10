@@ -138,7 +138,12 @@ for (const genreId of genreIds) {
    * `kind`, `name` and `sound: { source, assetId, detail }`. Asking `describe_arrangement` for the same facts would be a
    * second round trip that can disagree with the first.
    */
-  const created = asObject(await callTool("create_arrangement", { genreId }));
+  /**
+   * ⭐ **Ask for the genre's own content** — without this the arrangement carries no notes at all (the MCP surface drops
+   * starter notes by default, at two field reports' request), and a genre-seeded render is **digital silence**:
+   * measured 2026-10-10, thirteen bands at −120 dB. With the opt-in the same call carried 188 notes.
+   */
+  const created = asObject(await callTool("create_arrangement", { genreId, withGenreNotes: true }));
   const arrangementId = created.arrangementId ?? created.id;
   if (!arrangementId) {
     console.error(`${genreId}: could not create an arrangement: ${JSON.stringify(created).slice(0, 200)}`);

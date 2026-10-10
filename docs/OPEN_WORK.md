@@ -22083,3 +22083,23 @@ describe("the grid's editing actions", () => {
   ⏭️ **修法仍是那两条 ✓**（上一轮已定 ✓）：**A** 脚本侧把曲风内容写回去 ✓；**B** 给 `create_arrangement` 加**显式**
     `withGenreNotes` 参数 ✓（默认不变 ✓，不推翻那条有现场报告背书的决定 ✓）。我倾向 **B ＋ A 回退** ✓；
     实施前先拿到 `arrangementSeededFromGenre` 的签名与它产出的 `notesByTrack` 形状 ✓（**这次先探针、再写代码** ✓）。
+
+### 九百零二、✅✅ **根因修好了（显式 `withGenreNotes`）：同一句调用从 **0 个音符**变成 **188 个音符****（2026-10-10 ✓）
+
+  ⭐ **修法（B，我选的那条 ✓）** ✓：
+    · `mcp/arrangement.ts`：`createMcpArrangement({ …, withGenreNotes })` ✓ —— **默认行为一字不改** ✓
+      （仍然 `notesByTrack: {}` ✓，两份现场报告要的就是这个 ✓），只有 `withGenreNotes === true` **且**带 `genreId` 时
+      才保留种子内容 ✓；
+    · `mcp/registryArrangement.ts`：工具新增该参数 ✓，描述里**写清为什么默认关** ✓（"an MCP-created arrangement carries no
+      starter notes… Set true with `genreId` to keep the genre's own notes and steps — which is what cutting a clip from a
+      genre needs, since a genre-seeded arrangement with no notes renders silence" ✓）；
+    · `docs/MCP.md` 的 `create_arrangement` 行同步补上参数与理由 ✓（**登记纪律**：工具的**参数**也要进这份表 ✓）。
+  ⭐ **判据（3 例，两向 ✓）** ✓：①**默认必须还是 0 个音符** ✓（现场报告的决定不许被我推翻 ✓）；
+    ②**显式要求时必须真的有内容** ✓ ⇒ 实测 **`notes=188 stepsOn=0 tracks=8`** ✓（同一句 bossa-nova 调用 ✓）；
+    ③**没有 genreId 时该参数无效** ✓（无种子可留 ✓）。
+  ⭐ **脚本已同步** ✓：`build_genre_clips.mjs` 现在带 `withGenreNotes: true` ✓（注释里写明"不带就是数字静音、实测 13 个频段
+    −120 dB；带上同一次调用有 188 个音符" ✓）。
+  ⭐ **验收 ✓**：新判据 3 例绿 ✓；`typecheck`／`lint`／`docs:check`／`check:mcp` 全过 ✓。
+  ⏭️ **下一步（唯一的验证 ✓）**：重跑 `--only bossa-nova --format wav` ✓ ⇒ 用 `analyze_audio` 看
+    **`bandDb` 不再是 −120、`samplePeakDb` 不再是 null、`skippedLanes` 是否清零** ✓ ⇒
+    **那才是"片段里有声音"的证据** ✓（`notes=188` 只是"有内容" ✓，不等于"响" ✓—— 这一课今晚已经上过一次 ✓）。

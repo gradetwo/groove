@@ -88,6 +88,15 @@ export const ARRANGEMENT_TOOLS: ToolDefinition[] = [
       songId: z.string().optional().describe("the v1 song this is an arrangement of; defaults to a scratch id"),
       name: z.string().optional().describe("what a person calls it; absent means unnamed"),
       genreId: z.string().optional().describe("seed the tracks from this genre's arranged pattern"),
+      /**
+       * ⭐ The opt-in that makes a genre's content reachable without putting notes nobody wrote into every reply.
+       */
+      withGenreNotes: z
+        .boolean()
+        .optional()
+        .describe(
+          "**off by default**, because an MCP-created arrangement carries no starter notes (two field reports describe receiving notes nobody wrote). Set true with `genreId` to keep the genre's own notes and steps — which is what cutting a clip from a genre needs, since a genre-seeded arrangement with no notes renders silence"
+        ),
     },
     handler: (args) => {
       try {
@@ -97,6 +106,7 @@ export const ARRANGEMENT_TOOLS: ToolDefinition[] = [
           songId: args.songId as string | undefined,
           name: args.name as string | undefined,
           genreId: args.genreId as string | undefined,
+          withGenreNotes: args.withGenreNotes === true,
         });
       } catch (error) {
         return failure((error as Error).message);

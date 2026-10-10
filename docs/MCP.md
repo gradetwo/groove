@@ -124,7 +124,7 @@ Two things this surface states rather than leaves to be discovered:
 | Tool | Arguments | Returns |
 | :--- | :--- | :--- |
 | `list_arrangement_instruments` ▢ | `library?`, `limit?` | the catalogue assets a sampler track can play, each with its library and measured duration; `vcsl` alone declares 88 |
-| `create_arrangement` ▣ | `templateId?`, `blankKind?` (`synth`\|`sampler`\|`drumkit`\|`fx`\|`folder`), `songId?` | the new `arrangementId`, its tracks, the template ids it would accept, and any problem |
+| `create_arrangement` ▣ | `templateId?`, `blankKind?` (`synth`\|`sampler`\|`drumkit`\|`fx`\|`folder`), `songId?`, `genreId?`, `withGenreNotes?` | the new `arrangementId`, its tracks, the template ids it would accept, and any problem. **Notes are dropped by default** (two field reports describe receiving notes nobody wrote); pass `withGenreNotes` with `genreId` to keep the genre's own notes and steps, without which a genre-seeded arrangement renders silence |
 | `get_arrangement` ▢ | `arrangementId` | every track's kind, name, flags, **`sound`** (the catalogue asset or the built-in preset that is actually playing), `sampleAssetId`, `steps` with `stepsOn`, and takes |
 | `describe_arrangement` ▢ | `arrangementId` | one line per track — including what each one sounds with — for reading rather than parsing |
 | `add_arrangement_track` ▣ | `arrangementId`, `kind`, `name?`, `assetId?` | the arrangement with the track added; on `kind:"sampler"` the `assetId` points it at its instrument **in the same call**, and `assetId` on any other kind is refused rather than ignored |
