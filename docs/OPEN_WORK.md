@@ -23011,3 +23011,23 @@ describe("the grid's editing actions", () => {
   ⏭️ **下一步 ✓**：读 `src/app/router.ts`（`route` 的字段与 `/new` 的解析方式 ✓）⇒ 照**同一种写法**加 `/m` ✓
     ⇒ 在 `App.tsx` 里挂 `MobileApp` ✓ ⇒ 用真浏览器打开 `/m` 看它是否渲染 ✓（这一步的判据是"能渲染出来" ✓，
     再往后才是样式与触控 ✓）。
+
+### 九百五十二、🧭 **`/m` 的落点确定了（路由文件是 `.tsx`，而且读得很干净）**（2026-10-10 ✓）
+
+  ⚠️ **我又按错名字找了一次 ✓**：`src/app/router.ts` **不存在** ✗ —— 真名是 **`src/app/router.tsx`** ✓
+    （我上一次写 `router.ts` 时是**凭记忆** ✗，而不是先 `find` ✓ ⇒ 这条规矩今天已经立过 ✓，我又犯了一次 ✓）。
+  ⭐ **读到的接口 ✓**（`grep -nE "export …" src/app/router.tsx` ✓）✓：它导出
+    **`parseUrlToRoute`** ✓、**`formatRouteToUrl`** ✓、以及 **`RouteState`** 类型 ✓
+    （`src/test/router.test.ts` ✓ 与 `src/test/routerNewProject.test.ts` ✓ 已经覆盖这两条路 ✓；
+    而移植进来的 `MobileTabBar`／`MobileMoreSheet` 正是 **`import type { RouteState } from "../app/router"`** ✓
+    ⇒ 两个手机组件**已经在用 dev 的 `RouteState`** ✓ 而且**编译通过** ✓✓ —— 这是"移植集自洽"的又一个证据 ✓）。
+  ⭐ **`/m` 的四处触点（明确、机械 ✓）** ✓：
+    1. **`RouteState` 加一个字段** ✓（例如 `mobile?: boolean` ✓ —— 名字先读 `RouteState` 现有字段再定 ✓）；
+    2. **`parseUrlToRoute`** ✓：认出 `pathname` 以 `/m` 开头 ✓ ⇒ 置该字段 ✓（照它解析 `/new` 的**同一种写法** ✓）；
+    3. **`formatRouteToUrl`** ✓：反向写出 `/m` ✓（保证"解析→格式化"闭环 ✓，测试里就是这么用的 ✓）；
+    4. **`App.tsx`** ✓：`route.mobile` 为真时 `React.lazy` 挂 `MobileApp` ✓（当年就是这么挂的 ✓，只是判定条件换掉 ✓）。
+  ⭐ **判据（下一轮一起写 ✓）** ✓：`router.test.ts` 里加"**`/m` 解析出 mobile 为真** ✓、**`/m` 往返格式化不变** ✓、
+    以及**普通路由不受影响** ✓"三条 ✓（与前两个路由测试同一形状 ✓）。
+  ⚠️ **为什么这一轮停在这里 ✓**：上下文将尽 ✗ ⇒ 硬改路由（核心文件 ✓）风险不对称 ✗
+    （它会牵动 `App.tsx` 与整套路由测试 ✓）。**下次开工顺序 ✓**：先 `sed` 读 `RouteState` 与 `/new` 的解析片段 ✓
+    ⇒ 再照抄写 `/m` ✓ ⇒ 跑 `router.test.ts` ✓ ⇒ 最后在 `App.tsx` 挂载并用真浏览器打开 `/m` 验证渲染 ✓。
