@@ -177,7 +177,14 @@ const genreIds = (ALL ? allGenres : [ONLY].filter(Boolean)).filter((_, index) =>
   shardCount > 1 ? index % shardCount === shardIndex : true
 );
 /** ⭐ Declared **after** the shard is parsed: an earlier version referenced `shardIndex` before its `const`, and every shard died on startup. */
-const PART = `${OUT}/manifest-${shardIndex}.json`;
+/**
+ * ⭐ **A single-genre run gets its own file name.** `--only <genre>` with no `--shard` writes `manifest-0.json` — the same name
+ * a full first shard leaves behind — and that cost real data twice on 2026-10-10 (a 53-clip shard replaced by one clip; then
+ * one repaired genre's row replacing another's, so the first was lost from the parts layer even though its MP3 survived).
+ * The merge reads `/^manifest-\d+\.json$/`, so an `only-` part is deliberately invisible to it and has to be collected on
+ * purpose — which is the correct amount of friction for "this is not a shard".
+ */
+const PART = `${OUT}/manifest-${ONLY && !SHARD ? `only-${ONLY}` : shardIndex}.json`;
 console.log(`${ALL ? "all" : "only"}: ${genreIds.length} genre(s)`);
 /**
  * ⚠️ **A single-genre rerun writes the batch's own shard name.** With `--shard` unset it defaults to `0/1`, so
@@ -185,7 +192,7 @@ console.log(`${ALL ? "all" : "only"}: ${genreIds.length} genre(s)`);
  * six-genre repair loop silently replaced a 53-clip shard with one clip. Nothing was lost (the MP3s and the committed
  * manifest both survived), but the parts layer is exactly what a merge trusts, so the trap gets a warning rather than a note.
  */
-if (ONLY && !args.includes("--out")) {
+if (ONLY && !args.includes("--out") && !SHARD) {
   console.log(`   ⚠ --only without --out writes ${PART}, the same name a full shard uses; pass --out <dir> to keep them apart`);
 }
 if (MERGE) {
