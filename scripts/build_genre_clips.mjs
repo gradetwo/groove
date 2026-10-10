@@ -304,6 +304,16 @@ for (const genreId of genreIds) {
     }
   }
   /**
+   * ⭐ **No duration, no clip either.** The first batch wrote `seconds: 0` for a render whose reply carried no `durationSec`
+   * — and the app's reader rejects a clip whose length is not positive, so that entry could never have been shown; it only
+   * ever existed to be wrong. A render that cannot say how long the audio is, is a render that failed.
+   */
+  if (!(Number(banner.durationSec) > 0)) {
+    console.error(`${genreId}: the render reported durationSec=${String(banner.durationSec)} — skipped, nothing written`);
+    continue;
+  }
+
+  /**
    * ⭐ **No file, no clip.** A render whose reply carried no `durationSec` (the logs said `undefineds is outside 15–30s`) is a
    * render whose result cannot be trusted, and appending it anyway is how a list comes to name audio that does not exist —
    * the one failure this whole pipeline is built to avoid. The file is the evidence.

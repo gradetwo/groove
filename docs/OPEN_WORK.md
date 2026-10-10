@@ -23392,3 +23392,25 @@ describe("the grid's editing actions", () => {
        ⇒ 按店主规则（"changelog 不得出现从未发布过的版本号" ✓）与新鲜度判据的用法 ✓，
        这批片段是在 **dev 今天的引擎**上渲染的 ✓ ⇒ 清单里的版本应写成**它们真正对应的那个版本** ✓
        （即随手机版一起发的 **2.36.0** ✓，且清单本身**随该版本一起发布** ✓ ⇒ 不是"提前泄漏版本号" ✓）。
+
+### 九百六十八、🛡️ **批量脚本的第三道闸：不知道时长的片段一律不写**（2026-10-10 ✓）
+
+  ⭐ **背景 ✓**：合并出来的 139 个里，**6 个时长越界** ✗（`detroit-techno`／`psytrance`／`jersey-drill`／`microhouse`
+    各 **48.6 秒** ✗、`ambient-dub` **96.6 秒** ✗、`chicago-house` **0.0 秒** ✗）。
+    其中 **0.0 秒**那个的来源已查明 ✓：渲染回复里**没有 `durationSec`** ✓，而脚本当时写的是
+    `Number(banner.durationSec ?? 0) || 0` ✗ ⇒ 于是一条"**长度为 0 的片段**"进了 part ✓。
+  ⭐ **新增的闸 ✓**（脚本内 ✓，紧挨着"没有文件就不算片段"那道 ✓）：
+    ```js
+    if (!(Number(banner.durationSec) > 0)) { console.error(`${genreId}: … durationSec=${…} — skipped, nothing written`); continue; }
+    ```
+    **理由写在注释里 ✓**：应用的读取器**本来就拒绝**非正数的时长 ✓ ⇒ 那条记录**从诞生起就不可能被显示** ✗，
+      它唯一的作用就是"是错的" ✓ ⇒ 说得出长度的渲染才叫渲染 ✓。
+    ⇒ 至此脚本有**三道闸** ✓：①**有文件** ✓ ②**有声音**（`volumedetect` ✓）③**说得出时长** ✓。
+  ⭐ **另起了一个判据（暂未提交 ✓）** ✓：`src/test/genreClipManifestCommitted.test.ts` ✓ ——
+    用**应用自己的读取器**去读**已提交的那份清单** ✓，并断言"每个片段的 `url` 是音频 ✓、
+    `engineVersion`／`recipeVersion` 都在 ✓、且 **`recordedLanes > 0`**（硬要求 A ✓）" ✓。
+    **它第一次跑就红了 ✓**：`clips[0].seconds must be a positive number` ✗ —— 正是那个 **0.0 秒**的 chicago-house ✓✓
+    ⇒ **判据抓到了真问题 ✓**（这条判据的存在理由，就是"清单与读取器曾经能悄悄互相矛盾" ✓）。
+    ⚠️ **我按纪律没有提交一条红的判据 ✓**：等 6 个越界片段重切完、清单重新 merge 成绿的 ✓，再一起提交 ✓。
+  ⭐ **正在后台做的事 ✓**：按 `--only` 顺序重切那 **6 个**曲风 ✓（`nohup` ＋ pidfile ✓，PID 见 `/tmp/refix.pids` ✓，
+    日志 `/tmp/refix.log` ✓）⇒ 完成后重跑 `--merge` ✓ ⇒ 复核"全部落在 15–30 秒" ✓ ⇒ 再提交那条判据 ✓。
