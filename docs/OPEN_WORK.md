@@ -22878,3 +22878,25 @@ describe("the grid's editing actions", () => {
     9→3 这一步的**真正修法只有两行** ✓，而"算清楚依赖"花了三轮还不准 ✗。
     而且这次的修法**是照抄仓库既有的注册写法** ✓（不是发明 ✓）—— 今天两次回退都源于"没读原文就写" ✓，
     这次先读了 27 行，两行改动一次过 ✓。
+
+### 九百四十六、🎯 **14 → 2：最后两个错误正是我预言的"适配"**（2026-10-10 ✓）
+
+  ⭐ **本轮的修法（两处机械 ✓ ＋ 一处判断 ✓）** ✓：
+    1. **取回 `src/components/sequencer/toolbarTiers.ts`** ✓ ⇒ `Toolbar.tsx` 的 `Cannot find module './toolbarTiers'` 消失 ✓；
+    2. **把 `src/hooks/useLightPlayer.ts` 还原成 dev 的版本** ✓（而不是用取回的旧版 ✗）——
+       因为旧版要 `LIGHT_PLAYER_CHANGED_EVENT` 与 `saveLightPlayer` ✓，而 dev 里它们已改名
+       （`loadLightPlayer` 等 ✓）⇒ **正解是"别把旧实现搬回来"** ✓✓：dev 的实现是**更新**的 ✓，
+       旧版只是**同名的过时副本** ✗ ⇒ 取回它等于把 v2 的改进回退掉 ✗。
+  ⭐ **读数 ✓**：**14 → 13 → 9 → 2** ✓（本机 typecheck ✓，worktree `/tmp/mobile-wt` ✓）。
+  ⭐ **剩下的 2 个 ✓（都是同一件事 ✓）** ✓：
+    · `src/mobile/LightPlayerToggle.tsx:4` ✓ 与 `src/mobile/screens/MobilePlayerScreen.tsx:42` ✓
+      都 `import { useLightPlayer }` ✗ —— 而 dev 的 `useLightPlayer.ts` 导出的是
+      **`applyLightPlayer(enabled, root?)`** 与 **`applyStoredLightPlayer(root?)`** ✓（函数式 ✓）
+    ⇒ **把这两处调用改成函数式用法** ✓ ⇒ 这就是我几轮前说的"**是适配、不是考古**"的最后一例 ✓。
+  ⭐ **一条值得记住的判断 ✓**：**同名文件不等于同一个东西** ✓ ——
+    看到"dev 里也有这个文件"时，正确的问题不是"要不要取回旧版" ✗，而是
+    "**dev 的版本是否已经更新**" ✓；这次它是更新的 ✓ ⇒ 取回旧版会**回退改进** ✗。
+    同一课在这一天的另一面是"取回缺失文件" ✓：**缺的取回、在的别覆盖** ✓。
+  ⏭️ **下一步 ✓**：改那两处调用（读文件 → 按 dev 的函数式 API 改 ✓，**先读再改** ✓）⇒ `typecheck` 清零 ✓
+    ⇒ 那就得到**编译器确认的移植集**（35 ＋ 3 ＋ `src/utils/genreArt.ts` ＋ `toolbarTiers.ts` 等 ✓，
+    具体以"清零时 worktree 里多出来的文件"为准 ✓）。
