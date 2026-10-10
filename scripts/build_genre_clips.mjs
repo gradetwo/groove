@@ -169,7 +169,13 @@ if (MERGE) {
    * separate act so a half-finished batch can never replace the shipped list — the same rule the empty-run guard enforces.
    */
   const parts = readdirSync(OUT).filter((name) => /^manifest-\d+\.json$/.test(name));
-  const merged = parts.flatMap((name) => JSON.parse(readFileSync(`${OUT}/${name}`, "utf8")).clips ?? []);
+  const fromParts = parts.flatMap((name) => JSON.parse(readFileSync(`${OUT}/${name}`, "utf8")).clips ?? []);
+  /** ⭐ The manifest may only name files that are actually in the output directory. */
+  const merged = fromParts.filter((clip) => {
+    const present = existsSync(`${OUT}/${clip.url}`);
+    if (!present) console.error(`merge: ${clip.genreId} names ${clip.url}, which is not in ${OUT}/ — left out`);
+    return present;
+  });
   if (merged.length === 0) {
     console.error(`no shard manifests in ${OUT}/; nothing to merge`);
     process.exit(1);
@@ -296,6 +302,16 @@ for (const genreId of genreIds) {
       copied = wav;
       clipWarnings.push({ code: "ffmpeg-failed", detail: `ffmpeg could not encode the MP3 (${String(encoded.stderr ?? "").slice(0, 120)}); the WAV was kept` });
     }
+  }
+  /**
+   * ⭐ **No file, no clip.** A render whose reply carried no `durationSec` (the logs said `undefineds is outside 15–30s`) is a
+   * render whose result cannot be trusted, and appending it anyway is how a list comes to name audio that does not exist —
+   * the one failure this whole pipeline is built to avoid. The file is the evidence.
+   */
+  const produced = copied && existsSync(copied) && statSync(copied).size > 0 ? copied : undefined;
+  if (!produced) {
+    console.error(`${genreId}: the render produced no file (durationSec=${String(banner.durationSec)}) — skipped, nothing written`);
+    continue;
   }
   clips.push({
     genreId,
