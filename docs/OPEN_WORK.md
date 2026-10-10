@@ -21724,3 +21724,26 @@ describe("the grid's editing actions", () => {
   ⚠️ **诚实的边界 ✓**：43 秒是**本机**、**浏览器路径**、**完整编排**的数字 ✓；片段只要 15–30 秒 ⇒ 可能更快 ✓；
     MP3 编码会另加一点 ✓（本次测的是 WAV ✓）；采样字节数没测到 ✗ ⇒ 若要写进预算表，下一轮用 response 侧的
     `content-length` 或 CDN 日志补一次 ✓（不影响结论 ✓）。
+
+### 八百八十六、🧱 **预生成管线第一块落地：片段的**清单格式与新鲜度判据**（音频仍不入 git）**（2026-10-10 ✓）
+
+  ⭐ **店主决定 ✓**：预生成 MP3 ✓、**不入 git** ✓、放 **Cloudflare Worker 静态资源** ✓、另配**批量重生成脚本** ✓
+    ⇒ 于是"清单在仓库、音频在 Worker"这条分界 ✓ 需要三件事被写死 ✓，本轮把它们放进
+    `src/data/genreClips.ts` ✓ ＋ `public/genre-clips.json`（当前**显式为空** ✓）✓：
+    1. **每个片段必须说清自己是什么** ✓：`genreId`／`url`／`seconds`／`bytes?`／`lufs?`（与渲染报告同一套响度工具 ✓）／
+       `engineVersion`／`recipeVersion`／`generatedAt`／**`recordedLanes` ＋ `synthLanes`** ✓
+       —— 最后这两个字段正是我前面量出来的事实（曲风是**录音与 synth 混编** ✓：melodic-house 2/8 ✓、bossa-nova 6/8 ✓）
+       ⇒ **片段说明里可以如实写"含 X 轨真实录音"** ✓，而不是笼统吹"高保真" ✓；
+    2. **片段只对它出生那个 build 为真** ✓ ⇒ `staleClips(manifest, engineVersion, recipeVersion)` ✓
+       与 `check:loudness:fresh` **同一套思路** ✓：engine 或 recipe 一变 ✓，旧片段就是"关于今天的谎言" ✓ ⇒ 报红 ✓；
+    3. **空清单必须说明为什么空** ✓：`readClipManifest` 对 `clips: []` **且无 `emptyReason`** 直接抛错 ✓
+       （"手机没有音频"必须是**决定**，不能是事故 ✓）；现在那份空清单里的理由就是那段人话 ✓。
+  ⭐ **严格的读取 ✓**：缺字段／字段类型不对 ⇒ **指名道姓报错**（`clips[0] is missing \`url\`` ✓）✓，
+    与仓库里其它 schema 的做法一致 ✓（"schema 拒绝时要说清是哪个字段" ✓）。
+  ⭐ 判据 ✓（`src/test/genreClips.test.ts` 5 例 ✓）：正常读取与按 genre 查找 ✓、**字段错误被点名** ✓、
+    **静默空清单被拒** ✓、**engine/recipe 漂移被判 stale**（含"两者都对时不 stale" ✓）、以及**随仓库发布的清单要么对当前 build 新鲜、
+    要么显式说明为空** ✓ ——**最后这条就是管线真正的守门人** ✓：批量脚本一旦跑过 ✓，它就会盯着"片段是否还在说今天的话" ✓。
+  ⭐ **验收** ✓：新判据 5 条绿 ✓；`typecheck`／`lint`／`docs:check` ✓。
+  ⏭️ **下一步 ✓**：写 `scripts/build_genre_clips.mjs`（`--only <genre>`／`--all` ✓）：用**应用自己的离线渲染**
+    （不是协议层 ✓，理由见上一条：MCP 的 arrangement 存进程内 ✓）渲染 15–30 秒片段 ✓ → 编码 MP3 ✓ →
+    写出音频目录（交给 Worker ✓）＋ **重写这份清单**（含版本、时间、录音/synth 轨数 ✓）。

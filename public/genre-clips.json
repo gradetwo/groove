@@ -1,0 +1,4 @@
+{
+  "emptyReason": "No clips have been generated yet. The batch script (scripts/build_genre_clips.mjs) renders one 15–30 s clip per genre through the app's own offline renderer — so each clip carries that genre's own instruments, not the built-in synth — writes the MP3s to the Cloudflare Worker's static assets (they never enter this repository), and rewrites this file. Until it has run, a phone has no audio and this sentence is the reason.",
+  "clips": []
+}
