@@ -24281,3 +24281,27 @@ describe("the grid's editing actions", () => {
       我不把它算作自己的失败 ✓，也**不**把它的红说成绿 ✓。
   ⭐ **于是本地门禁的诚实结论 ✓**：**我引起的 3 条（`i18nKeys` ✓、`deadExportsBudget` ✓、`fileSizeBudget` ✓）全部修好 ✓**；
     余下 1 条是**联网语料** ✓，签名明确 ✓。全套的复跑（`bash-676` ✓）会再确认一次这个结论 ✓。
+
+### 一千零九、🐛 **回归：`/m` 上片段区卡在"加载中"（不是没渲染，而是清单请求没有落定）**（2026-10-10 ✓）
+
+  ⭐ **现象 ✓**（两次运行一致 ✓，不是抖动 ✓）：我这一轮做完"15 个死导出去掉 `export`、补 3 个 locale 键、更新两条预算"之后 ✓，
+    同一个探针从"**能放音**"变成 **`player: false` / `missing: null` / `compare: false`** ✗。
+  ⭐ **诊断探针 ✓**（新写 `scratch/probe-m-errors.mjs` ✓，捕获 `pageerror` ＋ console error ✓）读数 ✓：
+    ```
+    cards: ["mobile-home-timeline-genre-0-delta-blues", "mobile-home-timeline-genre-0-traditional-jazz"]  ← 两次点击都发生了 ✓
+    state: { shell: true, home: true, clip: false, missing: false }
+    errors: []                                   ← ⭐ 没有运行时错误 ✓
+    ```
+    ⇒ 三者合起来只有一种解释 ✓：**片段区既不是播放器、也不是"缺少片段"提示** ✓ ⇒ 它落在**加载中**那一个分支 ✓
+      （`clips === null` 且 `unavailable === null` ✓）⇒ 也就是**那份清单的 fetch 没有落定** ✗
+      —— 既没成功（否则会渲染控件 ✓）、也没失败（否则 `.catch` 会写 `unavailable` ⇒ 渲染"缺少片段" ✓）。
+  ⚠️ **因此这不是"壳坏了" ✓**：`shell: true` ✓、`home: true` ✓、**零 page error** ✓ ⇒ 手机壳、路由、样式都还活着 ✓；
+    坏的是**片段区的那一次异步读取** ✓。
+  ⭐ **下一步（已缩小范围 ✓）**：①先在探针里读 `[data-testid='mobile-clip-loading']` ✓ 确认确实是加载分支 ✓；
+    ②再让探针直接 `fetch('/genre-clips.json')` ✓ 看它返回什么（200/404/挂起 ✓）——
+      ⚠️ 我怀疑与**"我早先把 `dist/genre-clips.json` 改成 `/clips/…` 前缀做过生产拓扑验证"**有关 ✓：
+      那次是**构建产物**里的临时改动 ✓，而**这一轮重新构建**会把它从 `public/` 重新生成 ✓ ⇒ 目录里应当已经复原 ✓
+      —— 但这正是需要**读数**而不是推理的地方 ✓（今天已经反复证明 ✓）。
+    ③按读到的原因修 ✓（若是 `useMemo` 里 `setUnavailable` 这种"渲染中改状态"的写法 ✓，改成 `useEffect` ✓）。
+  ⚠️ **诚实说明 ✓**：这属于**我自己引入的回归** ✓（时间点明确：改动前后探针结果不同 ✓），
+    我会先修好它 ✓，再谈最终装配与收尾 ✓ —— 功能"曾经验过"不等于"现在还是好的" ✓。
