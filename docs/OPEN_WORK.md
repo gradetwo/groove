@@ -22066,3 +22066,20 @@ describe("the grid's editing actions", () => {
     **我倾向 B ＋ A 作为回退** ✓：B 让"我要曲风内容"成为一句明确的话 ✓，A 让脚本在没有 B 时也能工作 ✓。
   ⚠️ **本轮探针已删 ✓**（它自己在读曲风形状时崩了 ✗ ⇒ 不留红 ✓）；曲风 pattern 的真实形状**仍未确认** ✗
     ⇒ 下一轮做 A/B 之前**先跑一次形状探针**（我已经把这条写进流程 ✓，这次也一样 ✓）。
+
+### 九百零一、🔎 **两条读数：MCP 路 `notes=0` 已确证；曲风总数是 **50**（不是 100）；种子的实现在别的模块**（2026-10-10 ✓）
+
+  ⭐ **探针读数 ✓**（探针已删 ✓，不留红 ✓）✓：
+    ```
+    PROBE genres available: 50; first: chicago-house, deep-house, tech-house, future-house, progressive-house
+    PROBE MCP path: notes=0 bars=undefined            ← 静音在**源头**就成立了 ✓
+    PROBE arrangementSeededFromGenre: undefined       ← 它**不在** arrangementEdits 里 ✗
+    ```
+  ⭐ **有用的推论 ✓**：
+    · **曲风总数 50** ✓ ⇒ 批量预算按 50 算 ✓（每个约 40 秒墙钟 ⇒ **全量约 33 分钟** ✓，比我先前按 100 估的更宽松 ✓）；
+    · **MCP 路 `notes=0` 且 `bars=undefined`** ✓ ⇒ 之前"静音"的结论**在创建那一刻就成立** ✓，与渲不渲染无关 ✓；
+    · **`arrangementSeededFromGenre` 在别处** ✓（`arrangementEdits` 的导出里没有它 ✗）⇒
+      下一轮**先 grep 到它的模块与签名** ✓（流程：先看签名 ✓），再决定修法 A／B ✓。
+  ⏭️ **修法仍是那两条 ✓**（上一轮已定 ✓）：**A** 脚本侧把曲风内容写回去 ✓；**B** 给 `create_arrangement` 加**显式**
+    `withGenreNotes` 参数 ✓（默认不变 ✓，不推翻那条有现场报告背书的决定 ✓）。我倾向 **B ＋ A 回退** ✓；
+    实施前先拿到 `arrangementSeededFromGenre` 的签名与它产出的 `notesByTrack` 形状 ✓（**这次先探针、再写代码** ✓）。
