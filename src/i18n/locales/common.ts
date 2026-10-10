@@ -294,6 +294,14 @@ export const commonMessages = {
    * silent control this project has found — the hint's duplicate Listen, the export's first six seconds, the button that
    * looked like it did nothing — failed the same way: it acted without saying so).
    */
+  /**
+   * ⭐ **The clip player's words** (owner's decisions ② and ③): a clip starts instantly, and at other speeds the key moves with
+   * it — said out loud, because a listener who is not told will assume the app is broken.
+   */
+  mobile_clip_play: { en: "Play the clip", zh: "播放片段" },
+  mobile_clip_compare: { en: "Compare", zh: "对比" },
+  mobile_clip_pitch_note: { en: "pitch follows the speed, like a record", zh: "变速即变调，像唱片一样" },
+  mobile_clip_missing: { en: "No clip for this genre yet", zh: "这个曲风还没有片段" },
   instrument_auditioning: {
     en: "Auditioning {name}",
     zh: "正在试听 {name}",
