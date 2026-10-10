@@ -23254,3 +23254,22 @@ describe("the grid's editing actions", () => {
   ⏭️ **下一轮 ✓**：写 `src/test/mobileSkinParity.test.ts` ✓ —— 从 `src/data/skins.ts` 读桌面 id 清单 ✓、
     从 `src/mobile/SkinPicker.tsx`（或它引用的表 ✓）读手机清单 ✓、比对 ✓，
     并把 `default` 的理由连同**其余手机专用皮肤**一起写成**显式名单** ✓；再写 44 px 判据 ✓。
+
+### 九百六十三、✅ **店主两组判据之第一组落地：皮肤清单"单向一致"＋例外必须带可核查理由**（2026-10-10 ✓）
+
+  ⭐ **判据 ✓（`src/test/mobileSkinParity.test.ts` 2 例 ✓）** ✓：
+    · 从 **`src/data/skins.ts`** 读桌面 id 清单 ✓（正则 `id: "…"` ✓），从 **`src/mobile/skins/` 读手机皮肤表** ✓
+      （实测 7 张 ✓）⇒ 断言 **`桌面 ⊆ 手机 ∪ NOT_ON_PHONE`** ✓；
+    · `NOT_ON_PHONE` **不是通配** ✗：每条都要**一句评审可核查的理由** ✓（并且判据额外断言理由**不是**
+      "not done／todo／tbd／later" 之类的占位 ✓ —— 这正是仓库里 `EXCLUDED` 那份名单的规矩 ✓）。
+  ⭐ **为什么是单向（写进注释了 ✓）** ✓：实测**桌面 6 个 id** ✓（`default`／`minimal`／`comic`／`soviet`／`sovietYears`／`pixel` ✓）、
+    **手机 7 张表** ✓（多 `legacySkin`／`panelSkin` ✓）⇒ 若要求"两边相等" ✗，**手机专用皮肤会被判成错** ✗；
+    而店主真正担心的是"**桌面加了皮肤、手机静默落后**" ✓ ⇒ **单向包含**才表达这件事 ✓。
+  ⭐ **`default` 的理由 ✓（我写的、可核查 ✓）** ✓：
+    > "the desktop's base palette, not a skin a person picks. The phone shell carries its own base (`mobile.css`),
+    > which is what route B means: the two domains have their own foundations rather than one borrowing the other's." ✓
+    这条**同时把路 B 的含义写下来了** ✓（"两个域各有自己的底" ✓）—— 判据顺带成了决定的书面记录 ✓。
+  ⭐ **它是能红的 ✓**：桌面将来加一个皮肤而手机没有、又没进名单 ⇒ **立刻红** ✓（这正是要防的漂移 ✓）。
+  ⭐ **验收 ✓**：2 例绿 ✓、`typecheck` 0 ✓、`lint`／`docs:check` ✓。
+  ⏭️ **下一轮（第二组判据 ✓）** ✓：**44 px 触控 ＋ 对比度** ✓ —— 前者扫手机壳关键控件的
+    `min-h-11`／`min-w-11`（以**实际存在**的类为准 ✓，不猜 ✓），后者**算出**前景/背景对比度（读 `mobile.css` 与皮肤变量 ✓）。
