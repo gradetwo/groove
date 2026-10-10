@@ -11,7 +11,7 @@
   "clips": [
     {
       "genreId": "chicago-house",
-      "url": "chicago-house.mp3",
+      "url": "https://groove.wangda.today/clips/chicago-house.mp3",
       "seconds": 16.600023,
       "bars": 6,
       "engineVersion": "2.35.11",
@@ -24,7 +24,7 @@
     },
     {
       "genreId": "future-house",
-      "url": "future-house.mp3",
+      "url": "https://groove.wangda.today/clips/future-house.mp3",
       "seconds": 16.600022675736962,
       "bytes": 400030,
       "lufs": -8.157702946789492,
@@ -38,7 +38,7 @@
     },
     {
       "genreId": "bass-house",
-      "url": "bass-house.mp3",
+      "url": "https://groove.wangda.today/clips/bass-house.mp3",
       "seconds": 16.600022675736962,
       "bytes": 400030,
       "lufs": -8.598151990409029,
@@ -52,7 +52,7 @@
     },
     {
       "genreId": "acid-house",
-      "url": "acid-house.mp3",
+      "url": "https://groove.wangda.today/clips/acid-house.mp3",
       "seconds": 24.6,
       "bytes": 591873,
       "lufs": -8.525592131026006,
@@ -66,7 +66,7 @@
     },
     {
       "genreId": "afro-house",
-      "url": "afro-house.mp3",
+      "url": "https://groove.wangda.today/clips/afro-house.mp3",
       "seconds": 16.600022675736962,
       "bytes": 400030,
       "lufs": -8.726784740959713,
@@ -80,7 +80,7 @@
     },
     {
       "genreId": "detroit-techno",
-      "url": "detroit-techno.mp3",
+      "url": "https://groove.wangda.today/clips/detroit-techno.mp3",
       "seconds": 16.600023,
       "bytes": 400030,
       "lufs": -8.67010527577014,
@@ -94,7 +94,7 @@
     },
     {
       "genreId": "hard-techno",
-      "url": "hard-techno.mp3",
+      "url": "https://groove.wangda.today/clips/hard-techno.mp3",
       "seconds": 24.6,
       "bytes": 591873,
       "lufs": -8.339496184507238,
@@ -113,7 +113,7 @@
     },
     {
       "genreId": "schranz",
-      "url": "schranz.mp3",
+      "url": "https://groove.wangda.today/clips/schranz.mp3",
       "seconds": 24.6,
       "bytes": 591873,
       "lufs": -10.147630782013467,
@@ -140,7 +140,7 @@
     },
     {
       "genreId": "psytrance",
-      "url": "psytrance.mp3",
+      "url": "https://groove.wangda.today/clips/psytrance.mp3",
       "seconds": 16.600023,
       "bytes": 400030,
       "lufs": -8.722535829304128,
@@ -154,7 +154,7 @@
     },
     {
       "genreId": "hard-trance",
-      "url": "hard-trance.mp3",
+      "url": "https://groove.wangda.today/clips/hard-trance.mp3",
       "seconds": 16.600022675736962,
       "bytes": 400030,
       "lufs": -8.215286307759373,
@@ -168,7 +168,7 @@
     },
     {
       "genreId": "riddim",
-      "url": "riddim.mp3",
+      "url": "https://groove.wangda.today/clips/riddim.mp3",
       "seconds": 24.6,
       "bytes": 591873,
       "lufs": -12.491684068518033,
@@ -187,7 +187,7 @@
     },
     {
       "genreId": "post-dubstep",
-      "url": "post-dubstep.mp3",
+      "url": "https://groove.wangda.today/clips/post-dubstep.mp3",
       "seconds": 24.6,
       "bytes": 591873,
       "lufs": -11.833291921664312,
@@ -201,7 +201,7 @@
     },
     {
       "genreId": "deathstep",
-      "url": "deathstep.mp3",
+      "url": "https://groove.wangda.today/clips/deathstep.mp3",
       "seconds": 20.600022675736962,
       "bytes": 495951,
       "lufs": -8.691838035043604,
@@ -220,7 +220,7 @@
     },
     {
       "genreId": "neurofunk",
-      "url": "neurofunk.mp3",
+      "url": "https://groove.wangda.today/clips/neurofunk.mp3",
       "seconds": 24.6,
       "bytes": 591873,
       "lufs": -10.144969292800168,
@@ -234,7 +234,7 @@
     },
     {
       "genreId": "halftime",
-      "url": "halftime.mp3",
+      "url": "https://groove.wangda.today/clips/halftime.mp3",
       "seconds": 16.600022675736962,
       "bytes": 400030,
       "lufs": -10.597253762893226,
@@ -248,7 +248,7 @@
     },
     {
       "genreId": "sambass",
-      "url": "sambass.mp3",
+      "url": "https://groove.wangda.today/clips/sambass.mp3",
       "seconds": 16.600022675736962,
       "bytes": 400030,
       "lufs": -10.88974225456718,
@@ -262,7 +262,7 @@
     },
     {
       "genreId": "speed-garage",
-      "url": "speed-garage.mp3",
+      "url": "https://groove.wangda.today/clips/speed-garage.mp3",
       "seconds": 16.600022675736962,
       "bytes": 400030,
       "lufs": -8.75601024201254,
@@ -276,7 +276,7 @@
     },
     {
       "genreId": "uk-funky",
-      "url": "uk-funky.mp3",
+      "url": "https://groove.wangda.today/clips/uk-funky.mp3",
       "seconds": 16.600022675736962,
       "bytes": 400030,
       "lufs": -8.92583729703338,
@@ -290,7 +290,7 @@
     },
     {
       "genreId": "edm-trap",
-      "url": "edm-trap.mp3",
+      "url": "https://groove.wangda.today/clips/edm-trap.mp3",
       "seconds": 16.600022675736962,
       "bytes": 400030,
       "lufs": -10.844643379166511,
@@ -304,7 +304,7 @@
     },
     {
       "genreId": "brooklyn-drill",
-      "url": "brooklyn-drill.mp3",
+      "url": "https://groove.wangda.today/clips/brooklyn-drill.mp3",
       "seconds": 16.600022675736962,
       "bytes": 400030,
       "lufs": -11.954935412598873,
@@ -318,7 +318,7 @@
     },
     {
       "genreId": "kawaii-future-bass",
-      "url": "kawaii-future-bass.mp3",
+      "url": "https://groove.wangda.today/clips/kawaii-future-bass.mp3",
       "seconds": 16.600022675736962,
       "bytes": 400030,
       "lufs": -9.882592912164345,
@@ -332,7 +332,7 @@
     },
     {
       "genreId": "chillwave",
-      "url": "chillwave.mp3",
+      "url": "https://groove.wangda.today/clips/chillwave.mp3",
       "seconds": 16.600022675736962,
       "bytes": 400030,
       "lufs": -13.93132341210131,
@@ -346,7 +346,7 @@
     },
     {
       "genreId": "glitch-hop",
-      "url": "glitch-hop.mp3",
+      "url": "https://groove.wangda.today/clips/glitch-hop.mp3",
       "seconds": 24.6,
       "bytes": 591873,
       "lufs": -11.006393263805773,
@@ -360,7 +360,7 @@
     },
     {
       "genreId": "ambient-dub",
-      "url": "ambient-dub.mp3",
+      "url": "https://groove.wangda.today/clips/ambient-dub.mp3",
       "seconds": 16.600023,
       "bytes": 400030,
       "lufs": -12.717896495045073,
@@ -374,7 +374,7 @@
     },
     {
       "genreId": "footwork",
-      "url": "footwork.mp3",
+      "url": "https://groove.wangda.today/clips/footwork.mp3",
       "seconds": 24.6,
       "bytes": 591873,
       "lufs": -7.161302120931216,
@@ -393,7 +393,7 @@
     },
     {
       "genreId": "electro",
-      "url": "electro.mp3",
+      "url": "https://groove.wangda.today/clips/electro.mp3",
       "seconds": 16.600022675736962,
       "bytes": 400030,
       "lufs": -9.942760090916218,
@@ -412,7 +412,7 @@
     },
     {
       "genreId": "rock-and-roll",
-      "url": "rock-and-roll.mp3",
+      "url": "https://groove.wangda.today/clips/rock-and-roll.mp3",
       "seconds": 16.600022675736962,
       "bytes": 400030,
       "lufs": -11.607682971436327,
@@ -426,7 +426,7 @@
     },
     {
       "genreId": "punk-rock",
-      "url": "punk-rock.mp3",
+      "url": "https://groove.wangda.today/clips/punk-rock.mp3",
       "seconds": 24.6,
       "bytes": 591873,
       "lufs": -8.550110313703323,
@@ -445,7 +445,7 @@
     },
     {
       "genreId": "heavy-metal",
-      "url": "heavy-metal.mp3",
+      "url": "https://groove.wangda.today/clips/heavy-metal.mp3",
       "seconds": 24.6,
       "bytes": 591873,
       "lufs": -9.891903602453011,
@@ -459,7 +459,7 @@
     },
     {
       "genreId": "black-metal",
-      "url": "black-metal.mp3",
+      "url": "https://groove.wangda.today/clips/black-metal.mp3",
       "seconds": 24.6,
       "bytes": 591873,
       "lufs": -7.722835866940841,
@@ -487,7 +487,7 @@
     },
     {
       "genreId": "grunge",
-      "url": "grunge.mp3",
+      "url": "https://groove.wangda.today/clips/grunge.mp3",
       "seconds": 24.6,
       "bytes": 591873,
       "lufs": -8.784523345007402,
@@ -501,7 +501,7 @@
     },
     {
       "genreId": "math-rock",
-      "url": "math-rock.mp3",
+      "url": "https://groove.wangda.today/clips/math-rock.mp3",
       "seconds": 16.600022675736962,
       "bytes": 400030,
       "lufs": -9.484046193336804,
@@ -515,7 +515,7 @@
     },
     {
       "genreId": "boom-bap",
-      "url": "boom-bap.mp3",
+      "url": "https://groove.wangda.today/clips/boom-bap.mp3",
       "seconds": 24.6,
       "bytes": 591873,
       "lufs": -11.680389415117544,
@@ -529,7 +529,7 @@
     },
     {
       "genreId": "conscious-hip-hop",
-      "url": "conscious-hip-hop.mp3",
+      "url": "https://groove.wangda.today/clips/conscious-hip-hop.mp3",
       "seconds": 16.600022675736962,
       "bytes": 400030,
       "lufs": -10.743698228025353,
@@ -543,7 +543,7 @@
     },
     {
       "genreId": "east-coast-hip-hop",
-      "url": "east-coast-hip-hop.mp3",
+      "url": "https://groove.wangda.today/clips/east-coast-hip-hop.mp3",
       "seconds": 16.600022675736962,
       "bytes": 400030,
       "lufs": -9.800465321693478,
@@ -557,7 +557,7 @@
     },
     {
       "genreId": "cloud-rap",
-      "url": "cloud-rap.mp3",
+      "url": "https://groove.wangda.today/clips/cloud-rap.mp3",
       "seconds": 16.600022675736962,
       "bytes": 400030,
       "lufs": -10.081908186802016,
@@ -571,7 +571,7 @@
     },
     {
       "genreId": "texas-blues",
-      "url": "texas-blues.mp3",
+      "url": "https://groove.wangda.today/clips/texas-blues.mp3",
       "seconds": 16.600022675736962,
       "bytes": 400030,
       "lufs": -10.390343581707647,
@@ -585,7 +585,7 @@
     },
     {
       "genreId": "bebop",
-      "url": "bebop.mp3",
+      "url": "https://groove.wangda.today/clips/bebop.mp3",
       "seconds": 16.600022675736962,
       "bytes": 400030,
       "lufs": -12.067516755343386,
@@ -599,7 +599,7 @@
     },
     {
       "genreId": "modal-jazz",
-      "url": "modal-jazz.mp3",
+      "url": "https://groove.wangda.today/clips/modal-jazz.mp3",
       "seconds": 16.600022675736962,
       "bytes": 400030,
       "lufs": -11.690247277627746,
@@ -619,7 +619,7 @@
     },
     {
       "genreId": "smooth-jazz",
-      "url": "smooth-jazz.mp3",
+      "url": "https://groove.wangda.today/clips/smooth-jazz.mp3",
       "seconds": 16.600022675736962,
       "bytes": 400030,
       "lufs": -8.467431870877729,
@@ -633,7 +633,7 @@
     },
     {
       "genreId": "traditional-pop",
-      "url": "traditional-pop.mp3",
+      "url": "https://groove.wangda.today/clips/traditional-pop.mp3",
       "seconds": 16.600022675736962,
       "bytes": 400030,
       "lufs": -10.968611682529065,
@@ -647,7 +647,7 @@
     },
     {
       "genreId": "eurodance",
-      "url": "eurodance.mp3",
+      "url": "https://groove.wangda.today/clips/eurodance.mp3",
       "seconds": 16.600022675736962,
       "bytes": 400030,
       "lufs": -8.984372542174103,
@@ -661,7 +661,7 @@
     },
     {
       "genreId": "motown",
-      "url": "motown.mp3",
+      "url": "https://groove.wangda.today/clips/motown.mp3",
       "seconds": 16.600022675736962,
       "bytes": 400030,
       "lufs": -10.020554063022702,
@@ -675,7 +675,7 @@
     },
     {
       "genreId": "j-pop",
-      "url": "j-pop.mp3",
+      "url": "https://groove.wangda.today/clips/j-pop.mp3",
       "seconds": 16.600022675736962,
       "bytes": 400030,
       "lufs": -9.665242135174593,
@@ -695,7 +695,7 @@
     },
     {
       "genreId": "reggae",
-      "url": "reggae.mp3",
+      "url": "https://groove.wangda.today/clips/reggae.mp3",
       "seconds": 24.6,
       "bytes": 591873,
       "lufs": -14.204481276471165,
@@ -709,7 +709,7 @@
     },
     {
       "genreId": "afrobeat",
-      "url": "afrobeat.mp3",
+      "url": "https://groove.wangda.today/clips/afrobeat.mp3",
       "seconds": 16.600022675736962,
       "bytes": 400030,
       "lufs": -8.873873501150749,
@@ -723,7 +723,7 @@
     },
     {
       "genreId": "samba",
-      "url": "samba.mp3",
+      "url": "https://groove.wangda.today/clips/samba.mp3",
       "seconds": 24.6,
       "bytes": 591873,
       "lufs": -10.887062262951163,
@@ -737,7 +737,7 @@
     },
     {
       "genreId": "deep-house",
-      "url": "deep-house.mp3",
+      "url": "https://groove.wangda.today/clips/deep-house.mp3",
       "seconds": 16.600022675736962,
       "bytes": 400030,
       "lufs": -8.67053348402145,
@@ -751,7 +751,7 @@
     },
     {
       "genreId": "progressive-house",
-      "url": "progressive-house.mp3",
+      "url": "https://groove.wangda.today/clips/progressive-house.mp3",
       "seconds": 16.600022675736962,
       "bytes": 400030,
       "lufs": -8.227748942465894,
@@ -765,7 +765,7 @@
     },
     {
       "genreId": "ghetto-house",
-      "url": "ghetto-house.mp3",
+      "url": "https://groove.wangda.today/clips/ghetto-house.mp3",
       "seconds": 24.6,
       "bytes": 591873,
       "lufs": -9.918260947385924,
@@ -784,7 +784,7 @@
     },
     {
       "genreId": "french-house",
-      "url": "french-house.mp3",
+      "url": "https://groove.wangda.today/clips/french-house.mp3",
       "seconds": 16.600022675736962,
       "bytes": 400030,
       "lufs": -8.677100640389966,
@@ -798,7 +798,7 @@
     },
     {
       "genreId": "nu-disco-house",
-      "url": "nu-disco-house.mp3",
+      "url": "https://groove.wangda.today/clips/nu-disco-house.mp3",
       "seconds": 16.600022675736962,
       "bytes": 400030,
       "lufs": -9.107180841390187,
@@ -812,7 +812,7 @@
     },
     {
       "genreId": "industrial-techno",
-      "url": "industrial-techno.mp3",
+      "url": "https://groove.wangda.today/clips/industrial-techno.mp3",
       "seconds": 24.6,
       "bytes": 591873,
       "lufs": -8.388677530614077,
@@ -831,7 +831,7 @@
     },
     {
       "genreId": "dubstep",
-      "url": "dubstep.mp3",
+      "url": "https://groove.wangda.today/clips/dubstep.mp3",
       "seconds": 24.6,
       "bytes": 591873,
       "lufs": -12.348681623114375,
@@ -845,7 +845,7 @@
     },
     {
       "genreId": "melodic-dubstep",
-      "url": "melodic-dubstep.mp3",
+      "url": "https://groove.wangda.today/clips/melodic-dubstep.mp3",
       "seconds": 16.600022675736962,
       "bytes": 400030,
       "lufs": -10.43359384933235,
@@ -859,7 +859,7 @@
     },
     {
       "genreId": "tearout-dubstep",
-      "url": "tearout-dubstep.mp3",
+      "url": "https://groove.wangda.today/clips/tearout-dubstep.mp3",
       "seconds": 24.6,
       "bytes": 591873,
       "lufs": -9.36331465130311,
@@ -878,7 +878,7 @@
     },
     {
       "genreId": "jungle",
-      "url": "jungle.mp3",
+      "url": "https://groove.wangda.today/clips/jungle.mp3",
       "seconds": 24.6,
       "bytes": 591873,
       "lufs": -11.17234668941434,
@@ -892,7 +892,7 @@
     },
     {
       "genreId": "jump-up",
-      "url": "jump-up.mp3",
+      "url": "https://groove.wangda.today/clips/jump-up.mp3",
       "seconds": 24.6,
       "bytes": 591873,
       "lufs": -13.503935607017276,
@@ -906,7 +906,7 @@
     },
     {
       "genreId": "breakcore",
-      "url": "breakcore.mp3",
+      "url": "https://groove.wangda.today/clips/breakcore.mp3",
       "seconds": 20.600022675736962,
       "bytes": 495951,
       "lufs": -8.185720887457364,
@@ -920,7 +920,7 @@
     },
     {
       "genreId": "uk-garage",
-      "url": "uk-garage.mp3",
+      "url": "https://groove.wangda.today/clips/uk-garage.mp3",
       "seconds": 24.6,
       "bytes": 591873,
       "lufs": -12.194108658835964,
@@ -934,7 +934,7 @@
     },
     {
       "genreId": "grime",
-      "url": "grime.mp3",
+      "url": "https://groove.wangda.today/clips/grime.mp3",
       "seconds": 24.6,
       "bytes": 591873,
       "lufs": -10.241949574393315,
@@ -953,7 +953,7 @@
     },
     {
       "genreId": "dub",
-      "url": "dub.mp3",
+      "url": "https://groove.wangda.today/clips/dub.mp3",
       "seconds": 24.6,
       "bytes": 591873,
       "lufs": -14.055063126896123,
@@ -967,7 +967,7 @@
     },
     {
       "genreId": "hard-trap",
-      "url": "hard-trap.mp3",
+      "url": "https://groove.wangda.today/clips/hard-trap.mp3",
       "seconds": 16.600022675736962,
       "bytes": 400030,
       "lufs": -11.922404539631833,
@@ -986,7 +986,7 @@
     },
     {
       "genreId": "jersey-drill",
-      "url": "jersey-drill.mp3",
+      "url": "https://groove.wangda.today/clips/jersey-drill.mp3",
       "seconds": 16.600023,
       "bytes": 400030,
       "lufs": -9.090299327390904,
@@ -1000,7 +1000,7 @@
     },
     {
       "genreId": "synthwave",
-      "url": "synthwave.mp3",
+      "url": "https://groove.wangda.today/clips/synthwave.mp3",
       "seconds": 16.600022675736962,
       "bytes": 400030,
       "lufs": -9.048547196716024,
@@ -1014,7 +1014,7 @@
     },
     {
       "genreId": "downtempo",
-      "url": "downtempo.mp3",
+      "url": "https://groove.wangda.today/clips/downtempo.mp3",
       "seconds": 24.6,
       "bytes": 591873,
       "lufs": -8.908562349871668,
@@ -1028,7 +1028,7 @@
     },
     {
       "genreId": "idm",
-      "url": "idm.mp3",
+      "url": "https://groove.wangda.today/clips/idm.mp3",
       "seconds": 16.600022675736962,
       "bytes": 400030,
       "lufs": -8.476665760989414,
@@ -1042,7 +1042,7 @@
     },
     {
       "genreId": "lofi-house",
-      "url": "lofi-house.mp3",
+      "url": "https://groove.wangda.today/clips/lofi-house.mp3",
       "seconds": 16.600022675736962,
       "bytes": 400030,
       "lufs": -8.617958354535329,
@@ -1056,7 +1056,7 @@
     },
     {
       "genreId": "hardcore-gabber",
-      "url": "hardcore-gabber.mp3",
+      "url": "https://groove.wangda.today/clips/hardcore-gabber.mp3",
       "seconds": 16.600022675736962,
       "bytes": 400030,
       "lufs": -9.111169443794795,
@@ -1075,7 +1075,7 @@
     },
     {
       "genreId": "moombahton",
-      "url": "moombahton.mp3",
+      "url": "https://groove.wangda.today/clips/moombahton.mp3",
       "seconds": 24.6,
       "bytes": 591873,
       "lufs": -9.245449198678571,
@@ -1089,7 +1089,7 @@
     },
     {
       "genreId": "phonk",
-      "url": "phonk.mp3",
+      "url": "https://groove.wangda.today/clips/phonk.mp3",
       "seconds": 16.600022675736962,
       "bytes": 400030,
       "lufs": -10.831206614537631,
@@ -1103,7 +1103,7 @@
     },
     {
       "genreId": "breakbeat",
-      "url": "breakbeat.mp3",
+      "url": "https://groove.wangda.today/clips/breakbeat.mp3",
       "seconds": 24.6,
       "bytes": 591873,
       "lufs": -11.830665721921973,
@@ -1117,7 +1117,7 @@
     },
     {
       "genreId": "post-punk",
-      "url": "post-punk.mp3",
+      "url": "https://groove.wangda.today/clips/post-punk.mp3",
       "seconds": 24.6,
       "bytes": 591873,
       "lufs": -8.723470779641106,
@@ -1131,7 +1131,7 @@
     },
     {
       "genreId": "thrash-metal",
-      "url": "thrash-metal.mp3",
+      "url": "https://groove.wangda.today/clips/thrash-metal.mp3",
       "seconds": 24.6,
       "bytes": 591873,
       "lufs": -6.780340166312222,
@@ -1150,7 +1150,7 @@
     },
     {
       "genreId": "doom-metal",
-      "url": "doom-metal.mp3",
+      "url": "https://groove.wangda.today/clips/doom-metal.mp3",
       "seconds": 24.6,
       "bytes": 591873,
       "lufs": -9.081579411374713,
@@ -1169,7 +1169,7 @@
     },
     {
       "genreId": "alternative-rock",
-      "url": "alternative-rock.mp3",
+      "url": "https://groove.wangda.today/clips/alternative-rock.mp3",
       "seconds": 24.6,
       "bytes": 591873,
       "lufs": -9.79960258918148,
@@ -1183,7 +1183,7 @@
     },
     {
       "genreId": "shoe-gaze",
-      "url": "shoe-gaze.mp3",
+      "url": "https://groove.wangda.today/clips/shoe-gaze.mp3",
       "seconds": 16.600022675736962,
       "bytes": 400030,
       "lufs": -9.673339131618553,
@@ -1197,7 +1197,7 @@
     },
     {
       "genreId": "g-funk",
-      "url": "g-funk.mp3",
+      "url": "https://groove.wangda.today/clips/g-funk.mp3",
       "seconds": 16.600022675736962,
       "bytes": 400030,
       "lufs": -9.77307176749044,
@@ -1211,7 +1211,7 @@
     },
     {
       "genreId": "emo-rap",
-      "url": "emo-rap.mp3",
+      "url": "https://groove.wangda.today/clips/emo-rap.mp3",
       "seconds": 16.600022675736962,
       "bytes": 400030,
       "lufs": -9.709915967990895,
@@ -1225,7 +1225,7 @@
     },
     {
       "genreId": "west-coast-hip-hop",
-      "url": "west-coast-hip-hop.mp3",
+      "url": "https://groove.wangda.today/clips/west-coast-hip-hop.mp3",
       "seconds": 16.600022675736962,
       "bytes": 400030,
       "lufs": -9.693541143725799,
@@ -1249,7 +1249,7 @@
     },
     {
       "genreId": "delta-blues",
-      "url": "delta-blues.mp3",
+      "url": "https://groove.wangda.today/clips/delta-blues.mp3",
       "seconds": 16.600022675736962,
       "bytes": 400030,
       "lufs": -13.149343594666586,
@@ -1272,7 +1272,7 @@
     },
     {
       "genreId": "electric-blues",
-      "url": "electric-blues.mp3",
+      "url": "https://groove.wangda.today/clips/electric-blues.mp3",
       "seconds": 16.600022675736962,
       "bytes": 400030,
       "lufs": -12.93178637443679,
@@ -1286,7 +1286,7 @@
     },
     {
       "genreId": "hard-bop",
-      "url": "hard-bop.mp3",
+      "url": "https://groove.wangda.today/clips/hard-bop.mp3",
       "seconds": 16.600022675736962,
       "bytes": 400030,
       "lufs": -11.792377216939258,
@@ -1306,7 +1306,7 @@
     },
     {
       "genreId": "free-jazz",
-      "url": "free-jazz.mp3",
+      "url": "https://groove.wangda.today/clips/free-jazz.mp3",
       "seconds": 16.600022675736962,
       "bytes": 400030,
       "lufs": -9.202669590151622,
@@ -1320,7 +1320,7 @@
     },
     {
       "genreId": "acid-jazz",
-      "url": "acid-jazz.mp3",
+      "url": "https://groove.wangda.today/clips/acid-jazz.mp3",
       "seconds": 16.600022675736962,
       "bytes": 400030,
       "lufs": -10.829813877258806,
@@ -1334,7 +1334,7 @@
     },
     {
       "genreId": "synth-pop",
-      "url": "synth-pop.mp3",
+      "url": "https://groove.wangda.today/clips/synth-pop.mp3",
       "seconds": 16.600022675736962,
       "bytes": 400030,
       "lufs": -9.040912710850515,
@@ -1348,7 +1348,7 @@
     },
     {
       "genreId": "funk",
-      "url": "funk.mp3",
+      "url": "https://groove.wangda.today/clips/funk.mp3",
       "seconds": 16.600022675736962,
       "bytes": 400030,
       "lufs": -9.8000171774767,
@@ -1362,7 +1362,7 @@
     },
     {
       "genreId": "contemporary-rnb",
-      "url": "contemporary-rnb.mp3",
+      "url": "https://groove.wangda.today/clips/contemporary-rnb.mp3",
       "seconds": 16.600022675736962,
       "bytes": 400030,
       "lufs": -9.85910453182809,
@@ -1376,7 +1376,7 @@
     },
     {
       "genreId": "city-pop",
-      "url": "city-pop.mp3",
+      "url": "https://groove.wangda.today/clips/city-pop.mp3",
       "seconds": 16.600022675736962,
       "bytes": 400030,
       "lufs": -9.876322231400115,
@@ -1390,7 +1390,7 @@
     },
     {
       "genreId": "salsa",
-      "url": "salsa.mp3",
+      "url": "https://groove.wangda.today/clips/salsa.mp3",
       "seconds": 24.6,
       "bytes": 591873,
       "lufs": -11.59787831143966,
@@ -1404,7 +1404,7 @@
     },
     {
       "genreId": "dancehall",
-      "url": "dancehall.mp3",
+      "url": "https://groove.wangda.today/clips/dancehall.mp3",
       "seconds": 24.6,
       "bytes": 591873,
       "lufs": -11.278617807625709,
@@ -1418,7 +1418,7 @@
     },
     {
       "genreId": "cumbia",
-      "url": "cumbia.mp3",
+      "url": "https://groove.wangda.today/clips/cumbia.mp3",
       "seconds": 24.6,
       "bytes": 591873,
       "lufs": -9.006094166573511,
@@ -1432,7 +1432,7 @@
     },
     {
       "genreId": "tech-house",
-      "url": "tech-house.mp3",
+      "url": "https://groove.wangda.today/clips/tech-house.mp3",
       "seconds": 16.600022675736962,
       "bytes": 400030,
       "lufs": -8.922047159010768,
@@ -1446,7 +1446,7 @@
     },
     {
       "genreId": "electro-house",
-      "url": "electro-house.mp3",
+      "url": "https://groove.wangda.today/clips/electro-house.mp3",
       "seconds": 16.600022675736962,
       "bytes": 400030,
       "lufs": -8.361577097328576,
@@ -1460,7 +1460,7 @@
     },
     {
       "genreId": "tropical-house",
-      "url": "tropical-house.mp3",
+      "url": "https://groove.wangda.today/clips/tropical-house.mp3",
       "seconds": 16.600022675736962,
       "bytes": 400030,
       "lufs": -8.382368002591386,
@@ -1474,7 +1474,7 @@
     },
     {
       "genreId": "microhouse",
-      "url": "microhouse.mp3",
+      "url": "https://groove.wangda.today/clips/microhouse.mp3",
       "seconds": 16.600023,
       "bytes": 400030,
       "lufs": -8.80405807774383,
@@ -1494,7 +1494,7 @@
     },
     {
       "genreId": "acid-techno",
-      "url": "acid-techno.mp3",
+      "url": "https://groove.wangda.today/clips/acid-techno.mp3",
       "seconds": 16.600022675736962,
       "bytes": 400030,
       "lufs": -8.932258237483,
@@ -1513,7 +1513,7 @@
     },
     {
       "genreId": "raw-techno",
-      "url": "raw-techno.mp3",
+      "url": "https://groove.wangda.today/clips/raw-techno.mp3",
       "seconds": 24.6,
       "bytes": 591873,
       "lufs": -8.833272455754846,
@@ -1532,7 +1532,7 @@
     },
     {
       "genreId": "tech-trance",
-      "url": "tech-trance.mp3",
+      "url": "https://groove.wangda.today/clips/tech-trance.mp3",
       "seconds": 16.600022675736962,
       "bytes": 400030,
       "lufs": -7.812476766846829,
@@ -1551,7 +1551,7 @@
     },
     {
       "genreId": "brostep",
-      "url": "brostep.mp3",
+      "url": "https://groove.wangda.today/clips/brostep.mp3",
       "seconds": 24.6,
       "bytes": 591873,
       "lufs": -9.932424008178959,
@@ -1565,7 +1565,7 @@
     },
     {
       "genreId": "future-garage",
-      "url": "future-garage.mp3",
+      "url": "https://groove.wangda.today/clips/future-garage.mp3",
       "seconds": 24.6,
       "bytes": 591873,
       "lufs": -10.411181322654325,
@@ -1579,7 +1579,7 @@
     },
     {
       "genreId": "chillstep",
-      "url": "chillstep.mp3",
+      "url": "https://groove.wangda.today/clips/chillstep.mp3",
       "seconds": 16.600022675736962,
       "bytes": 400030,
       "lufs": -9.175424606917433,
@@ -1593,7 +1593,7 @@
     },
     {
       "genreId": "liquid-dnb",
-      "url": "liquid-dnb.mp3",
+      "url": "https://groove.wangda.today/clips/liquid-dnb.mp3",
       "seconds": 16.600022675736962,
       "bytes": 400030,
       "lufs": -9.922533929112106,
@@ -1607,7 +1607,7 @@
     },
     {
       "genreId": "techstep",
-      "url": "techstep.mp3",
+      "url": "https://groove.wangda.today/clips/techstep.mp3",
       "seconds": 24.6,
       "bytes": 591873,
       "lufs": -12.98565992663452,
@@ -1621,7 +1621,7 @@
     },
     {
       "genreId": "ragga-jungle",
-      "url": "ragga-jungle.mp3",
+      "url": "https://groove.wangda.today/clips/ragga-jungle.mp3",
       "seconds": 24.6,
       "bytes": 591873,
       "lufs": -11.03948442644686,
@@ -1635,7 +1635,7 @@
     },
     {
       "genreId": "2-step-garage",
-      "url": "2-step-garage.mp3",
+      "url": "https://groove.wangda.today/clips/2-step-garage.mp3",
       "seconds": 24.6,
       "bytes": 591873,
       "lufs": -13.233272398427173,
@@ -1649,7 +1649,7 @@
     },
     {
       "genreId": "bassline",
-      "url": "bassline.mp3",
+      "url": "https://groove.wangda.today/clips/bassline.mp3",
       "seconds": 24.6,
       "bytes": 591873,
       "lufs": -8.405249991557485,
@@ -1663,7 +1663,7 @@
     },
     {
       "genreId": "speedbass",
-      "url": "speedbass.mp3",
+      "url": "https://groove.wangda.today/clips/speedbass.mp3",
       "seconds": 24.6,
       "bytes": 591873,
       "lufs": -8.17427782348255,
@@ -1677,7 +1677,7 @@
     },
     {
       "genreId": "hybrid-trap",
-      "url": "hybrid-trap.mp3",
+      "url": "https://groove.wangda.today/clips/hybrid-trap.mp3",
       "seconds": 16.600022675736962,
       "bytes": 400030,
       "lufs": -10.77408878668462,
@@ -1691,7 +1691,7 @@
     },
     {
       "genreId": "uk-drill",
-      "url": "uk-drill.mp3",
+      "url": "https://groove.wangda.today/clips/uk-drill.mp3",
       "seconds": 16.600022675736962,
       "bytes": 400030,
       "lufs": -11.725576828706066,
@@ -1705,7 +1705,7 @@
     },
     {
       "genreId": "future-bass",
-      "url": "future-bass.mp3",
+      "url": "https://groove.wangda.today/clips/future-bass.mp3",
       "seconds": 16.600022675736962,
       "bytes": 400030,
       "lufs": -11.020912188097727,
@@ -1719,7 +1719,7 @@
     },
     {
       "genreId": "trip-hop",
-      "url": "trip-hop.mp3",
+      "url": "https://groove.wangda.today/clips/trip-hop.mp3",
       "seconds": 24.6,
       "bytes": 591873,
       "lufs": -11.319232520738176,
@@ -1733,7 +1733,7 @@
     },
     {
       "genreId": "ambient",
-      "url": "ambient.mp3",
+      "url": "https://groove.wangda.today/clips/ambient.mp3",
       "seconds": 16.600022675736962,
       "bytes": 400030,
       "lufs": -8.231986780364954,
@@ -1764,7 +1764,7 @@
     },
     {
       "genreId": "chiptune",
-      "url": "chiptune.mp3",
+      "url": "https://groove.wangda.today/clips/chiptune.mp3",
       "seconds": 16.600022675736962,
       "bytes": 400030,
       "lufs": -9.344325449375535,
@@ -1778,7 +1778,7 @@
     },
     {
       "genreId": "frenchcore",
-      "url": "frenchcore.mp3",
+      "url": "https://groove.wangda.today/clips/frenchcore.mp3",
       "seconds": 16.600022675736962,
       "bytes": 400030,
       "lufs": -8.580713811308796,
@@ -1792,7 +1792,7 @@
     },
     {
       "genreId": "jersey-club",
-      "url": "jersey-club.mp3",
+      "url": "https://groove.wangda.today/clips/jersey-club.mp3",
       "seconds": 24.6,
       "bytes": 591873,
       "lufs": -9.41976797203573,
@@ -1806,7 +1806,7 @@
     },
     {
       "genreId": "drift-phonk",
-      "url": "drift-phonk.mp3",
+      "url": "https://groove.wangda.today/clips/drift-phonk.mp3",
       "seconds": 16.600022675736962,
       "bytes": 400030,
       "lufs": -10.975891597671966,
@@ -1825,7 +1825,7 @@
     },
     {
       "genreId": "big-beat",
-      "url": "big-beat.mp3",
+      "url": "https://groove.wangda.today/clips/big-beat.mp3",
       "seconds": 24.6,
       "bytes": 591873,
       "lufs": -10.307873639809344,
@@ -1839,7 +1839,7 @@
     },
     {
       "genreId": "hard-rock",
-      "url": "hard-rock.mp3",
+      "url": "https://groove.wangda.today/clips/hard-rock.mp3",
       "seconds": 24.6,
       "bytes": 591873,
       "lufs": -9.873351363271762,
@@ -1853,7 +1853,7 @@
     },
     {
       "genreId": "new-wave",
-      "url": "new-wave.mp3",
+      "url": "https://groove.wangda.today/clips/new-wave.mp3",
       "seconds": 24.6,
       "bytes": 591873,
       "lufs": -8.729940006575163,
@@ -1867,7 +1867,7 @@
     },
     {
       "genreId": "death-metal",
-      "url": "death-metal.mp3",
+      "url": "https://groove.wangda.today/clips/death-metal.mp3",
       "seconds": 24.6,
       "bytes": 591873,
       "lufs": -7.4764377618518525,
@@ -1895,7 +1895,7 @@
     },
     {
       "genreId": "metalcore",
-      "url": "metalcore.mp3",
+      "url": "https://groove.wangda.today/clips/metalcore.mp3",
       "seconds": 24.6,
       "bytes": 591873,
       "lufs": -7.396810124549789,
@@ -1919,7 +1919,7 @@
     },
     {
       "genreId": "old-school-hip-hop",
-      "url": "old-school-hip-hop.mp3",
+      "url": "https://groove.wangda.today/clips/old-school-hip-hop.mp3",
       "seconds": 24.6,
       "bytes": 591873,
       "lufs": -10.89612411958585,
@@ -1938,7 +1938,7 @@
     },
     {
       "genreId": "trap-rap",
-      "url": "trap-rap.mp3",
+      "url": "https://groove.wangda.today/clips/trap-rap.mp3",
       "seconds": 24.6,
       "bytes": 591873,
       "lufs": -10.292398863913801,
@@ -1952,7 +1952,7 @@
     },
     {
       "genreId": "lofi-hip-hop",
-      "url": "lofi-hip-hop.mp3",
+      "url": "https://groove.wangda.today/clips/lofi-hip-hop.mp3",
       "seconds": 24.6,
       "bytes": 591873,
       "lufs": -11.8731489421187,
@@ -1966,7 +1966,7 @@
     },
     {
       "genreId": "southern-hip-hop",
-      "url": "southern-hip-hop.mp3",
+      "url": "https://groove.wangda.today/clips/southern-hip-hop.mp3",
       "seconds": 16.600022675736962,
       "bytes": 400030,
       "lufs": -10.52350196625315,
@@ -1980,7 +1980,7 @@
     },
     {
       "genreId": "chicago-blues",
-      "url": "chicago-blues.mp3",
+      "url": "https://groove.wangda.today/clips/chicago-blues.mp3",
       "seconds": 16.600022675736962,
       "bytes": 400030,
       "lufs": -12.404353222081609,
@@ -1994,7 +1994,7 @@
     },
     {
       "genreId": "traditional-jazz",
-      "url": "traditional-jazz.mp3",
+      "url": "https://groove.wangda.today/clips/traditional-jazz.mp3",
       "seconds": 16.600022675736962,
       "bytes": 400030,
       "lufs": -11.409773291461972,
@@ -2008,7 +2008,7 @@
     },
     {
       "genreId": "cool-jazz",
-      "url": "cool-jazz.mp3",
+      "url": "https://groove.wangda.today/clips/cool-jazz.mp3",
       "seconds": 16.600022675736962,
       "bytes": 400030,
       "lufs": -14.116552918582789,
@@ -2022,7 +2022,7 @@
     },
     {
       "genreId": "jazz-fusion",
-      "url": "jazz-fusion.mp3",
+      "url": "https://groove.wangda.today/clips/jazz-fusion.mp3",
       "seconds": 16.600022675736962,
       "bytes": 400030,
       "lufs": -9.959195256847805,
@@ -2036,7 +2036,7 @@
     },
     {
       "genreId": "gypsy-jazz",
-      "url": "gypsy-jazz.mp3",
+      "url": "https://groove.wangda.today/clips/gypsy-jazz.mp3",
       "seconds": 16.600022675736962,
       "bytes": 400030,
       "lufs": -13.097649164959742,
@@ -2059,7 +2059,7 @@
     },
     {
       "genreId": "disco",
-      "url": "disco.mp3",
+      "url": "https://groove.wangda.today/clips/disco.mp3",
       "seconds": 16.600022675736962,
       "bytes": 400030,
       "lufs": -8.974416989252472,
@@ -2073,7 +2073,7 @@
     },
     {
       "genreId": "soul",
-      "url": "soul.mp3",
+      "url": "https://groove.wangda.today/clips/soul.mp3",
       "seconds": 16.600022675736962,
       "bytes": 400030,
       "lufs": -9.144375671442454,
@@ -2087,7 +2087,7 @@
     },
     {
       "genreId": "alternative-rnb",
-      "url": "alternative-rnb.mp3",
+      "url": "https://groove.wangda.today/clips/alternative-rnb.mp3",
       "seconds": 16.600022675736962,
       "bytes": 400030,
       "lufs": -10.359928166430306,
@@ -2101,7 +2101,7 @@
     },
     {
       "genreId": "k-pop",
-      "url": "k-pop.mp3",
+      "url": "https://groove.wangda.today/clips/k-pop.mp3",
       "seconds": 24.6,
       "bytes": 591873,
       "lufs": -8.507036042680086,
@@ -2115,7 +2115,7 @@
     },
     {
       "genreId": "bachata",
-      "url": "bachata.mp3",
+      "url": "https://groove.wangda.today/clips/bachata.mp3",
       "seconds": 24.6,
       "bytes": 591873,
       "lufs": -9.408670150422244,
@@ -2129,7 +2129,7 @@
     },
     {
       "genreId": "reggaeton",
-      "url": "reggaeton.mp3",
+      "url": "https://groove.wangda.today/clips/reggaeton.mp3",
       "seconds": 16.600022675736962,
       "bytes": 400030,
       "lufs": -9.510645446547525,
@@ -2143,7 +2143,7 @@
     },
     {
       "genreId": "bossa-nova",
-      "url": "bossa-nova.mp3",
+      "url": "https://groove.wangda.today/clips/bossa-nova.mp3",
       "seconds": 16.600022675736962,
       "bytes": 400030,
       "lufs": -11.968354754191092,
@@ -2157,7 +2157,7 @@
     },
     {
       "genreId": "kuduro",
-      "url": "kuduro.mp3",
+      "url": "https://groove.wangda.today/clips/kuduro.mp3",
       "seconds": 24.6,
       "bytes": 591873,
       "lufs": -9.391436135987068,
@@ -2171,7 +2171,7 @@
     },
     {
       "genreId": "amapiano",
-      "url": "amapiano.mp3",
+      "url": "https://groove.wangda.today/clips/amapiano.mp3",
       "seconds": 16.600023,
       "bytes": 400030,
       "lufs": -9.898859095956333,
@@ -2185,7 +2185,7 @@
     },
     {
       "genreId": "ambient-techno",
-      "url": "ambient-techno.mp3",
+      "url": "https://groove.wangda.today/clips/ambient-techno.mp3",
       "seconds": 16.600023,
       "bytes": 400030,
       "lufs": -8.450046216243704,
@@ -2199,7 +2199,7 @@
     },
     {
       "genreId": "blues-rock",
-      "url": "blues-rock.mp3",
+      "url": "https://groove.wangda.today/clips/blues-rock.mp3",
       "seconds": 16.600023,
       "bytes": 400030,
       "lufs": -9.70781218614457,
@@ -2213,7 +2213,7 @@
     },
     {
       "genreId": "chicago-drill",
-      "url": "chicago-drill.mp3",
+      "url": "https://groove.wangda.today/clips/chicago-drill.mp3",
       "seconds": 16.600023,
       "bytes": 400030,
       "lufs": -11.257786958249692,
@@ -2227,7 +2227,7 @@
     },
     {
       "genreId": "dub-techno",
-      "url": "dub-techno.mp3",
+      "url": "https://groove.wangda.today/clips/dub-techno.mp3",
       "seconds": 96.6,
       "bytes": 2319716,
       "lufs": -8.57046440503894,
@@ -2246,7 +2246,7 @@
     },
     {
       "genreId": "happy-hardcore",
-      "url": "happy-hardcore.mp3",
+      "url": "https://groove.wangda.today/clips/happy-hardcore.mp3",
       "seconds": 16.600023,
       "bytes": 400030,
       "lufs": -8.391787143663882,
@@ -2260,7 +2260,7 @@
     },
     {
       "genreId": "hardstyle",
-      "url": "hardstyle.mp3",
+      "url": "https://groove.wangda.today/clips/hardstyle.mp3",
       "seconds": 48.6,
       "bytes": 1168030,
       "lufs": -8.554366093912408,
@@ -2279,7 +2279,7 @@
     },
     {
       "genreId": "melodic-house",
-      "url": "melodic-house.mp3",
+      "url": "https://groove.wangda.today/clips/melodic-house.mp3",
       "seconds": 96.6,
       "bytes": 2319716,
       "lufs": -8.72309797915414,
@@ -2298,7 +2298,7 @@
     },
     {
       "genreId": "minimal-techno",
-      "url": "minimal-techno.mp3",
+      "url": "https://groove.wangda.today/clips/minimal-techno.mp3",
       "seconds": 16.600023,
       "bytes": 400030,
       "lufs": -8.054821540874036,
@@ -2317,7 +2317,7 @@
     },
     {
       "genreId": "neo-soul",
-      "url": "neo-soul.mp3",
+      "url": "https://groove.wangda.today/clips/neo-soul.mp3",
       "seconds": 16.600023,
       "bytes": 400030,
       "lufs": -10.874457513406377,
@@ -2331,7 +2331,7 @@
     },
     {
       "genreId": "peak-time-techno",
-      "url": "peak-time-techno.mp3",
+      "url": "https://groove.wangda.today/clips/peak-time-techno.mp3",
       "seconds": 16.600023,
       "bytes": 400030,
       "lufs": -8.238856579927084,
@@ -2345,7 +2345,7 @@
     },
     {
       "genreId": "progressive-rock",
-      "url": "progressive-rock.mp3",
+      "url": "https://groove.wangda.today/clips/progressive-rock.mp3",
       "seconds": 16.600023,
       "bytes": 400030,
       "lufs": -8.641376964239925,
@@ -2359,7 +2359,7 @@
     },
     {
       "genreId": "progressive-trance",
-      "url": "progressive-trance.mp3",
+      "url": "https://groove.wangda.today/clips/progressive-trance.mp3",
       "seconds": 16.600023,
       "bytes": 400030,
       "lufs": -8.10436980338306,
@@ -2373,7 +2373,7 @@
     },
     {
       "genreId": "uplifting-trance",
-      "url": "uplifting-trance.mp3",
+      "url": "https://groove.wangda.today/clips/uplifting-trance.mp3",
       "seconds": 16.600023,
       "bytes": 400030,
       "lufs": -8.306083570228509,
@@ -2387,7 +2387,7 @@
     },
     {
       "genreId": "vaporwave",
-      "url": "vaporwave.mp3",
+      "url": "https://groove.wangda.today/clips/vaporwave.mp3",
       "seconds": 16.600023,
       "bytes": 400030,
       "lufs": -10.348484731043758,
@@ -2401,7 +2401,7 @@
     },
     {
       "genreId": "wave",
-      "url": "wave.mp3",
+      "url": "https://groove.wangda.today/clips/wave.mp3",
       "seconds": 16.600023,
       "bytes": 400030,
       "lufs": -9.27591688362858,

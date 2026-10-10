@@ -24582,3 +24582,25 @@ describe("the grid's editing actions", () => {
   ⚠️ **两项仍属店主侧 ✓**：**Worker 域名**（一有值 ⇒ `--merge --base …` 整体改指向 ✓）；
     **发版**（按指示**暂停** ✓；发版清单已写死：并入 `2.35.11` ⇒ 单条 **2.36.0** ✓、
     `--merge --base <Worker> --engine-version 2.36.0` ✓、按 `docs/RELEASE.md` 九步走、**推完看 CI** ✓）。
+
+### 一千零二十三、🌍 **清单已指向 Worker：`https://groove.wangda.today/clips/<genre>.mp3`**（2026-10-10 ✓）
+
+  ⭐ **店主给的域名 ✓**：`groove.wangda.today` ✓ ⇒ 我用 `--merge --out dist-repair --base https://groove.wangda.today/clips` ✓
+    把 **155 条**整体改指向 ✓（`rows: 155 | in range: 152` ✓，判据全绿 ✓）。
+    ⚠️ **第一次我漏了 `--out`** ✗ ⇒ 那次 `--merge` 读的是 `dist-clips` 里**陈旧的分片** ✓
+      ⇒ 一度把清单写成了 **93 条** ✗ ⇒ **立刻 `git checkout` 恢复 155 条** ✓，再用正确的 `--out dist-repair` 重跑 ✓
+      ⇒ 现状正确 ✓。**教训 ✓**：`--merge` 的 `--out` **不是可选的美化** ✗ —— 省略它就会去读另一个目录的分片 ✓
+      （而那个目录的分片正是我早先单曲风运行破坏过的 ✓）。
+  ⭐ **实测这个域名现在提供什么 ✓（用 `curl` 量的 ✓）** ✓：**所有**路径都返回
+    `HTTP 200 · 8715 bytes · text/html` ✗ —— 连 `chicago-house.mp3` 与 `genre-clips.json` 也是 ✓
+    ⇒ 那是 `wrangler.toml` 里 `not_found_handling = "single-page-application"` 的**兜底页** ✓
+    ⇒ **音频与清单都还没有部署上去** ✗（域名活着 ✓、站点在 ✓、**静态资源不在** ✗）。
+  ⭐ **为什么我这一轮不能替店主部署 ✓**：`npx wrangler whoami` 明确回答
+    **"You are not authenticated. Please run `wrangler login`."** ✗
+    ⇒ 部署/上传这一步**需要凭据** ✓（`.env.local` 里有一套 R2 键 ✓ 与 `VITE_SAMPLE_ROOT` ✓，
+      仓库里也有 `scripts/upload_samples.mjs` ✓ —— 那是给**采样镜像**用的 R2 通路 ✓，
+      与"把片段放进 Worker 静态资源"是两条不同的路 ✓）。
+  ⭐ **部署这件事的现成做法 ✓（`wrangler.toml` 已经把答案写在里面 ✓）** ✓：
+    `[assets] directory = "./dist"` ✓ ⇒ 只要**把 MP3 拷进 `dist/clips/` 再 `npx wrangler deploy`** ✓，
+    它们就会出现在 `https://groove.wangda.today/clips/<genre>.mp3` ✓✓ —— 与清单里的 URL **逐字对应** ✓。
+    （我早先在本地 preview 上验过的 `/clips/…` 形状 ✓，就是按这个目录布局推出来的 ✓。）
