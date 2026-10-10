@@ -92,6 +92,14 @@ const flag = (name, fallback) => {
   return at === -1 ? fallback : args[at + 1];
 };
 const OUT = flag("out", "dist-clips");
+/**
+ * ⭐ **Remember the repeats that landed in the window, so a re-run renders once instead of twice** (measured 2026-10-10:
+ * a clip takes ~350–650 s and the length search costs a **second full render**; the first pass guessed six repeats, saw
+ * 12.6 s, and asked for ten). The cache is a side file in the untracked output directory, not the shipped manifest — the
+ * manifest is written only by `--merge`, and a batch must never edit it in passing.
+ */
+const BARS_CACHE = `${OUT}/bars.json`;
+const barsCache = existsSync(BARS_CACHE) ? JSON.parse(readFileSync(BARS_CACHE, "utf8")) : {};
 const MERGE = args.includes("--merge");
 const ONLY = flag("only", undefined);
 const ALL = args.includes("--all");
@@ -225,7 +233,10 @@ for (const genreId of genreIds) {
    */
   const TARGET_SECONDS = 20;
   const IN_RANGE = (seconds) => seconds >= 15 && seconds <= 30;
-  let banner = asObject(await callTool("render_arrangement", { arrangementId, format: FORMAT, bitrateKbps: 192, bars: flag("bars", 6) }));
+  const remembered = Number(barsCache[genreId] ?? 0);
+  const firstGuess = remembered > 0 ? remembered : Number(flag("bars", 6));
+  if (remembered > 0) console.log(`   using the remembered ${remembered} repeat(s) for ${genreId}`);
+  let banner = asObject(await callTool("render_arrangement", { arrangementId, format: FORMAT, bitrateKbps: 192, bars: firstGuess }));
   let passes = Number(banner.passes ?? flag("bars", 6)) || 1;
   if (!IN_RANGE(Number(banner.durationSec ?? 0))) {
     const one = Number(banner.durationSec ?? 0) / passes;
@@ -252,6 +263,9 @@ for (const genreId of genreIds) {
   );
   for (const lane of skipped) console.log(`   ⚠ skipped: ${JSON.stringify(lane).slice(0, 240)}`);
   console.log(`   reply keys: ${Object.keys(banner).join(", ")}`);
+  /** ⭐ Record what worked, so the next batch pays for one render per clip rather than two. */
+  barsCache[genreId] = passes;
+  writeFileSync(BARS_CACHE, JSON.stringify(barsCache, null, 2) + "\n");
   const clipWarnings = [];
   if (skipped.length > 0) {
     clipWarnings.push({ code: "skipped-lanes", detail: `${skipped.length} lane(s) had nothing to resolve and are not in the clip` });
