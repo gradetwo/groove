@@ -21558,3 +21558,28 @@ describe("the grid's editing actions", () => {
   ⏳ **下一步（定位法已定 ✓）**：用 **MutationObserver ＋ `performance.mark`** 记下"进度节点**何时出现**" ✓
     与"点击**何时**被派发" ✓ 之间的所有异步边界 ✓（`pointerdown` 监听 → 菜单关闭 → action → 状态设置 ✓），
     找出那 6.4 秒里到底在等什么 ✓，再决定是**提前设状态** ✓ 还是**消除那段等待** ✓。
+
+### 八百七十八、🔎 **那 6.4 秒沉默定位到了具体一行：`arrangementFiles.ts:291` 的 `await audioLaneOptions(pattern)`**（2026-10-10 ✓）
+
+  ⭐ **读数链（全部可复核 ✓）** ✓：
+    1. 进度条本身是真的 ✓（`Exporting…` → `10 % · ~58s left` → `40 % · ~11s left` ✓）；
+    2. 第一帧在 **6.42–6.66 秒**才出现 ✓（Playwright 真点击与页内点击两次都量了 ✓）；
+    3. **没有主线程阻塞** ✓：`PerformanceObserver(longtask)` 只记到 **352/127/76/118 ms** ✓，且都在 9.5 s 之后 ✓
+       ⇒ 排除"设了状态画不出来" ✗；
+    4. 于是顺着代码找"第一次上报之前有什么 await" ✓ ⇒ `wavFileFor` ✓：
+       ```ts
+       const pattern = compiledPatternFor(arrangement);     // 同步
+       const lanes = await audioLaneOptions(pattern);        // ⭐ 这里，6.4 秒就在这
+       const startedAt = Date.now();
+       ... onRenderProgress ...
+       ```
+    ⇒ **`audioLaneOptions` 期间一声不响** ✗，而它做的正是"**准备音频轨/取录音**" ✓
+    —— 对照：**无头渲染那条路是会报的** ✓（`recordings ready: 12 of 40` ✓，见 `onAudioLanePreparation` ✓）
+    ⇒ **Web 导出这条路没有把同一件事说出来** ✓✓，这就是用户看到的"点了没反应" ✓。
+  ⭐ **修法（已定，下一轮做 ✓）** ✓：让 `audioLaneOptions`（或它的调用点 ✓）在**开始准备时先上报一次** ✓，
+    UI 把这一阶段显示成"**正在准备乐器…**"（新 i18n 键 ✓，中英各一 ✓）而不是空白 ✓；
+    判据：①`wavFileFor` **必须在 `audioLaneOptions` 之前**触发一次上报 ✓（源码断言 ✓，回退即红 ✓）；
+    ②新键必须存在且中英齐 ✓。
+  ⚠️ **诚实边界 ✓**：本轮**没有**最终验证"UI 那 6.4 秒里到底画了什么" ✗（我的探针在页内点击时连采样循环一起冻住 ✗，
+    真点击那次只记了 DOM 快照 ✓）。也就是说"**第一次上报之前确实有 6.4 秒的等待**"是**确证** ✓，
+    而"这 6.4 秒屏幕上完全没有字"是**高度一致但未逐帧确认** ✓ ——下一轮做修法时顺手补一帧级截图即可闭合 ✓。
