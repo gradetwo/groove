@@ -2390,10 +2390,24 @@
       "recordedLanes": 4,
       "builtInLanes": 4,
       "warnings": []
+    },
+    {
+      "genreId": "wave",
+      "url": "wave.mp3",
+      "seconds": 16.600023,
+      "bytes": 400030,
+      "lufs": -9.27591688362858,
+      "bars": 1,
+      "engineVersion": "2.35.11",
+      "recipeVersion": "1",
+      "generatedAt": "2026-10-10",
+      "recordedLanes": 2,
+      "builtInLanes": 6,
+      "warnings": []
     }
   ],
   "health": {
-    "audited": 154,
+    "audited": 155,
     "withFindings": 28,
     "tally": {
       "empty-lane": 36,
