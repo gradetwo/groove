@@ -21685,3 +21685,19 @@ describe("the grid's editing actions", () => {
     而不是"预生成太贵" ✗ —— 这两种结论差别很大，所以下一轮那次测量很关键 ✓。
   ⭐ **顺带一个可写进文案的事实 ✓**：曲风编排里"哪些轨用录音、哪些用内置合成器"是**逐轨决定**的 ✓
     （见上一条读数 ✓），所以片段说明里可以如实写"含 X 轨真实录音" ✓，比笼统说"高保真"诚实得多 ✓。
+
+### 八百八十四、🧩 **量测踩到的一个真问题（也是管线设计的输入 ✓）：MCP 服务器把编排存在**进程内**⇒"建工程"与"渲染"必须在同一个会话里**（2026-10-10 ✓）
+
+  ⭐ **现场 ✓**：我用仓库自带的 `scripts/mcp_call.mjs`（一次进程调一个工具 ✓）分两步做：
+    ①`create_arrangement {genreId:"bossa-nova"}` ✓ 拿到 `arrangementId: "arrangement-1"` ✓；
+    ②`render_arrangement {arrangementId:"arrangement-1", …}` ✗ ⇒ **`unknown arrangementId "arrangement-1" — create one with create_arrangement`** ✗。
+  ⭐ **原因（代码事实 ✓）**：MCP 服务器把 arrangement **存在进程内的 map** 里 ✓（`check:mcp` 的注释也提过 ✓）
+    ⇒ **每个 `mcp_call.mjs` 都是一次新进程** ✗ ⇒ 第 ② 步看不到第 ① 步建的工程 ✓✓。这不是 bug ✓（协议本来就是会话式 ✓），
+    是**我的调用方式错了** ✗。
+  ⭐ **对预生成管线的直接含义（记下来 ✓）** ✓：批量生成脚本**不能**"每片段两次 `mcp_call`" ✗
+    ⇒ 它必须**在一个 MCP 会话（一个子进程）里**依次 `create_arrangement` → `set_…` → `render_arrangement` ✓，
+    或者**不走 MCP**、直接在 Node 里调应用侧的渲染函数 ✓（`wavFileFor`／`renderWav` 那条 ✓，Web 导出用的就是它 ✓）。
+    **我倾向后者** ✓：预生成是"仓库自己的批量作业" ✓，不需要经过协议层 ✓，还能省掉每次的浏览器/服务进程开销 ✓。
+  ⭐ **下一次（接着量 ✓）** ✓：用 `scripts/probe_eight_bar_render.mjs` 当模板 ✓（它显然要在**一个进程**里建+渲 ✓），
+    或直接照着 `wavFileFor` 的调用方式写一个一次性 Node 脚本 ✓，测 **bossa-nova**（录音最多，6/8 轨 ✓，最吃力的情形 ✓）：
+    记录**墙钟 / 实际拉取的录音条数（`recordings ready: N of M`）/ 字节数 / 产物大小** ✓。
