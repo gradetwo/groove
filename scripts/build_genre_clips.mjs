@@ -334,7 +334,13 @@ for (const genreId of genreIds) {
   }
   clips.push({
     genreId,
-    url: `${genreId}.${FORMAT}`,
+    /**
+     * ⭐ **The manifest names the file that is actually delivered.** It used to name `${FORMAT}`, which meant a batch that
+     * rendered WAV and then encoded MP3 recorded `.wav` — the intermediate — and the merge could no longer find any of them
+     * (measured 2026-10-10: all 159 clips "left out" for naming files that had already been rewritten to MP3). The pipeline's
+     * whole point is that the list and the files agree.
+     */
+    url: `${genreId}.${produced.endsWith(".wav") ? "wav" : "mp3"}`,
     /**
      * ⭐ **The reply's own names** (measured 2026-10-10, printed from a real render): `durationSec`, `bytes`,
      * `integratedLufs`, `skippedLanes`. My first version guessed four other spellings of the duration and wrote 0 —
