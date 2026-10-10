@@ -1,27 +1,23 @@
 {
-  "version": "2.36.0",
+  "version": "2.36.1",
   "releaseDate": "2026-10-10",
   "changelogCount": 10,
   "latest": {
-    "version": "2.36.0",
-    "date": "2026-10-10",
-    "category": "feature",
+    "version": "2.36.1",
+    "date": "2026-10-11",
+    "category": "fix",
     "title": {
-      "zh": "手机版以 /m 子路径回来，并带上预生成的主题片段",
-      "en": "The phone version returns at /m, with pre-cut theme clips"
+      "zh": "手机端可读性与样式归属的小修",
+      "en": "Small fixes for phone readability and style ownership"
     },
     "highlights": [
       {
-        "zh": "手机壳 40 个文件接回：/m 路由、皮肤独立样式域、44px 与对比度三组判据、换音源可试听。",
-        "en": "Forty phone-shell files are back: the /m route, an independent skin domain, the 44 px and contrast criteria, and an audition in the instrument chooser."
+        "zh": "手机最暗的一层文字调亮：对底色从 3.95:1 提到 5.24:1，越过正文门槛。",
+        "en": "The dimmest phone text is lighter: 3.95:1 became 5.24:1 on the page, clearing the body-text floor."
       },
       {
-        "zh": "155 个 15–30 秒片段，各用该曲风自己的音色，存 Cloudflare；生成时同时体检数据并把问题写进清单。",
-        "en": "155 clips of 15–30 s, each through its genre's own instruments and served from Cloudflare; generation audits the genre data and writes what it finds into the list."
-      },
-      {
-        "zh": "导出不再沉默六秒：先说“正在准备乐器…”，首次反馈从 6.4 秒缩到 0.1 秒。",
-        "en": "An export no longer begins with six silent seconds: it says \"Preparing instruments…\", moving first feedback from 6.4 s to 0.1 s."
+        "zh": "和弦页三处写死的灰改用本皮肤墨色；App 里手机壳的懒加载移到其它视图旁边。",
+        "en": "Three hardcoded greys in the chords view use the skin's own ink, and the phone shell's lazy import sits with the other views in App."
       }
     ],
     "truncated": false
