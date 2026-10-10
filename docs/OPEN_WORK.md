@@ -22701,3 +22701,33 @@ describe("the grid's editing actions", () => {
     剩下的"工作量"在于**接入**（`/m` 路由、样式独立域＋两组判据、播放器、触控复验 ✓），而不是"修移植" ✓。
   ⭐ **隔离环境 ✓**：`/tmp/mobile-wt`（worktree ＋ 软链 `node_modules` ✓）保留 ✓ ⇒ 下一轮在那里把 14 处清零 ✓，
     之后再把"最小移植集"整体并回 `dev` ✓（并回时照常跑判据与门禁 ✓）。
+
+### 九百三十七、🔧 **修正我自己的估算：移植集不是 38 个文件，而是**119 个"dev 里已不存在"的 src 文件**——手机壳会牵出一整片 v1 时代的子树**（2026-10-10 ✓）
+
+  ⭐ **怎么发现的 ✓**：我把三个"找不到的模块"补进 worktree 后 ✓，错误只从 **14 → 13** ✗ ——
+    因为那三个文件**自己又 import 了更多不存在的东西** ✗（典型的**依赖闭包**问题 ✓）。
+    ⇒ 于是换一个**不需要猜**的办法 ✓：
+    ```bash
+    git ls-tree -r --name-only origin/mobile-preserved -- src | sort > preserved
+    git ls-tree -r --name-only dev -- src | sort > dev
+    comm -23 preserved dev            # 封存有、dev 没有
+    ```
+  ⭐ **读数 ✓** ✓：封存 `src/` **899** 个文件 ✓、dev `src/` **1121** 个 ✓ ⇒
+    **"封存有而 dev 没有"共 119 个** ✗，其中**只有 34 个**匹配我的 `src/mobile|Mobile*` 过滤 ✓。
+    ⇒ 也就是说：**手机壳的依赖闭包最多牵到 119 个文件** ✗，而它们是**v1 时代的整片子树** ✓：
+    `src/audio/InspireMe.ts` ✓、`src/audio/SoundBankManager.ts` ✓、
+    `src/components/arrangement/ArrangementPanel.tsx` ✓、`TrackRows.tsx` ✓、
+    `src/components/sequencer/SequencerPanel.tsx` ✓、`EuclideanModal.tsx` ✓、`InfoDossier.tsx` ✓ …
+  ⭐ **这个修正很重要 ✓（它把工作量从"补三个模块"变成"分诊 119 个文件" ✓）** ✓：
+    · 有些**真的要回来** ✓（例如 `hooks/useLightPlayer.ts` ✓、`useLabelArt.ts` ✓、`sequencer/Toolbar.tsx` ✓）；
+    · 有些**是 v1 的旧组件，v2 已经有替代** ✗（`SequencerPanel`／`TrackRows`／`ArrangementPanel` ✓
+      很可能是 v2 编排视图的前身 ✓）⇒ 正解不是"把 v1 搬回来" ✗，而是**把手机壳指向 v2 的对应物** ✓；
+    · 还有些可能**根本不需要** ✓（手机壳从未用到 ✓）。
+  ⭐ **因此我把上一轮的结论改正为 ✓**：移植工作量 ＝ **对 119 个文件做三分类**（要回来 ✓／映射到 v2 ✓／不需要 ✓）
+    ＋ 三处机械修法（`CATEGORY_SWATCH` ✓、i18n 键登记 ✓、补回的模块 ✓）✓；
+    **这仍然不是重写** ✓（手机壳那 34 个文件本身几乎没动 ✓），但**比"38 个文件"要大** ✓，
+    而且**分诊必须逐个看** ✓（我下一轮开始做，按"手机壳真正 import 到的"逐步收窄 ✓，
+    而不是一次把这 119 个都搬回来 ✗）。
+  ⭐ **`CATEGORY_SWATCH` 与 i18n 键的现状 ✓**：`src/mobile/genreArt.ts` 里**没有** swatch ✓
+    （所以它当年来自某个已被删的模块 ✓ ⇒ 属于"要回来 ✓ 或 映射到 v2 ✓"那一类 ✓）；
+    dev 的 i18n 目录里**没有**合并 `locales/mobile` 的痕迹 ✓ ⇒ 键登记要按仓库现有做法补 ✓（下一轮读 v2 的键表实现 ✓）。
