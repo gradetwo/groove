@@ -8,7 +8,7 @@ export interface RouteState {
    * capability check plus a route flag; the owner chose an explicit path instead, which is why this is a route of its own —
    * the same precedent `/new` and `/console` already set.
    */
-  mobile?: boolean;
+  mobileShell?: boolean;
   /**
    * ⭐ **A new project rather than a place to browse** — and this route is the one that must **not** get a genre.
    *
@@ -57,7 +57,7 @@ export function parseUrlToRoute(pathname: string, search: string, hash: string =
      * parse into a route of its own — that rule was a deliberate removal, and reviving it by accepting a prefix would
      * break it. The phone shell switches modules in its own state (`mobileModules.ts`), not in the URL.
      */
-    return { ...parseUrlToRoute("/", search, hash), mobile: true };
+    return { ...parseUrlToRoute("/", search, hash), mobileShell: true };
   }
 
   const params = new URLSearchParams(search);
@@ -254,7 +254,7 @@ export function formatRouteToUrl(route: RouteState): string {
    * carried over, so "the phone shell, as it is" is exactly `/m`. Parsing and formatting stay a closed pair, which is how
    * `router.test.ts` uses them.
    */
-  if (route.mobile) return "/m";
+  if (route.mobileShell) return "/m";
   // Use clean paths where possible, with fallback query params
   switch (route.tab) {
     case "detail":

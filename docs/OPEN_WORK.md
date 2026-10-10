@@ -23124,3 +23124,15 @@ describe("the grid's editing actions", () => {
       加**两处**测试 ✓，**逐处读、逐处改**（每处一行 ✓）比写一个替换脚本**更快也更安全** ✓。
       我在这件事上已经连续栽了三次（解构 ✓、函数体 ✓、改名 ✓）⇒ **下次凡是"改名/改结构"，一律逐处手改 ✓**，
       改完立刻 `typecheck` ✓。
+
+### 九百五十六、✅ **改名完成：`mobileShell`（这次逐处改，绿了）**（2026-10-10 ✓）
+
+  ⭐ **这次怎么改的 ✓**：**先 `grep -n` 打出每一处**（`router.tsx` 3 处 ✓、测试 5 处 ✓）⇒
+    再用**带幂等保护的定向替换** ✓（`re.sub(r"mobileShell ?Shell", "mobileShell")` ✓ —— 专门防住上一轮
+    "套两层"的错 ✓）⇒ 第一次仍有 3 处漏在测试里 ✗（它们是 `parseUrlToRoute(...).mobile` 而不是 `route.mobile` ✓）
+    ⇒ 补一次 ✓ ⇒ **`typecheck` 0** ✓、三份路由判据 **27 条全绿** ✓。
+  ⭐ **命名冲突至此解决 ✓**：`RouteState.mobileShell?: boolean`（"这是手机壳入口" ✓）
+    与移植进来的 `MobileApp` 的 **`module`** prop（"当前哪个模块" ✓）**彻底分开** ✓ ——
+    这正是"一个词两个意思最容易传错参数"的那类坑 ✓，而且是在**挂载之前**发现的 ✓。
+  ⭐ **P1 只剩最后一步 ✓**：`App.tsx` 按 `route.mobileShell` 挂 `MobileApp`（带 `module` 状态与
+    `onSelectModule` ✓）⇒ 真浏览器打开 `/m` 验收渲染 ✓。
