@@ -22293,3 +22293,19 @@ describe("the grid's editing actions", () => {
     宁可总时长长一点，也不要一台被压到连测量都做不了的机器 ✓（这条对"我还能不能继续工作"尤其重要 ✓）。
   ⭐ **写入安全 ✓**：三份 part 分别写 `dist-clips/manifest-{0,1,2}.json` ✓（互不覆盖 ✓），
     合并只由 `--merge` 一步做 ✓ ⇒ 跑批期间 `public/genre-clips.json` **不会**被改 ✓。
+
+### 九百一十四、⚡ **采纳店主的建议：直接渲 WAV，再用 ffmpeg 压 MP3**（2026-10-10 ✓）
+
+  ⭐ **店主原话 ✓**："直接生成wav，然后再用ffmpeg之类压成mp3应该能快很多" ✓ ⇒ **两个理由都成立 ✓**：
+    1. **内联 MP3 编码是跑在渲染里的 JavaScript** ✓ ⇒ 每个片段都要为它付时间 ✗ ⇒ 换成 **ffmpeg（本机 **9.0.2** ✓）**
+       原生编码 ✓ ⇒ 渲染本身只写 WAV ✓（本来就快 ✓）；
+    2. **WAV 路径还会报 `integratedLufs`** ✓ —— 而 MP3 路径一直回 `null` ✗（我前几轮为此困惑过 ✓）
+       ⇒ 这次改动**既更快又多测到一个量** ✓。
+  ⭐ **已实现 ✓**：脚本默认 `format: "wav"` ✓ → 复制到 `dist-clips/<genre>.wav` ✓ →
+    `ffmpeg -y -loglevel error -i x.wav -codec:a libmp3lame -b:a 192k x.mp3` ✓ →
+    **删 WAV**（`--keep-wav` 可保留 ✓）✓、清单 `url`/`bytes` 指向 MP3 ✓、`lufs` 取 WAV 的实测值 ✓；
+    **ffmpeg 失败不会丢片段** ✓：保留 WAV ✓ 并在 `warnings` 里写 `ffmpeg-failed` ✓（宁可产物是 WAV，也不静默丢掉 ✓）。
+  ⭐ **已按新代码重启 3 个 shard** ✓（旧进程按 PID 停 ✓；丢掉的是 2 个已完成片段 ＋ 3 个在飞片段 ✗ —— 为换掉最慢的一环，值得 ✓）。
+  ⚠️ **速度提升**还没被证实** ✗** ✓：重启后 4 分钟，3 个 shard 都还在各自第一个片段上 ✓
+    （`load 11.76` ✓、`dist-clips/*.mp3` 里那 4 个是**先前**跑的 ✓）⇒
+    **等第一个片段出来再对比**（旧：353 秒/片段 ✗）✓ —— 在那之前我不写"变快了" ✓。

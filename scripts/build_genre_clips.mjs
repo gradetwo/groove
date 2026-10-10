@@ -31,8 +31,8 @@
  * The kill targets the Chromium processes this server started, found by walking `/proc/<pid>/cmdline` rather
  * than by name: `pgrep -f chromium_headless` was measured to find 4 of 50 leaked processes.
  */
-import { spawn } from "node:child_process";
-import { copyFileSync, existsSync, mkdirSync, readFileSync, readdirSync, statSync, writeFileSync } from "node:fs";
+import { spawn, spawnSync } from "node:child_process";
+import { copyFileSync, existsSync, mkdirSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from "node:fs";
 
 const BUNDLE = "dist-mcp/groove-mcp.mjs";
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -97,7 +97,14 @@ const ONLY = flag("only", undefined);
 const ALL = args.includes("--all");
 const RECIPE_VERSION = "1";
 /** ⭐ `--format wav` exists for one question only: the **WAV path reports `integratedLufs`** and the MP3 path does not. */
-const FORMAT = flag("format", "mp3");
+/**
+ * ⭐ **Render WAV, then encode with ffmpeg** (owner's suggestion, 2026-10-10: *"直接生成wav，然后再用ffmpeg之类压成mp3应该
+ * 能快很多"*). Two reasons it is right: the browser's MP3 encoder is JavaScript running inside the render, so every clip pays
+ * for it, and the **WAV path is also the one that reports `integratedLufs`** — the MP3 path answered `null`. So this is
+ * faster *and* it measures more.
+ */
+const FORMAT = flag("format", "wav");
+const KEEP_WAV = args.includes("--keep-wav");
 
 /** ⭐ `callTool` answers with the reply already parsed when it is JSON, and with text when it is not: accept both. */
 const asObject = (value) => {
@@ -259,11 +266,22 @@ for (const genreId of genreIds) {
   }
   const file = banner.file ?? banner.output ?? banner.path ?? banner.outputPath ?? banner.writtenTo;
   let bytes;
-  let copied = file;
+  let copied;
   if (typeof file === "string" && existsSync(file)) {
-    copied = `${OUT}/${genreId}.mp3`;
-    copyFileSync(file, copied);
-    bytes = statSync(copied).size;
+    const wav = `${OUT}/${genreId}.wav`;
+    copyFileSync(file, wav);
+    const mp3 = `${OUT}/${genreId}.mp3`;
+    const encoded = spawnSync("ffmpeg", ["-y", "-loglevel", "error", "-i", wav, "-codec:a", "libmp3lame", "-b:a", "192k", mp3], { stdio: ["ignore", "ignore", "pipe"] });
+    if (encoded.status === 0 && existsSync(mp3)) {
+      bytes = statSync(mp3).size;
+      copied = mp3;
+      if (!KEEP_WAV) rmSync(wav, { force: true });
+    } else {
+      // ⚠ A missing ffmpeg must not lose the clip: the WAV is a real, playable result, and the manifest says which it is.
+      bytes = statSync(wav).size;
+      copied = wav;
+      clipWarnings.push({ code: "ffmpeg-failed", detail: `ffmpeg could not encode the MP3 (${String(encoded.stderr ?? "").slice(0, 120)}); the WAV was kept` });
+    }
   }
   clips.push({
     genreId,
