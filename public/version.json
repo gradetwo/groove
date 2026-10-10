@@ -1,29 +1,25 @@
 {
-  "version": "2.35.10",
-  "releaseDate": "2026-10-09",
+  "version": "2.35.11",
+  "releaseDate": "2026-10-10",
   "changelogCount": 10,
   "latest": {
-    "version": "2.35.10",
+    "version": "2.35.11",
     "date": "2026-10-10",
-    "category": "feature",
+    "category": "fix",
     "title": {
-      "zh": "MCP 更好用：轨道数据、旋律落轨、冷启动有进度",
-      "en": "MCP gets data, a melody track, and a cold start that speaks"
+      "zh": "导出不再沉默六秒",
+      "en": "The export stops being silent for six seconds"
     },
     "highlights": [
       {
-        "zh": "describe_arrangement 可以要 JSON 数据，trackId 不必再从散文里找。",
-        "en": "describe_arrangement can answer as data, so a client need not read a track's id out of prose."
+        "zh": "导出音频时先说“正在准备乐器…”，首次反馈从 6.4 秒缩到 0.1 秒；随后仍是带预计剩余时间的百分比。",
+        "en": "An audio export now says \"Preparing instruments…\" first: the first feedback moved from 6.4 s to 0.1 s, and the percentage with its estimate still follows."
       },
       {
-        "zh": "新增 melody_to_track：生成的旋律直接落到轨道，按十六分网格，不必手工拼 startBeats。",
-        "en": "melody_to_track writes a generated melody onto a track on the sixteenth grid, so nobody zips four arrays by hand."
-      },
-      {
-        "zh": "渲染冷启动先报进度；未知参数会被点名；响度报告自称是已提交基线。",
-        "en": "A render announces its cold start, a tool names the arguments it never declared, and the loudness report says it is a committed baseline."
+        "zh": "那六秒花在取目录与录音上（渲染开始之前），此前这一阶段一声不响；无头渲染早就报同一件事。",
+        "en": "Those six seconds were the catalogue and recordings being fetched before the render began, a stage that reported nothing — while the headless path had always narrated it."
       }
     ],
-    "truncated": true
+    "truncated": false
   }
 }
