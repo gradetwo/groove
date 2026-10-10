@@ -2241,6 +2241,7 @@ export function ArrangementViewV2({ currentSong, songId, capture, bar = 0, playe
         }}
         instruments={instruments}
         onChangeInstrument={(trackId, assetId) => commit(setTrackSampleCommand(trackId, trackFor(trackId)?.sample?.assetId ?? DEFAULT_SAMPLER_ASSET, assetId))}
+        onAudition={(assetId) => void player?.audition?.({ assetId, midi: 60 })}
         presets={SYNTH_PRESET_KEYS}
         onChangePreset={(trackId, preset) => commit(setTrackInstrumentCommand(trackId, trackFor(trackId)?.instrument ?? "", preset))}
         onToggleStep={(trackId, index) => commit(toggleStepCommand(trackId, index))}

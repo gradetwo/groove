@@ -30,6 +30,8 @@ export interface TrackHeaderV2Props {
   onLibraryOpenChange?: (trackId: string, open: boolean) => void;
   instruments?: readonly InstrumentChoice[];
   onChangeInstrument?: (trackId: string, assetId: string) => void;
+  /** ⭐ Audition a candidate before choosing it (owner's instruction 2026-10-10); absent ⇒ no ▷ is drawn. */
+  onAudition?: (assetId: string) => void;
   onToggle?: (trackId: string, flag: "muted" | "soloed", value: boolean) => void;
   onToggleArm?: (trackId: string, armed: boolean) => void;
   onChangeGain?: (trackId: string, gainDb: number) => void;
@@ -68,7 +70,7 @@ export function TrackHeaderV2({
   libraryOpen = false,
   onLibraryOpenChange,
   instruments = [],
-  onChangeInstrument,
+  onChangeInstrument, onAudition,
   onToggle,
   onToggleArm,
   onChangeGain,
@@ -173,6 +175,7 @@ export function TrackHeaderV2({
       {canPlayInstrument && (
         <span data-control="instrument" className="min-w-0 max-w-[7rem]">
           <InstrumentBrowserV2
+          {...(onAudition ? { onAudition } : {})}
           /** ⭐ The header copy, marked so one testid has one element (fourth evaluation P2-2). */
           scope="header"
             trackId={track.id}

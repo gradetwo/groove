@@ -28,6 +28,8 @@ export interface TrackListV2Props {
    */
   instruments?: readonly InstrumentChoice[];
   onChangeInstrument?: (trackId: string, assetId: string) => void;
+  /** ⭐ Audition a candidate before choosing it (owner's instruction 2026-10-10); absent ⇒ no ▷ is drawn. */
+  onAudition?: (assetId: string) => void;
   /** ⭐ The synth presets a track may name, and what to do when one is chosen (fifth Web evaluation, P2). */
   presets?: readonly string[];
   onChangePreset?: (trackId: string, preset: string) => void;
@@ -99,7 +101,7 @@ function depthOf(track: TrackV2, all: readonly TrackV2[], seen = new Set<string>
 /** The kinds the add menu offers — one table, shared with the new-project panel and the kind chooser. */
 const ADDABLE = TRACK_KIND_ORDER;
 
-export function TrackListV2({ arrangement, onAddTrack, onRemoveTrack, onToggle, onToggleCollapse, onChangeKind, instruments = [], onChangeInstrument, presets, onChangePreset, onToggleStep, bar = 0, onChangeGain, onChangePan }: TrackListV2Props) {
+export function TrackListV2({ arrangement, onAddTrack, onRemoveTrack, onToggle, onToggleCollapse, onChangeKind, instruments = [], onChangeInstrument, onAudition, presets, onChangePreset, onToggleStep, bar = 0, onChangeGain, onChangePan }: TrackListV2Props) {
   const { t } = useLanguage();
   // Which row's library panel is open. One at a time: two panels open would make the list jump as each one changes its height.
   const [openLibraryFor, setOpenLibraryFor] = useState<string | undefined>(undefined);
@@ -173,6 +175,7 @@ export function TrackListV2({ arrangement, onAddTrack, onRemoveTrack, onToggle, 
               )}
               {track.kind === "sampler" && onChangeInstrument && instruments.length > 0 && (
                 <InstrumentBrowserV2
+                {...(onAudition ? { onAudition } : {})}
                   trackId={track.id}
                   trackName={track.name}
                   {...(track.sample?.assetId ? { assetId: track.sample.assetId } : {})}

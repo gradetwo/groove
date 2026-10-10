@@ -22441,3 +22441,26 @@ describe("the grid's editing actions", () => {
     **先看原文、再写替换** ✓（本轮我又违反了一次 ✗，代价是一次回退 ✓，但**没有把红留在仓库里** ✓）。
   ⭐ **顺手补的一个真问题 ✓**：`dist-clips/` 里的 MP3 **之前没有被忽略** ✗（`git status` 里 8 个片段显示为 `??` ✓）
     ⇒ **店主明确说过 MP3 不入 git** ✓ ⇒ 已把 **`dist-clips/` 加进 `.gitignore`** ✓（迟做总比误提交好 ✓）。
+
+### 九百二十三、🎧✅ **chooser 试听接线完成（4 个文件）——而且发现这条路**应用里早就走通过**（`onAudition` 已存在）**（2026-10-10 ✓）
+
+  ⭐ **这次守住了规矩 ✓（先读原文、再写替换 ✓）** ✓：上一轮的失败是我拿**猜的**解构文本去替换 ✗；
+    这一轮改成**用正则找真实的函数签名与参数表** ✓（`export function X({…})` ✓）＋
+    **用 chooser 元素本身作锚点**插入透传 ✓（不再依赖"旁边有个 `onChangeInstrument`"这种假设 ✓）
+    ⇒ 两个渲染器各 **3 处**（接口／解构／透传 ✓）＋ 视图 **1 处** ✓ ⇒ `typecheck` 干净 ✓。
+  ⭐ **意外发现（很有说服力 ✓）** ✓：`ArrangementViewV2` 里**本来就有** `onAudition` ✗（第 2158 行 ✓），
+    它的注释与我这几轮独立得出的原则**一字不差地同向** ✓：
+    > "**The roll writes, the view sounds.** … A drum or synth track gets no audition rather than a silent one,
+    > which is the honest answer and the one its own keyboard is already given." ✓
+    ⇒ 也就是说：**"不给一个听不见的试听"**这条，应用里早就是既有立场 ✓ ⇒ 我的实现（只对 sampler 轨、
+    没有 player 就不画 ▷ ✓）与它**同一立场** ✓，不是我又发明了一套 ✓。
+  ⭐ **现在的状态 ✓**：
+    · `InstrumentLibraryV2`：每个选项的 `<li>` 里有**兄弟** ▷ 按钮 ✓（44 px ✓、`aria-label` ✓）；
+    · `InstrumentBrowserV2`：`onAudition` 只在被传入时透传 ✓；
+    · `TrackListV2`／`TrackHeaderV2`：各 3 处（接口／解构／透传 ✓）；
+    · `ArrangementViewV2`：`onAudition={(assetId) => void player?.audition?.({ assetId, midi: 60 })}` ✓
+      —— **`audition` 就是那个"给 assetId 就发声、不改状态"的现成入口** ✓（`playArrangementV2.ts:74` ✓）。
+  ⭐ **验收 ✓**：`instrumentAudition`／`instrumentLibrarySurface`／`trackInstrumentChooser` **22 例全绿** ✓；
+    `typecheck`／`lint`／`docs:check` ✓。
+  ⏳ **仍差最后一件小事 ✓**：**可见回执**（"正在试听 <乐器名>" ✓）＋**门控未开时的引导** ✓ ——
+    下一轮做，并配"点了要看得见"的判据 ✓（与导出/首渲那两条"别沉默"同源 ✓）。
