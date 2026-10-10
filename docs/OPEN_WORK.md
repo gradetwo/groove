@@ -24194,3 +24194,33 @@ describe("the grid's editing actions", () => {
     而不是把"跑不出来"写成"跑完了" ✓。
   ⭐ **顺带 ✓**：**第二轮全套测试目前 0 个 FAIL** ✓（已推进 600+ 个通过用例 ✓）⇒
     首轮那 8 个失败**不能当作当前状态** ✓（首轮与渲染并发、且含联网用例 ✓）⇒ 以第二轮汇总为准 ✓。
+
+### 一千零五、🚦 **全套测试的**准确**失败清单（4 个文件，其中 3 个是我的）**（2026-10-10 ✓）
+
+  ⭐ **读数（第二轮，留底版 ✓）** ✓：
+    ```
+    Test Files  4 failed | 681 passed | 4 skipped (689)
+    FAIL  src/test/deadExportsBudget.test.ts  > exports nothing refers to > stays under the measured budget
+    FAIL  src/test/fileSizeBudget.test.ts     > production source sizes > every bucket stays at or under its measured count
+    FAIL  src/test/i18nKeys.test.ts           > i18n key completeness guard (U-03) > resolves every literal t("...") usage
+    FAIL  src/test/sfzTrigger.test.ts         > the whole-corpus trigger census > … (联网取语料)
+    ```
+    ⇒ **4 个**（首轮是 6 个文件 / 8 个用例 ✓）⇒ 我自己修掉 `phoneShellCut` 之后 ✓，
+      剩下的正是**移植"带回来的东西"必须过的三道账** ✓ —— 而这三道**恰好都是"接回一个面"时最容易被忽略的** ✓：
+    1. **`deadExportsBudget`** ✗：移植进来的文件（以及我新加的组件 ✓）里**有没人引用的导出** ✓ ——
+       一个被封存的面回来时 ✓，它内部互相引用的导出对着**今天的仓库**未必都还有人用 ✓；
+    2. **`fileSizeBudget`** ✗：**生产源码体积的分桶预算**被我的移植超了 ✓ —— 这是**40 个文件确实进来了**的直接体现 ✓；
+    3. **`i18nKeys`（U-03）** ✗：**要求 `src/` 下每一个字面量 `t("…")` 都能在字典里解析到** ✓ ⇒
+       说明移植进来的屏幕里**有我没登记/不存在的键** ✓（我登记了 `mobileMessages` ✓，但显然还有漏的 ✓）；
+    4. **`sfzTrigger`** ✗：联网语料（"a declared text file did not fetch" ✓）⇒ **环境相关** ✓，与我无关 ✓
+       （我**不**把它算作自己的问题 ✓，但也**不**假装它绿 ✓）。
+  ⭐ **性质判断 ✓**：这三条**不是"坏判据"** ✗ —— 它们正是这个仓库用来防"**删了没人知道、加了没人管**"的账本 ✓
+    （`deadExportsBudget` 防死代码 ✓、`fileSizeBudget` 防体积悄悄膨胀 ✓、`i18nKeys` 防文案漏登记 ✓）
+    ⇒ 所以正确做法**不是**把预算调高就完事 ✗，而是：
+    · `deadExports`：把**确实没人用**的导出**删掉** ✓（或给出被引用的路径 ✓）；**实在需要**保留的 ✓，
+      按仓库既有做法**登记到它的清单**里并写明理由 ✓；
+    · `fileSizeBudget`：先**读它的分桶口径** ✓，再用**实测值**更新预算 ✓ —— 但必须在注释里写清"这是手机壳接回带来的" ✓
+      （而不是无声地抬阈值 ✗，那是这个仓库最反对的做法 ✓）；
+    · `i18nKeys`：**逐条**找出解析不到的 `t("…")` 字面量 ✓ ⇒ 要么补键 ✓、要么改字面量 ✓。
+  ⭐ **为什么这一条重要 ✓**：目标里写着"**本地门禁绿**、远端 CI 为权威" ✓ ⇒
+    在把这 3 条清掉之前 ✓，**我不会宣布目标完成** ✓（哪怕功能全都验过了 ✓）——这正是"验收"与"感觉做完了"的区别 ✓。
