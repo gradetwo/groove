@@ -21516,3 +21516,27 @@ describe("the grid's editing actions", () => {
   ⭐ **下次三步 ✓** ✓：①写 synth 轨的预设选择器（表头 ＋ 列表两份 ✓，与 sampler chip 同槽不同源 ✓），
     接 `setTrackInstrument` ✓ ＋ 判据"选了就写进模型" ✓；②加 MCP 工具 `set_arrangement_track_instrument` ✓
     并登记 `EXPOSED` ✓ ＋ 判据 ✓；③重跑 `release.sh` 发 **2.35.10**（changelog 已就绪 198 字 ✓）并核对线上 ✓。
+
+### 八百七十六、🚀 **v2.35.10 已发布上线（九步全过，含远端 `full CI` ok）**（2026-10-10 ✓）
+
+  ⭐ **发布读数 ✓**：`version:check ✓ version:new ✓ local gate skipped ✓ build ✓ budget ✓ **full CI ok** ✓ deploy ✓
+    tag ✓ remote ✓`；线上 `https://groove.wangda.today/version.json` ⇒ **`"version": "2.35.10"`** ✓。
+    **发布前本机全量单测**：**672 个文件 / 5145 条全绿** ✓（3 文件 24 条镜像相关跳过 ✓）✓。
+  ⭐ **这一版带上去的（两份 2026-10-10 报告的处置 ✓）** ✓：
+    · **MCP 两个 P2** ✓：未知参数会被**点名**（`unknownArgs` ＋ 说明 ✓）、`get_loudness_report` 自称
+      `source: "committed-baseline"` 并解释 `generatedAt` ✓；
+    · **`describe_arrangement` 的 `format: "json"`** ✓（默认文本不变 ✓，`trackId` 不必再从散文里找 ✓）；
+    · **`add_melody_to_track`** ✓（原 `melody_to_track` ✓ 改名以符合"写动词开头"的规则 ✓）：把 `generate_melody`
+      的四个平行数组按**十六分网格**写成音符 ✓（默认 `beatsPerStep = 4 / STEPS_PER_BAR` ✓ 由常量推导 ✓）；
+    · **`set_arrangement_track_preset`** ✓（原 `set_arrangement_track_instrument` ✓ 改名以**不复活废弃名** ✓）：
+      合成器轨按名字选预设 ✓，其他 kind 一律拒绝 ✓；
+    · **首渲不再沉默** ✓：渲染在**等待之前**先报一句冷启动 ✓（`report(0, …)` ✓）；
+    · **gate 慢时解释自己** ✓（2.5 s 后才出现那句话 ✓，本机实测整个启动 **579 ms** ✓）；
+    · **轨道类型选择器 32 → 56 px** ✓（闭合态显示完整 "Sampler" ✓，实测最宽标签 49 px ✓）；
+    · **压缩器降级提示按原因只说一次** ✓；**鼓轨说明用内置套鼓/角色** ✓；**chip 只显示乐器名** ✓。
+  ⭐ **这一版最贵的一课（已固化 ✓）**：新增 MCP 工具要同时对上**七处**——
+    `EXPOSED` ✓、`UI_LEDGER`／Web 接线 ✓、`mcpTools` 的**写动词前缀规则** ✓、
+    `mcpTrackKindRename` 的**废弃名守卫** ✓、`docs/MCP.md` 工具表 ✓、`docs/FEATURE_ALIGNMENT.md` 对照表 ✓、
+    以及**以 `mcp` 命名的判据文件**（工具覆盖语料 ✓）。
+    **两次改名都是判据逼出来的** ✓，而不是我事先想到的 ✓——**先跑判据、再改、再发**是唯一可靠顺序 ✓
+    （本机全量单测绿之后一次发成功 ✓，与前面连续四次 CI 红形成对照 ✓）。
