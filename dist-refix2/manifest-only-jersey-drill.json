@@ -2,17 +2,17 @@
   "bars": 8,
   "clips": [
     {
-      "genreId": "psytrance",
-      "url": "psytrance.mp3",
+      "genreId": "jersey-drill",
+      "url": "jersey-drill.mp3",
       "seconds": 16.600022675736962,
       "bytes": 400030,
-      "lufs": -8.718070620087712,
+      "lufs": -9.150446736300047,
       "bars": 2,
       "engineVersion": "2.35.11",
       "recipeVersion": "1",
       "generatedAt": "2026-10-10",
-      "recordedLanes": 3,
-      "builtInLanes": 5
+      "recordedLanes": 2,
+      "builtInLanes": 6
     }
   ]
 }

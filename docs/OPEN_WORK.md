@@ -23670,3 +23670,24 @@ describe("the grid's editing actions", () => {
     ⇒ 同时把那条警告收窄 ✓（只在**既没 `--out`、也没 `--shard`** 时才提示 ✓），因为现在**默认行为已经安全** ✓。
   ⭐ **当前产物 ✓**：`dist-refix2/` 里已有 `detroit-techno.mp3`（**16.6 s ✓**）✓；`psytrance` 正在跑 ✓（3/6 ✓）。
     ⚠️ `chicago-house` 的两次渲染都没留下文件 ✗ ⇒ 它需要单独重跑 ✓（用带诊断的新脚本 ✓），届时原因会自己说出来 ✓。
+
+### 九百八十一、🎯✅ **`chicago-house` 的谜团由修复本身解决了：96.6 秒 → **16.6 秒**（诊断补丁没白加，但这次用不上它）**（2026-10-10 ✓）
+
+  ⭐ **决定性的日志 ✓**（单独重跑 `chicago-house`，`/tmp/diag-chi.log` ✓） ✓：
+    ```
+    96.6s (measured from the artifact) is outside 15–30s; asking for 1 repeat(s) instead
+    bars=8 passes=1 totalSteps=128 durationSec=16.600022675736962 sampleRate=44100 channels=2 lufs=-9.656906171420587
+    wrote /tmp/diag-chi/manifest-only-chicago-house.json with 1 clip(s)
+    ```
+    ⇒ **"产物优先"三步都成立 ✓**：①先量产物 ✓（96.6 s ✓）；②据此算出 **1 遍** ✓；
+      ③第二遍产出 **16.6 秒**、`lufs −9.66` ✓ ⇒ **落进窗口** ✓；并且写出的文件名是
+      **`manifest-only-chicago-house.json`** ✓✓ ⇒ 新命名规则**当场生效** ✓（不再可能覆盖整片分片 ✓）。
+  ⭐ **由此对"字段全 undefined"家族的最终结论 ✓**：那不是"某个曲风的回复天生缺时长" ✓，
+    而是**某些渲染轮次**返回了无法解析的包装 ✓（`reply keys: ok, text` ✓）；而**只要让决定依赖产物** ✓，
+    这类轮次就自然被"再来一遍"吸收掉 ✓ ⇒ **修复比诊断更有用** ✓（诊断补丁留着 ✓，下次真出现会自己说明白 ✓）。
+  ⭐ **接下来的收尾动作 ✓**：旧循环（改名前启动的 ✓）已按 PID 停掉 ✓；改为**两个各 3 个曲风的循环** ✓，
+    统一输出到 **`dist-fix`** ✓、由**新脚本**写 `manifest-only-<genre>.json` ✓
+    （PID `fix-a` / `fix-b` ✓，日志 `/tmp/fix-a.log` / `/tmp/fix-b.log` ✓，共 2 个渲染器 ✓ 在安全上限内 ✓）。
+    ⇒ 6 个 `manifest-only-*.json` 齐了之后 ✓：以**已提交的 139 条为底** ✓、把这 6 个曲风的旧行**替换**为新行 ✓
+    ⇒ 再把结果写成一份**数字分片**（merge 只认数字分片 ✓）⇒ 跑 `--merge` ✓ ⇒ 用严格读取器复核 ✓
+    ⇒ 那份清单才会**既通过读取器、又全部落在 15–30 秒** ✓ ⇒ 手机片段播放器就能真正出声 ✓。

@@ -2,17 +2,17 @@
   "bars": 8,
   "clips": [
     {
-      "genreId": "psytrance",
-      "url": "psytrance.mp3",
+      "genreId": "ambient-dub",
+      "url": "ambient-dub.mp3",
       "seconds": 16.600022675736962,
       "bytes": 400030,
-      "lufs": -8.718070620087712,
-      "bars": 2,
+      "lufs": -12.901026337924574,
+      "bars": 1,
       "engineVersion": "2.35.11",
       "recipeVersion": "1",
       "generatedAt": "2026-10-10",
-      "recordedLanes": 3,
-      "builtInLanes": 5
+      "recordedLanes": 2,
+      "builtInLanes": 6
     }
   ]
 }
