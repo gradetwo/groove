@@ -17,13 +17,13 @@ describe("the chooser's audition", () => {
   it("⭐ is a sibling of the row, because a button cannot be nested in a button", () => {
     const li = list.indexOf("<li key={entry.assetId}>");
     const rowClose = list.indexOf("</button>", li);
-    const audition = list.indexOf("instrument-audition-");
+    const audition = list.indexOf("instrument-audition-${entry.assetId}");
     expect(li, "the row wrapper").toBeGreaterThan(-1);
     expect(audition, "the audition control exists").toBeGreaterThan(rowClose);
   });
 
   it("⭐ is thumb-sized and names what it will play", () => {
-    const at = list.indexOf("instrument-audition-");
+    const at = list.indexOf("instrument-audition-${entry.assetId}");
     const block = list.slice(at, at + 900);
     expect(block, "44 px for a thumb").toContain("min-h-11 min-w-11");
     expect(block, "an accessible name").toContain("aria-label=");
