@@ -159,7 +159,26 @@ for (const genreId of genreIds) {
    * those two anyway; they were ignored (the reply's own `unknownArgs` is the mechanism that says so) and the file landed
    * in the server's temporary directory. The reply names where it went, so the script copies it where the batch wants it.
    */
-  const banner = asObject(await callTool("render_arrangement", { arrangementId, format: "mp3", bitrateKbps: 192 }));
+  /**
+   * ⭐ **A genre's arrangement is one bar long** (measured 2026-10-10: `bars=1 passes=1 totalSteps=16 durationSec=2.6`), and
+   * the owner wants a **15–30 second** clip. `render_arrangement`'s `bars` argument **repeats the arrangement** and "drives
+   * the duration", so the clip's length is a choice this script has to make rather than inherit.
+   *
+   * It asks for six repeats first — a rough guess at 15–20 s for the tempos in this library — then, **only if the answer is
+   * outside the window**, works out the repeats that would land at ~20 s from what the first render actually measured. One
+   * render in the common case, two in the rare one.
+   */
+  const TARGET_SECONDS = 20;
+  const IN_RANGE = (seconds) => seconds >= 15 && seconds <= 30;
+  let banner = asObject(await callTool("render_arrangement", { arrangementId, format: "mp3", bitrateKbps: 192, bars: flag("bars", 6) }));
+  let passes = Number(banner.passes ?? flag("bars", 6)) || 1;
+  if (!IN_RANGE(Number(banner.durationSec ?? 0))) {
+    const one = Number(banner.durationSec ?? 0) / passes;
+    const wanted = one > 0 ? Math.max(1, Math.round(TARGET_SECONDS / one)) : passes;
+    console.log(`   ${String(banner.durationSec)}s is outside 15–30s; asking for ${wanted} repeat(s) instead`);
+    banner = asObject(await callTool("render_arrangement", { arrangementId, format: "mp3", bitrateKbps: 192, bars: wanted }));
+    passes = wanted;
+  }
   /**
    * ⭐ **`skippedLanes` is a health check the renderer hands over for free**: a lane whose bytes could not be resolved is
    * named there with its reason, rather than dropped in silence. It belongs in the manifest beside the lane counts.
@@ -197,6 +216,8 @@ for (const genreId of genreIds) {
     seconds: Number(banner.durationSec ?? 0) || 0,
     ...(bytes === undefined ? {} : { bytes }),
     ...(typeof banner.integratedLufs === "number" ? { lufs: banner.integratedLufs } : {}),
+    /** ⭐ The repeats the clip was cut with, so its length is reproducible rather than "about twenty seconds". */
+    bars: passes,
     engineVersion: version,
     recipeVersion: RECIPE_VERSION,
     generatedAt: new Date().toISOString().slice(0, 10),
