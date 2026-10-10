@@ -182,6 +182,14 @@ export function AudioStartGate({ children, onStart }: AudioStartGateProps) {
       ? `v${APP_VERSION}`
       : `v${APP_VERSION} · ${typeof AudioContext === "undefined" ? "no AudioContext" : "AudioContext ok"}`;
 
+  /**
+   * ⭐ **The gate has a phone face too** (found in a browser on 2026-10-10: on `/m` the shell sat under a desktop-styled
+   * overlay whose button a probe could not click, because it intercepted pointer events). The gate itself is right — browsers
+   * only start audio inside a gesture — but a phone route should not be greeted with a desktop dialog. Read from the path
+   * rather than the router, because this component renders **above** `RouterProvider`.
+   */
+  const phoneRoute = typeof window !== "undefined" && /^\/m(\/|$)/.test(window.location.pathname);
+
   return (
     <>
       {children}
@@ -190,7 +198,7 @@ export function AudioStartGate({ children, onStart }: AudioStartGateProps) {
         role="dialog"
         aria-modal="true"
         aria-label={t("audio_gate_label")}
-        className="gate-overlay"
+        className={`gate-overlay${phoneRoute ? " gate-overlay--phone" : ""}`}
         /**
          * ⭐ **Clicking the backdrop dismisses, exactly as Escape does** (fourth evaluation, P2-3: the gate "should not
          * block navigation or creating a project", and on `/new` it swallowed the Create click behind it).

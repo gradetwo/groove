@@ -814,3 +814,36 @@ html.reduced-motion .animate-orbit {
     animation: none;
   }
 }
+
+/**
+ * ⭐ **The audio gate, on the phone shell's route** (owner's 2026-10-10 work on `/m`). The phone's own sheet
+ * (`src/mobile/mobile.css`) is imported **lazily** by `MobileApp`, deliberately, so a desktop visit never downloads the
+ * phone's style domain — which means it cannot style a gate that appears *before* the shell mounts. These values are
+ * therefore written here with the phone palette's own numbers, and the phone's `--m-*` variables are listed first so a
+ * mounted shell still wins if it ever defines them on this element.
+ */
+.gate-overlay--phone {
+  background: var(--m-bg, #0b0b14);
+  padding: 20px;
+}
+.gate-overlay--phone .gate-card {
+  background: var(--m-card, #14141f);
+  border: 1px solid var(--m-line-2, rgba(232, 232, 255, 0.2));
+  border-radius: 18px;
+  max-width: 360px;
+  padding: 20px;
+}
+.gate-overlay--phone .gate-btn {
+  /* ⭐ 44 px: the phone's touch rule, applied to the first thing a phone user taps. */
+  min-height: 44px;
+  border-radius: 14px;
+  background: var(--m-gold, #5eead4);
+  color: var(--m-on-gold, #0b0b14);
+}
+.gate-overlay--phone .gate-brand,
+.gate-overlay--phone .gate-name {
+  color: var(--m-ink, #f3f3f9);
+}
+.gate-overlay--phone .gate-sub {
+  color: var(--m-ink-3, #98929f);
+}
