@@ -22481,3 +22481,21 @@ describe("the grid's editing actions", () => {
   ⏭️ **下一轮（第一件事 ✓）** ✓：`sed` 读 `InstrumentLibraryV2` 里 `<ul>` 那一段的真实标记 ✓ ⇒
     在它上面加一条 `aria-live="polite"` 的回执行 ✓（`data-testid="instrument-audition-receipt"` ✓），
     由一个 `useState<string | null>` 驱动 ✓（点 ▷ 时写入乐器名 ✓）⇒ 配"点了之后**必须出现**这句话"的判据 ✓。
+
+### 九百二十五、↩️ **回执行第二次尝试也回退了：我又往"没读过上下文"的 JSX 位置插了东西**（2026-10-10 ✓）
+
+  ⭐ **这次错在哪（技术细节，写清 ✓）** ✓：我把回执写成
+    `{/** … */}` ＋ `<p …>` 直接插在 `<ul` 之前 ✓ ⇒ **该位置的 JSX 语法不接受这种组合** ✗
+    ⇒ `typecheck` 报 `')' expected`／`Unexpected token`／`Expected corresponding JSX closing tag for 'div'` ✗✗
+    ⇒ **立刻 `git checkout` 回退** ✓ ⇒ `typecheck` 干净 ✓、`instrumentAudition`／`instrumentLibrarySurface`
+      **9 例全绿** ✓（**没有把红留在仓库里** ✓ —— 这条我每次都做到 ✓）。
+  ⭐ **两次回退的共同原因（同一个毛病 ✓）** ✗：我读了"**要插入的位置**" ✓，但没读"**包着它的那层结构**" ✗ ——
+    第一次是**解构的形状** ✗、这次是**外层 JSX 的语法** ✗ ⇒ 两次都是**只看一行、不看上下文** ✓。
+    ⇒ **修正后的做法（写死 ✓）** ✓：插入任何 JSX 之前，**先 `sed` 打印目标位置上下各 15 行** ✓，
+      确认父元素、缩进与是否已在 `{}` 表达式里 ✓，再写**最朴素**的形式 ✓（不套 `{/** */}` 注释 ✓、
+      不假设自闭合 ✓）✓。
+  ⭐ **已经就位、不受这次回退影响的部分 ✓** ✓：
+    · ▷ 按钮（44 px ✓、`aria-label` ✓）✓；`onAudition` 在四个文件里的**完整链路** ✓（上一提交 ✓）；
+    · 两个文案键 `instrument_auditioning`／`instrument_audition_hint` **中英齐** ✓ ＋ 4 条判据 ✓（上上提交 ✓）。
+    ⇒ **只剩"把这句话画到界面上"这一步** ✓，而它是**几行 JSX** ✓（风险全在"没读上下文"上 ✓，不在工作量上 ✓）。
+  ⭐ **跑批读数 ✓**：`shard0=5 / shard1=7 / shard2=4` ⇒ **16 个片段** ✓（上次 15 ⇒ 仍在稳步推进 ✓）。
