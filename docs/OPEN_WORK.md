@@ -23430,3 +23430,20 @@ describe("the grid's editing actions", () => {
       （第一次是我把"举例"写成了路径 ✓）——**它抓的正是"文档说假话"这一类** ✓。
   ⭐ **同时 ✓**：重切 6 个越界曲风的任务已**换用新脚本重启** ✓（PID `119459` ✓，日志 `/tmp/refix2.log` ✓）——
     旧任务用的是改前的代码 ✗（会把"0 秒/48.6 秒"再写一遍 ✗）⇒ 按 PID 停掉 ✓ 后用新脚本（**从文件量时长** ✓）重跑 ✓。
+
+### 九百七十、📦 **决策③落地了一半：清单现在能点名 Cloudflare Worker 静态资源**（2026-10-10 ✓）
+
+  ⭐ **为什么需要它 ✓**：`src/data/genreClips.ts` 自己写着 ✓：片段的 `url` 是"**absolute or root-relative**" ✓ ——
+    而我们一直写的是 **`chicago-house.mp3`** 这样的裸文件名 ✗ ⇒ **清单无法表达音频到底放在哪** ✗
+    （音频**不入 git** ✓、放 Worker 静态资源 ✓ —— 那 Worker 的地址就必须能从清单里读出来 ✓）。
+  ⭐ **做法 ✓（`--base` ✓）** ✓：`node scripts/build_genre_clips.mjs --merge --base https://<worker>/clips` ✓
+    ⇒ **两个写入点都套用** ✓（渲染时写一条 ✓ ＋ **merge 时统一套用** ✓）——
+    后者尤其重要 ✓：**已经切好的 139 个片段不必重切** ✓，重跑一次 merge 就能整体改指向 ✓✓。
+  ⭐ **实测 ✓（两个方向都验了 ✓）** ✓：
+    · `--merge --base https://clips.example.invalid/groove` ⇒ `url: "https://clips.example.invalid/groove/chicago-house.mp3"` ✓；
+    · 再跑一次不带 `--base` ⇒ 回到 `"chicago-house.mp3"` ✓，片段数仍是 **139** ✓（幂等 ✓）。
+    ⚠️ 现在**故意**保持"裸文件名" ✓ —— 因为真正的 Worker 域名还没定 ✗；等它定了 ✓，
+      一条 `--merge --base …` 就把 139 个片段整体改指向 ✓。
+  ⭐ **顺带 ✓**：`check:docs:refs` 那两条"随手机壳移除"的记录已补注"**外壳已随 v2.36.0 以 `/m` 回来**，
+    那两个旧 id 仍退役" ✓（历史不否认 ✓、读者不被误导 ✓）；并且**它替我抓出自己台账里 10 处
+    `router.ts` 笔误** ✗（真名 `router.tsx` ✓）⇒ 已全部修正 ✓，检查器回到 OK ✓。

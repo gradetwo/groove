@@ -113,6 +113,15 @@ const RECIPE_VERSION = "1";
  */
 const FORMAT = flag("format", "wav");
 const KEEP_WAV = args.includes("--keep-wav");
+/**
+ * ⭐ **Where the audio will actually live** (owner's decision ③, 2026-10-10: *"MP3 放 Cloudflare Worker 静态资源"*). The
+ * clip's `url` is written into the committed manifest, and `src/data/genreClips.ts` says it is "absolute or root-relative" —
+ * so the batch needs a way to name the Worker rather than a bare filename. The **merge** is the single writer of the shipped
+ * list, which is why this applies there too: re-running the merge with a base is enough to re-point a batch that is already
+ * rendered, with no re-render.
+ */
+const BASE = String(flag("base", "")).replace(/\/+$/, "");
+const withBase = (url) => (BASE && !/^https?:\/\//.test(url) ? `${BASE}/${url.replace(/^\//, "")}` : url);
 
 /** ⭐ `callTool` answers with the reply already parsed when it is JSON, and with text when it is not: accept both. */
 const asObject = (value) => {
@@ -180,7 +189,7 @@ if (MERGE) {
     console.error(`no shard manifests in ${OUT}/; nothing to merge`);
     process.exit(1);
   }
-  writeFileSync("public/genre-clips.json", JSON.stringify({ bars: 8, clips: merged }, null, 2) + "\n");
+  writeFileSync("public/genre-clips.json", JSON.stringify({ bars: 8, clips: merged.map((clip) => ({ ...clip, url: withBase(clip.url) })) }, null, 2) + "\n");
   console.log(`merged ${merged.length} clip(s) from ${parts.length} shard manifest(s)`);
   process.exit(0);
 }
@@ -363,7 +372,7 @@ for (const genreId of genreIds) {
      * (measured 2026-10-10: all 159 clips "left out" for naming files that had already been rewritten to MP3). The pipeline's
      * whole point is that the list and the files agree.
      */
-    url: `${genreId}.${produced.endsWith(".wav") ? "wav" : "mp3"}`,
+    url: withBase(`${genreId}.${produced.endsWith(".wav") ? "wav" : "mp3"}`),
     /**
      * ⭐ **The reply's own names** (measured 2026-10-10, printed from a real render): `durationSec`, `bytes`,
      * `integratedLufs`, `skippedLanes`. My first version guessed four other spellings of the duration and wrote 0 —
