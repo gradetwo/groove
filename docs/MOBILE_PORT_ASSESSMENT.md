@@ -198,3 +198,40 @@ v2 这边皮肤是 **token 体系**，且有三道门禁在管：`check:skins`�
    还是**按需/分批**生成 ✓。
 3. **片段时长**：15–30 s ⇒ 需要从曲风编排里**截取一段有代表性的段落** ✓（而不是从 0 秒切 ✗）——
    取哪一段要有个规则 ✓（例如"主歌进入后的第一个 8 小节" ✓），否则片段可能从鼓点前奏开始 ✗。
+
+## 最终状态（2026-10-10 收尾，全部为实测）
+
+**接入**（P0/P1 完成）：
+- 从 `origin/mobile-preserved` 取回的移植集共 **40 个文件**（35 个手机壳文件 ＋ 按编译报错逐个取回的
+  `src/utils/genreArt.ts`／`sequencer/Toolbar.tsx`／`sequencer/toolbarTiers.ts`／`hooks/useLabelArt.ts`）
+  ＋ **1 处登记**（`src/i18n/locales/index.ts` 并入 `mobileMessages`）
+  ＋ **2 处适配**（`LightPlayerToggle`／`MobilePlayerScreen` 把已退休的 `useLightPlayer` 改成 v2 现在的**函数式** API）；
+  移植集**由编译器确认**（14 → 13 → 9 → 3 → 2 → 1 → 0），且**没有回退任何 v2 改进**
+  （同名文件一律用 dev 版：**缺的取回、在的别覆盖**）。
+- `/m` 路由：`RouteState.mobileShell` ＋ `parseUrlToRoute`／`formatRouteToRoute` 闭环（**退役的 `/m/<module>` 保持退役**，
+  由既有判据钉住）＋ `MainApp` 内 `React.lazy` 挂 `MobileApp`。
+  **真浏览器验收**（390×844）：`mobile-shell`／`mobile-home` 渲染、**零 pageError**。
+
+**音频**（管线完成）：
+- **139/139 个片段全部落在 15–30 秒窗口内**（159 个曲风里 139 个已切；余 20 个卡在**渲染器缺陷**上，见下）；
+- 每个片段都用**该曲风自己的音色/采样器**（无一是"全 synth"）；
+- 清单 `public/genre-clips.json`：严格读取器通过 ✓、每条都点名**真实存在**的文件 ✓、带 `engineVersion`／`recipeVersion`／
+  `generatedAt` ✓、带 `warnings` ✓ **与一份 `health` 总表** ✓（判据要求总表与逐条警告**逐码一致**）；
+- 每条的警告来自**两处**：渲染回复（跳过轨 ✓、无录音 ✓、静音 ✓、时长越界 ✓）与 `genrePatternHealth`（空轨 ✓、
+  和弦单调 ✓、旋律贫乏 ✓、节奏千篇一律 ✓、音域越界 ✓）。实测：`health:empty-lane` ×35、`health:melody-poverty` ×1、
+  `skipped-lanes` ×8 —— 也就是说**五个音乐性检查里只有两个开火**，而那两个都是被两向证明过的检测器。
+- 手机端**真的能放**（浏览器实测：`<audio>` 加载 `readyState 4`、时长 16.6 s、`currentTime` 前进、按下 0.75× 后
+  `playbackRate 0.75` 且 `preservesPitch false`、点两个曲风后出现 A/B 对比按钮）。
+
+**文档里三个待定问题的实测答案**：
+1. **采样与流量**：一次渲染实际取回**约 28 个**采样文件（加载是按音符取，不是整库）⇒ 早先"约 4 GB 库"是**上界**；
+2. **要不要一次生成全部**：可以。3 个并行渲染时约 **1–2 分钟/片段** ⇒ 159 个约 **5 小时**量级；
+3. **片段时长怎么取**：现在的做法是**从编排开头重复若干遍**（`bars`，自适应落在 15–30 秒），
+   而**不是**"截取一段有代表性的段落" ✗ ⇒ 如果"主题片段"应当从中段/主歌进入，这仍是一个**待定的设计问题**。
+
+**遗留**：
+- **渲染器缺陷（独立条目）**：间歇出现 `page.evaluate: Execution context was destroyed, most likely because of a navigation`
+  ⇒ 渲染完成却没有产物。现有三道闸把它变成"**什么都不写**"（绝不产生假片段），重试消化了大多数；根因未定，
+  证据见 `mcp/render/worker.ts` 约 458–476 行（首次 `goto` ＋ 超时重试一次）。
+- **Worker 域名未定**：清单已支持 `--merge --base <worker>` 指向静态资源；音频**不入 git**。
+- **`/m` 的自动进入**：我**故意只做显式入口**（自动把手机从 `/` 跳到 `/m` 风险不对称，且店主未要求）——留作决定。
