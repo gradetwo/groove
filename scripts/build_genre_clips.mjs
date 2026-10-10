@@ -95,6 +95,8 @@ const OUT = flag("out", "dist-clips");
 const ONLY = flag("only", undefined);
 const ALL = args.includes("--all");
 const RECIPE_VERSION = "1";
+/** ⭐ `--format wav` exists for one question only: the **WAV path reports `integratedLufs`** and the MP3 path does not. */
+const FORMAT = flag("format", "mp3");
 
 /** ⭐ `callTool` answers with the reply already parsed when it is JSON, and with text when it is not: accept both. */
 const asObject = (value) => {
@@ -170,13 +172,13 @@ for (const genreId of genreIds) {
    */
   const TARGET_SECONDS = 20;
   const IN_RANGE = (seconds) => seconds >= 15 && seconds <= 30;
-  let banner = asObject(await callTool("render_arrangement", { arrangementId, format: "mp3", bitrateKbps: 192, bars: flag("bars", 6) }));
+  let banner = asObject(await callTool("render_arrangement", { arrangementId, format: FORMAT, bitrateKbps: 192, bars: flag("bars", 6) }));
   let passes = Number(banner.passes ?? flag("bars", 6)) || 1;
   if (!IN_RANGE(Number(banner.durationSec ?? 0))) {
     const one = Number(banner.durationSec ?? 0) / passes;
     const wanted = one > 0 ? Math.max(1, Math.round(TARGET_SECONDS / one)) : passes;
     console.log(`   ${String(banner.durationSec)}s is outside 15–30s; asking for ${wanted} repeat(s) instead`);
-    banner = asObject(await callTool("render_arrangement", { arrangementId, format: "mp3", bitrateKbps: 192, bars: wanted }));
+    banner = asObject(await callTool("render_arrangement", { arrangementId, format: FORMAT, bitrateKbps: 192, bars: wanted }));
     passes = wanted;
   }
   /**
@@ -207,7 +209,7 @@ for (const genreId of genreIds) {
   }
   clips.push({
     genreId,
-    url: `${genreId}.mp3`,
+    url: `${genreId}.${FORMAT}`,
     /**
      * ⭐ **The reply's own names** (measured 2026-10-10, printed from a real render): `durationSec`, `bytes`,
      * `integratedLufs`, `skippedLanes`. My first version guessed four other spellings of the duration and wrote 0 —
