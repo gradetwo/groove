@@ -92,7 +92,11 @@ onImportFile,
             * run's `finally` the interface says it is still stopping. The percentage is gone with the abandoned result —
             * a moving number would suggest the work is the thing being wound down.
             */}
-          {exportStopping ? t("arrangement_export_stopping") : t("arrangement_exporting")}
+          {exportStopping
+            ? t("arrangement_export_stopping")
+            : exportProgress !== undefined && exportProgress.fraction < 0.03
+              ? t("arrangement_export_preparing")
+              : t("arrangement_exporting")}
           {!exportStopping && exportProgress !== undefined && exportProgress.fraction >= 0.03
             ? ` ${Math.round(exportProgress.fraction * 100)}% · ${t("arrangement_export_eta", { time: remainingLabel(exportProgress) })}`
             : ""}

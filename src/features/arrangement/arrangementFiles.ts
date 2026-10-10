@@ -288,6 +288,12 @@ export async function wavFileFor(
   onProgress?: (fraction: number, elapsedSec: number) => void
 ): Promise<ProducedAudio> {
   const pattern = compiledPatternFor(arrangement);
+  /**
+   * ⭐ **Say what the waiting is** (measured 2026-10-10): `audioLaneOptions` fetches the catalogue and the recordings the
+   * arrangement's lanes need, and it reported nothing while it did — the first progress frame arrived 6.4 s after the click.
+   * Reporting 0 % first is what lets the interface name the stage instead of showing a bare ellipsis for six seconds.
+   */
+  onProgress?.(0, 0);
   const lanes = await audioLaneOptions(pattern);
   const startedAt = Date.now();
   const options = {

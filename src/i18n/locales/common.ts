@@ -200,6 +200,16 @@ export const commonMessages = {
   arrangement_lanes_label: { en: "Arrangement lanes", zh: "编排通道" },
   lanes_label: { en: "Lanes", zh: "通道" },
   lanes_mute: { en: "Mute", zh: "静音" },
+  /**
+   * ⭐ **The stage that used to be silent** (Web functional test of v2.35.9: *"點擊後無進度提示"*). Measured 2026-10-10 with
+   * `scratch/probe-export-progress.mjs`: the first progress frame arrived at **6.42 s**, and the code shows why —
+   * `wavFileFor` awaits `audioLaneOptions(pattern)` (fetching the catalogue and recordings) before the renderer reports
+   * anything. The headless path narrates exactly that stage (`recordings ready: 12 of 40`); the web path did not.
+   */
+  arrangement_export_preparing: {
+    en: "Preparing instruments…",
+    zh: "正在准备乐器…",
+  },
   arrangement_exporting: { en: "Exporting…", zh: "导出中…" },
   /**
    * ⭐ **How much longer, from the render's own fraction.** `{time}` is `m:ss`, so the copy stays a sentence in both
