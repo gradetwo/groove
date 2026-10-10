@@ -21630,3 +21630,32 @@ describe("the grid's editing actions", () => {
        （"先看签名再写调用"——这一课今晚已经栽过好几次了 ✓）。
   ⭐ **待发的仍待发 ✓**：导出准备阶段那条**不单独发版** ✓，与手机版一起进 **v2.36.0** ✓（changelog 不得出现
     从未发布过的版本号 ✓）；线上仍是 **v2.35.10** ✓。
+
+### 八百八十二、📊 **量到了（关键读数 ✓）：曲风编排**确实**把一部分轨解析到真实录音，其余走内置 synth**（2026-10-10 ✓）
+
+  ⭐ **方法 ✓**（临时探针，跑完即删 ✓，用仓库自己的测试运行器执行应用代码 ✓）：用 `createMcpArrangement({genreId})` 建曲风编排 ✓ ⇒
+    对每条轨取 `laneRoleForTrack(track)` ✓ / `laneInstrumentForTrack(track)` ✓ ⇒ 再把它拼成 lane 形状
+    `{track_id, instrument, sample}` ✓ 交给 **`sampledAssetForLane`**（播放层真正用的那个函数 ✓），
+    回退再问 `sampledInstrumentFor(instrument)` ✓——两条一起看，避免"只问了一半" ✗。
+  ⭐ **读数（每曲风 8 条轨 ✓）** ✓：
+
+| 曲风 | 有录音的轨 | 具体例子 |
+| --- | --- | --- |
+| melodic-house | **2 / 8** | hihat、percussion → `virtuosity-drums-basic` |
+| chicago-house | **4 / 8** | kick ＋ hihat ＋ percussion → `virtuosity-drums-basic`；chords → `freepats-drawbar-organ` |
+| bossa-nova | **6 / 8** | bass → `dsmolken-double-bass:d-smolken-rubner-bass-pizz`；chords → `karoryfer-emilyguitar:emily-clean`；lead → `vsco2ce:FluteSusVib` |
+| lofi-hip-hop | **3 / 8** | hihat、percussion → `virtuosity-drums-basic`；chords → `jlearman-jrhodes3c:jRhodes-both-looped` |
+| ambient | **3 / 8** | hihat、percussion → `virtuosity-drums-basic`；lead → `vsco2ce:ViolinEnsSusVib` |
+
+  ⭐ **结论（对店主硬要求的直接回答 ✓）** ✓：
+    1. **"每个片段用它自己的音色"是可以做到的 ✓**，而且**不需要额外机制**：同一条 `编排 → 渲染` 路径已经在做 ✓
+       （`mcp/instruments.ts` 的 `mappedInstruments` ✓ 就是它 ✓）。MCP 深测说"未测 sampler/SFZ 路径" ✓ 指的是
+       **他们那次测试没测** ✗，不是这条路径不存在 ✓。
+    2. **片段里会同时含录音与 synth 轨** ✓（例如 melodic-house 只有 2/8 走录音 ✓）——这是**曲风编排本来的样子** ✓，
+       不是降级 ✓；但要在给用户的文案里说清"其余轨是内置合成器" ✗/✓，免得被当成"没做好" ✗。
+    3. **细节值得记住 ✓**：kick/snare 在多数曲风里**仍是 synth** ✓，而 **hihat/percussion 走同一套鼓录音**
+       `virtuosity-drums-basic` ✓ ⇒ 鼓的映射是**按音色逐个**决定的 ✓（不是整组切换 ✓）。
+    4. **代价（下一轮要实测量 ✓）**：片段会用到 `virtuosity-drums-basic`／`dsmolken-double-bass`／
+       `karoryfer-emilyguitar`／`vsco2ce`／`freepats-drawbar-organ`／`jlearman-jrhodes3c` 等录音
+       ⇒ 生成时要**拉这些库** ✓ ⇒ 每个片段的机器时间与流量**按用到的库计** ✓，一定比 synth-only 慢 ✗
+       ⇒ **必须实测一个 15–30 秒片段** ✓ 才能算"全曲风批量"的账 ✓。
