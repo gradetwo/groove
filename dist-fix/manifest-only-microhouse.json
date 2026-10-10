@@ -1,0 +1,25 @@
+{
+  "bars": 8,
+  "clips": [
+    {
+      "genreId": "microhouse",
+      "url": "microhouse.mp3",
+      "seconds": 16.600022675736962,
+      "bytes": 400030,
+      "lufs": -9.41111999037635,
+      "bars": 2,
+      "engineVersion": "2.35.11",
+      "recipeVersion": "1",
+      "generatedAt": "2026-10-10",
+      "recordedLanes": 6,
+      "builtInLanes": 2,
+      "skippedLanes": 5,
+      "warnings": [
+        {
+          "code": "skipped-lanes",
+          "detail": "5 lane(s) had nothing to resolve and are not in the clip"
+        }
+      ]
+    }
+  ]
+}

@@ -23836,3 +23836,30 @@ describe("the grid's editing actions", () => {
     （这条判据是几轮前因为它红了才被暂存的 ✓，现在它**以绿色入库** ✓，正如当时承诺的 ✓）。
   ⭐ **意义 ✓**：手机片段播放器此前在浏览器里只能显示"**No clip for this genre yet — clips[0].seconds must be a positive number**" ✓
     ⇒ 现在**这个障碍没了** ✓ ⇒ 下一步就是**在真浏览器里看它放音** ✓（这是整条链路的验收 ✓）。
+
+### 九百八十九、🎧🎉 **手机片段播放器：浏览器里**真的出声了**（整条链路验收通过）**（2026-10-10 ✓）
+
+  ⭐ **探针 ✓**（`scratch/probe-m-clip-play.mjs` ✓，390×844 ✓）：点掉音频门控 ✓ ⇒ 点**两张不同的**曲风卡 ✓
+    （每次都回到 home 标签 ✓）⇒ 读片段条 ✓ ⇒ 点 0.75× ✓ ⇒ 点播放 ✓ ⇒ 再读一次 ✓。
+  ⭐ **读数 ✓（每一环都有证据 ✓）** ✓：
+    ```
+    src:   "traditional-jazz.mp3"                                   ← 清单里的真 URL ✓
+    status: "traditional-jazz · 1× · pitch follows the speed, like a record"  ← 它说得出自己在放什么 ✓
+    speeds: ["0.75×", "1×", "1.25×"]                                ✓
+    compare: true                                                   ← ⭐ 点过两个曲风后，A/B 按钮出现了 ✓
+    afterSlowClick: { playbackRate: 0.75, preservesPitch: false }    ← ⭐ 变速真的到达元素，且音高跟随（唱片语义 ✓）
+    afterPlay:      { readyState: 4, duration: 16.6, currentTime: 1.8, paused: false }  ← ⭐ 加载完成、时长对、在走、没暂停 ✓
+    ```
+    ⇒ **manifest ✓ → 严格读取器 ✓ → `clipForGenre` ✓ → `<audio>` ✓ → 播放中 ✓ → 变速生效 ✓ → A/B 出现 ✓**
+      整条链路**一次验完** ✓✓。
+  ⭐ **一处"看起来像问题、其实是对的" ✓（记下来免得以后误判 ✓）**：第一次读到的
+    `loaded: { readyState: 0, duration: 0, error: null }` ✗ —— 那是**按设计**的 ✓：
+    元素写着 `preload="none"` ✓ 且**还没按播放** ✓ ⇒ `readyState 0` 正是"还没打算加载" ✓，而不是"加载失败" ✓
+    （`error: null` ✓ 也印证了 ✓）。按下播放之后 `readyState` 直接到 **4** ✓。
+    ⇒ 又一次"**同一个字段在两种语境下含义不同**" ✓，这次我**先按了播放再下结论** ✓。
+  ⭐ **为了让这次验收成立所做的准备（并说明它为什么不污染仓库 ✓）** ✓：
+    把 `dist-clips/*.mp3` **拷进构建产物 `dist/`** ✓（**139 个** ✓）——
+    因为本地 preview 只服务 `dist/` ✓，而音频在生产里由 **Worker 静态资源**提供 ✓（**不入 git** ✓）。
+    `dist/` 是**构建产物、本来就不入库** ✓ ⇒ 这次拷贝只是让"能听见"这件事**在本地可验** ✓。
+  ⭐ **至此店主那三件事（②③④中的播放器那一块）在浏览器里都成立了 ✓** ✓：
+    15–30 秒片段 ✓（本片段 **16.6 秒** ✓）、`<audio>` ✓、**变速＝变调** ✓、**曲风对比** ✓、44 px ✓、没片段就说原因 ✓。
