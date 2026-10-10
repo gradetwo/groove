@@ -23629,3 +23629,23 @@ describe("the grid's editing actions", () => {
   ⭐ **这条留在这里的意义 ✓**：**结论必须由产物支持，而不只是由耗时支持** ✓ ——
     今天我已在"文件是它自己时长的权威"上学过一次 ✓，这是同一课的第二个面 ✓：
     **耗时也要配上产物才算数** ✓（否则我量到的可能只是失败的速度 ✓）。
+
+### 九百七十九、🔎 **找到了"字段全是 undefined"的机制（有日志原文）——并且它暴露了一个"失败不说话"的洞**（2026-10-10 ✓）
+
+  ⭐ **日志原文 ✓（A 跑的收尾 ✓）** ✓：
+    ```
+    bars=undefined passes=undefined totalSteps=undefined durationSec=undefined sampleRate=undefined channels=undefined lufs=undefined
+    reply keys: ok, text
+    bossa-nova: the render reported durationSec=undefined — skipped, nothing written
+    ```
+    ⇒ **`reply keys: ok, text`** ✓ —— 也就是说脚本拿到的**不是工具的 JSON** ✓，而是**外层包装 `{ok, text}`** ✓
+      ⇒ 所有字段自然全是 `undefined` ✓ ⇒ 我的闸**正确地拒绝写任何东西** ✓（`skipped, nothing written` ✓✓，没有产出半个假片段 ✓）。
+  ⭐ **机制 ✓**：`asObject` 的职责就是把 `{ok, text}` 里的 `text` 解析出来 ✓（注释里写着这是"把工具的回答变成数据"的那一步 ✓）；
+    但当 `text` **不是 JSON** 时 ✓，它的 `catch` **静静地把包装原样返回** ✗ ⇒ 于是**失败变成了一堆 undefined** ✓，
+    而**失败的原因（那段 text）一个字都没被打印** ✗✗ —— 这正是这个仓库最讨厌的那类失败 ✓："做了事却不说" ✓
+    （只不过这次是"**失败了不说为什么**" ✓）。
+    ⇒ **代价是真实的 ✓**：那一跑花了 **148 秒** ✓、什么也没产出 ✓、而且**什么也没告诉我** ✗（我还差点拿它当有效对照 ✗）。
+  ⭐ **修法 ✓**：`catch` 里加一句 **`console.error("⚠ the harness reply was not JSON; its text begins: …")`** ✓
+    ⇒ 下一次同类失败会**自己说明白** ✓；闸不变 ✓（该跳过的还是跳过 ✓）。
+  ⭐ **这条与今天的主线完全同源 ✓**：**"清单必须说得出为什么"** ✓、**"控件不能点了没反应"** ✓、
+    **"越界要能看见"** ✓ —— 现在是**"渲染失败也要能看见"** ✓。四次都是同一件事 ✓：**沉默是这里最大的 bug 类别** ✓。

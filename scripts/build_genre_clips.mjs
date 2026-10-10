@@ -133,6 +133,13 @@ const asObject = (value) => {
     try {
       return JSON.parse(value.text);
     } catch {
+      /**
+       * ⭐ **A failure must say what it was.** Measured 2026-10-10: a run that produced no artifact logged
+       * `reply keys: ok, text` — the wrapper itself, because the text inside it was not JSON — and every field then read as
+       * `undefined`. The clip was correctly skipped, but the *reason* was invisible, so the run cost 148 seconds and taught
+       * nothing. Printing the text is what turns that into a sentence the next run can act on.
+       */
+      console.error(`   ⚠ the harness reply was not JSON; its text begins: ${String(value.text).slice(0, 240)}`);
       return value;
     }
   }
