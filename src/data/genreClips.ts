@@ -30,7 +30,8 @@ export interface GenreClip {
   generatedAt: string;
   /** ⭐ Measured, not claimed: how much of the arrangement is a real recording. */
   recordedLanes: number;
-  synthLanes: number;
+  /** Lanes that sound through a built-in voice —  is the track count. */
+  builtInLanes: number;
 }
 
 export interface GenreClipManifest {
@@ -49,7 +50,7 @@ const REQUIRED: readonly (keyof GenreClip)[] = [
   "recipeVersion",
   "generatedAt",
   "recordedLanes",
-  "synthLanes",
+  "builtInLanes",
 ];
 
 /** Strict on purpose: a manifest that names a field wrong is a manifest that would play the wrong sound. */
@@ -66,7 +67,7 @@ export function readClipManifest(raw: unknown): GenreClipManifest {
     if (typeof clip.genreId !== "string" || clip.genreId.trim() === "") throw new Error(`clips[${index}].genreId must be a non-empty string`);
     if (typeof clip.url !== "string" || clip.url.trim() === "") throw new Error(`clips[${index}].url must be a non-empty string`);
     if (typeof clip.seconds !== "number" || !(clip.seconds > 0)) throw new Error(`clips[${index}].seconds must be a positive number`);
-    if (typeof clip.recordedLanes !== "number" || typeof clip.synthLanes !== "number") {
+    if (typeof clip.recordedLanes !== "number" || typeof clip.builtInLanes !== "number") {
       throw new Error(`clips[${index}] must count its recorded and synth lanes`);
     }
     return clip as unknown as GenreClip;

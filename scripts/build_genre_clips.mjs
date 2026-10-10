@@ -32,7 +32,7 @@
  * than by name: `pgrep -f chromium_headless` was measured to find 4 of 50 leaked processes.
  */
 import { spawn } from "node:child_process";
-import { existsSync, mkdirSync, readFileSync, readdirSync, statSync, writeFileSync } from "node:fs";
+import { copyFileSync, existsSync, mkdirSync, readFileSync, readdirSync, statSync, writeFileSync } from "node:fs";
 
 const BUNDLE = "dist-mcp/groove-mcp.mjs";
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -153,13 +153,27 @@ for (const genreId of genreIds) {
     const source = track?.sound?.source;
     return source !== undefined && source !== "catalogue-asset" && track?.sound?.assetId === undefined;
   });
-  const banner = asObject(await callTool("render_arrangement", { arrangementId, format: "mp3", outputDir: OUT, filename: `${genreId}.mp3` }));
-  const file = banner.file ?? banner.output ?? banner.path;
-  const bytes = file && existsSync(file) ? statSync(file).size : undefined;
+  /**
+   * ⭐ **Only the arguments the tool declares** (measured 2026-10-10): `render_arrangement` takes `arrangementId`,
+   * `format`, `bitrateKbps`, `bars`, `sampleRate` and `channels` — **not** `outputDir`/`filename`. The first run passed
+   * those two anyway; they were ignored (the reply's own `unknownArgs` is the mechanism that says so) and the file landed
+   * in the server's temporary directory. The reply names where it went, so the script copies it where the batch wants it.
+   */
+  const banner = asObject(await callTool("render_arrangement", { arrangementId, format: "mp3", bitrateKbps: 192 }));
+  console.log(`   reply keys: ${Object.keys(banner).join(", ")}`);
+  const file = banner.file ?? banner.output ?? banner.path ?? banner.outputPath ?? banner.writtenTo;
+  let bytes;
+  let copied = file;
+  if (typeof file === "string" && existsSync(file)) {
+    copied = `${OUT}/${genreId}.mp3`;
+    copyFileSync(file, copied);
+    bytes = statSync(copied).size;
+  }
   clips.push({
     genreId,
     url: `${genreId}.mp3`,
-    seconds: Number(banner.durationSeconds ?? banner.seconds ?? 0) || 0,
+    /** ⭐ The reply's own duration, under whichever name it uses — printed above so the name is never guessed twice. */
+    seconds: Number(banner.durationSeconds ?? banner.seconds ?? banner.duration ?? banner.audioSeconds ?? 0) || 0,
     ...(bytes === undefined ? {} : { bytes }),
     ...(typeof banner.lufs === "number" ? { lufs: banner.lufs } : {}),
     engineVersion: version,
@@ -167,7 +181,12 @@ for (const genreId of genreIds) {
     generatedAt: new Date().toISOString().slice(0, 10),
     /** ⭐ Counted from the create reply, and the sources are carried into the log so a fallback cannot pass unnoticed. */
     recordedLanes: tracks.filter((track) => track?.sound?.source === "catalogue-asset").length,
-    synthLanes: tracks.filter((track) => track?.kind === "synth").length,
+    /**
+     * ⭐ **Built-in voices, not "tracks whose kind is synth"** — the first run counted by kind and reported 3 while the
+     * truth was 2 (the snare and the fx lane: a synth *kind* can still sound through a recording, and a drumkit lane can
+     * sound through the built-in drums). `recordedLanes + builtInLanes` is the track count, and this is the honest split.
+     */
+    builtInLanes: tracks.filter((track) => track?.sound?.source !== "catalogue-asset").length,
   });
   console.log(
     `${genreId}: ${((Date.now() - started) / 1000).toFixed(1)}s, ${bytes ?? "?"} bytes, ` +
