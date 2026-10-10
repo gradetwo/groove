@@ -22792,3 +22792,24 @@ describe("the grid's editing actions", () => {
     **施工清单至此完全落地为可执行的 13 条** ✓，没有一条需要重新设计 ✓。
   ⚠️ **两棵对照 worktree 都留着 ✓**（`/tmp/mobile-wt` 改移植 ✓、`/tmp/mobile-orig` 是"当年干净"的基准 ✓）
     ⇒ 以后任何"这处是不是 v2 改的"疑问，都可以**两边一跑就见分晓** ✓（比读 diff 快得多 ✓）。
+
+### 九百四十一、⬇️ **9 个错误了（13 → 9）——并发现我的闭包遍历漏了 `export *`**（2026-10-10 ✓）
+
+  ⭐ **读数 ✓**：把 **`src/utils/genreArt.ts`** 取回后 ✓，`/tmp/mobile-wt` 的错误 **13 → 9** ✓：
+    · `MobileGenreDetailScreen` **6** ✓（就是那 6 个 i18n 键 ✓）；
+    · `src/hooks/useLightPlayer.ts` **2** ✗（**我自己刚取回的那个文件**自己报错 ✓ ⇒ 它又 import 了 dev 没有的东西 ✓）；
+    · `src/components/sequencer/Toolbar.tsx` **1** ✗（同理 ✓）。
+  ⭐ **`CATEGORY_SWATCH` 的真相 ✓**：它定义在 **`src/utils/genreArt.ts:37`** ✓（**不是** `src/mobile/genreArt.ts` ✗）✓
+    ⇒ 我上一条"v2 里没有对应物、要放回移动端"的判断**只对了一半** ✓：**定义确实还在封存树里** ✓（在 `src/utils/` ✓），
+      只是**没被我的遍历发现** ✗。
+  ⚠️ **遍历为什么漏了它 ✓（我自己的工具缺陷 ✓）** ✗：我的小脚本只认
+    `from "…"` 这种 import ✗，**不认 `export * from "…"`／`export { … } from "…"`** ✗
+    ⇒ 而 `src/mobile/genreArt.ts` 很可能正是**再导出** `src/utils/genreArt` ✓ ⇒ 链子在这里断了 ✓。
+    ⇒ **修正办法 ✓**：把正则扩成 `(?:from|export\s*\*\s*from)\s*"…"` ✓ 并把 `export { … } from "…"` 也纳入 ✓，
+      再重跑一次闭包 ✓ ⇒ 那才是**权威的**"必须取回的文件"清单 ✓（我已经在 119 → 3 那次栽过一回 ✓，
+      这次是同一类工具缺陷的第二个表现 ✓：**工具不完整时，结论会低估依赖** ✓）。
+  ⭐ **现在的进度 ✓**：施工面由"38 文件 ＋ 13 处适配"更新为
+    **"38 文件 ＋ `src/utils/genreArt.ts` ＋ 若干随行模块（`useLightPlayer`/`Toolbar` 的依赖）"** ✓，
+    而**适配项**已知的只剩 **6 个 i18n 键** ✓（其余都已由"取回文件"解决 ✓）。
+  ⏭️ **下一轮 ✓**：修好遍历的正则 ✓ ⇒ 重算闭包 ✓ ⇒ 得到**权威的取回清单**（不再逐个试错 ✓）；
+    然后一次性取回 ＋ 登记 6 个键 ⇒ 期望 `typecheck` 清零 ✓。
