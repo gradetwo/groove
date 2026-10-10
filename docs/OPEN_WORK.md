@@ -23528,3 +23528,30 @@ describe("the grid's editing actions", () => {
   ⚠️ **仍留着一条更彻底的选择 ✓（未做，先记 ✓）**：手机上完全可以**不弹门控** ✓、而由壳子的**首次点按**完成解锁 ✓
     （多数手机应用如此 ✓）—— 但那会改动"音频解锁契约" ✓（仓库是**刻意**建的 ✓）⇒ 我选**保守**做法 ✓：
     先给门控一张手机的脸 ✓，把"首次点按照常解锁"当作**独立决定**留给店主 ✓。
+
+### 九百七十四、🔬 **把"重复遍数"的决定权交给产物：`chicago-house` 的 96.6 秒是怎么来的**（2026-10-10 ✓）
+
+  ⭐ **证据（日志原文 ✓）** ✓：
+    ```
+    bars=8 passes=6 totalSteps=128 durationSec=96.6 sampleRate=44100 channels=2 lufs=-8.819
+    reply keys: path, filename, bytes, durationSec, sampleRate, channels, limiterKind, truePeakDb, integratedLufs,
+                gs1PatchProblems, trackPeaksDb, audioLanes, problems, engine, arrangementId, bars, passes, totalSteps,
+                arrangementProblems, renderedAudioLanes
+    ```
+    ⇒ **回复里**是**有** `durationSec` 的** ✓（96.6 ✓）—— 所以我前几轮写的"回复里没有时长"**不完全对**** ✗✗：
+      准确的说法是"**那次区间判断看到的**是 `undefined`" ✓（那也是日志里 `undefineds is outside 15–30s` 的出处 ✓），
+      于是自适应逻辑退化成"再来 6 遍" ✗ ⇒ **96.6 秒**的片段 ✓（同时解释了另一条 **0 秒**的记录 ✓）。
+    ⭐ **我把它记清楚，因为它是一个很好的例子 ✓**：同一个回复里，**一个字段能被读到、也能被判成 undefined** ✓
+      —— 差别只在于**在哪一步读** ✓。我已经在"文件是它自己时长的权威"上花了两轮 ✓，
+      而真正该改的是**更早一步**：**让决定也基于产物** ✓。
+  ⭐ **修法 ✓（脚本 ✓）** ✓：在区间判断**之前** ✓ 先用回复自带的 `path` ✓ 对**产物**跑一次 `ffprobe` ✓，
+    以**量出来的值**决定"要不要重渲、要几遍" ✓（`truth = measuredReply || banner.durationSec` ✓）；
+    命令行输出也随之说清来源 ✓：`96.6s (measured from the artifact) is outside 15–30s; asking for 2 repeat(s)` ✓。
+    ⇒ 于是"**产物优先、回复兜底**"这条规矩在**记录层**与**决策层**一致了 ✓（此前只有记录层 ✓）。
+  ⭐ **新的重切任务 ✓**：`chicago-house`／`detroit-techno`／`psytrance`／`ambient-dub`／`jersey-drill`／`microhouse` ✓
+    ⇒ 输出到 **`dist-refix2`** ✓（PID `124367` ✓，日志 `/tmp/refix5.log` ✓）。
+    ⚠️ **一次操作失误如实记 ✓**：我第一次重启时把曲风清单放在**环境变量**里 ✗ 而 `nohup bash -c` 里读到的是空值 ✗
+      ⇒ 那个任务**立刻跑完（什么都不做）** ✓ ⇒ 已改成**把清单直接内联进命令** ✓ 重启 ✓（这类"看起来跑了、其实什么都没做"的失败，
+      正是我在片段管线上一直盯着的同一类 ✓——这次日志里那句 `DONE` 让我一眼看出来了 ✓）。
+  ⭐ **另一条已确认的事实 ✓**：上一轮重切出的 chicago-house 是 **96.6 秒** ✓ 且**被正确打上 `length-out-of-range` 警告** ✓
+    ⇒ "越界要能看见"这条在真实数据上生效了 ✓（而不是悄悄发一个 96 秒的"片段" ✓）。

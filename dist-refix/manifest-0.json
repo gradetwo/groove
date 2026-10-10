@@ -2,23 +2,17 @@
   "bars": 8,
   "clips": [
     {
-      "genreId": "chicago-house",
-      "url": "chicago-house.mp3",
-      "seconds": 96.6,
-      "bytes": 2319716,
-      "lufs": -8.819351500997717,
-      "bars": 6,
+      "genreId": "detroit-techno",
+      "url": "detroit-techno.mp3",
+      "seconds": 16.600022675736962,
+      "bytes": 400030,
+      "lufs": -8.674731036074782,
+      "bars": 2,
       "engineVersion": "2.35.11",
       "recipeVersion": "1",
       "generatedAt": "2026-10-10",
-      "recordedLanes": 4,
-      "builtInLanes": 4,
-      "warnings": [
-        {
-          "code": "length-out-of-range",
-          "detail": "96.6s is outside the owner's 15–30s window"
-        }
-      ]
+      "recordedLanes": 3,
+      "builtInLanes": 5
     }
   ]
 }

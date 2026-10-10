@@ -262,10 +262,25 @@ for (const genreId of genreIds) {
   if (remembered > 0) console.log(`   using the remembered ${remembered} repeat(s) for ${genreId}`);
   let banner = asObject(await callTool("render_arrangement", { arrangementId, format: FORMAT, bitrateKbps: 192, bars: firstGuess, ...(flag("sample-rate", undefined) ? { sampleRate: Number(flag("sample-rate")) } : {}), ...(flag("channels", undefined) ? { channels: Number(flag("channels")) } : {}) }));
   let passes = Number(banner.passes ?? flag("bars", 6)) || 1;
-  if (!IN_RANGE(Number(banner.durationSec ?? 0))) {
-    const one = Number(banner.durationSec ?? 0) / passes;
+  /**
+   * ⭐ **Ask the artifact, not the reply.** Measured 2026-10-10: a reply for `chicago-house` printed
+   * `bars=8 passes=6 totalSteps=128 durationSec=96.6` — a real number — while the *range check* had seen `undefined` and so
+   * fell back to "six repeats", which is how one clip came out **96.6 seconds** long and another recorded **0**. The reply
+   * names its own file (`path`), so the length can be read from the artifact before deciding anything; the reply's number is
+   * only the fallback. This is the same rule the manifest already follows ("the file is the ground truth for its own length"),
+   * applied one step earlier, where it changes the decision instead of only the record.
+   */
+  const measuredReply = (() => {
+    const at = typeof banner.path === "string" ? banner.path : "";
+    if (!at || !existsSync(at)) return 0;
+    const out = spawnSync("ffprobe", ["-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", at], { encoding: "utf8" });
+    return Number(String(out.stdout ?? "").trim()) || 0;
+  })();
+  const truth = measuredReply > 0 ? measuredReply : Number(banner.durationSec ?? 0);
+  if (!IN_RANGE(truth)) {
+    const one = truth / passes;
     const wanted = one > 0 ? Math.max(1, Math.round(TARGET_SECONDS / one)) : passes;
-    console.log(`   ${String(banner.durationSec)}s is outside 15–30s; asking for ${wanted} repeat(s) instead`);
+    console.log(`   ${truth}s (measured ${measuredReply > 0 ? "from the artifact" : "from the reply"}) is outside 15–30s; asking for ${wanted} repeat(s) instead`);
     banner = asObject(await callTool("render_arrangement", { arrangementId, format: FORMAT, bitrateKbps: 192, bars: wanted, ...(flag("sample-rate", undefined) ? { sampleRate: Number(flag("sample-rate")) } : {}), ...(flag("channels", undefined) ? { channels: Number(flag("channels")) } : {}) }));
     passes = wanted;
   }
