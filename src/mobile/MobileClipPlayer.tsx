@@ -64,12 +64,13 @@ export function MobileClipPlayer({ genreId, compareGenreId }: MobileClipPlayerPr
     () => (comparing && compareGenreId ? [genreId, compareGenreId] : [genreId]),
     [comparing, compareGenreId, genreId]
   );
-  const clip = useMemo(() => {
-    if (!clips) return undefined;
-    const found = clipForGenre({ clips }, genreIds[0]!);
-    if (!found) setUnavailable(`no clip for ${genreIds[0]}`);
-    return found;
-  }, [clips, genreIds]);
+  /**
+   * ⭐ **A pure lookup — no state is written while rendering.** The first version called `setUnavailable(...)` inside this
+   * `useMemo`, i.e. it set state during render: React applies that on the **next** render, so the current pass fell through to
+   * the "loading" branch and the surface could sit there saying "…" forever even though the manifest had arrived. A render
+   * path decides what to draw **from the data it has**; only effects and events change state.
+   */
+  const clip = useMemo(() => (clips ? clipForGenre({ clips }, genreIds[0]!) : undefined), [clips, genreIds]);
 
   /** ⭐ Speed is a property of the element, and pitch-following is the record's own behaviour, so both are applied here. */
   useEffect(() => {
@@ -91,14 +92,28 @@ export function MobileClipPlayer({ genreId, compareGenreId }: MobileClipPlayerPr
     }
   }, []);
 
-  if (unavailable && !clip) {
+  if (unavailable && !clips) {
     return (
       <p data-testid="mobile-clip-missing" className="m-note px-1 py-2 text-[11px] opacity-70">
         {t("mobile_clip_missing")} — {unavailable}
       </p>
     );
   }
-  if (!clip) return <p data-testid="mobile-clip-loading" className="m-note px-1 py-2 text-[11px] opacity-70">…</p>;
+  if (!clips) {
+    return (
+      <p data-testid="mobile-clip-loading" className="m-note px-1 py-2 text-[11px] opacity-70">
+        …
+      </p>
+    );
+  }
+  /** ⭐ The data has arrived and named no clip for this genre: say so, with the reason, instead of a spinner that never ends. */
+  if (!clip) {
+    return (
+      <p data-testid="mobile-clip-missing" className="m-note px-1 py-2 text-[11px] opacity-70">
+        {t("mobile_clip_missing")} — {unavailable ?? `no clip for ${genreIds[0]}`}
+      </p>
+    );
+  }
 
   const label = comparing && compareGenreId ? `${genreId} ↔ ${compareGenreId}` : genreId;
   return (
