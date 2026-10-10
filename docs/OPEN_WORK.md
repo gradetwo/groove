@@ -21863,3 +21863,31 @@ describe("the grid's editing actions", () => {
     下一轮把它也查清 ✓，可能只在 wav 路径上有 ✓）。
   ⚠️ **附带** ✓：我改清单 schema（`synthLanes` → `builtInLanes` ✓）时**忘了同步测试夹具** ✗ ⇒ 那 3 条判据短暂变红 ✓，
     已立即修好 ✓ 并复绿 ✓（纪律：**改 schema 就要同时改夹具与判据** ✓）。
+
+### 八百九十二、✅✅ **两个谜团都破了，而且第二个正好证明店主的要求 B 不是假想**（2026-10-10 ✓）
+
+  ⭐ **渲染器自己的数字（现在脚本会打出来 ✓）** ✓：
+    ```
+    bars=1 passes=1 totalSteps=16 durationSec=2.6 sampleRate=44100 channels=2 lufs=null
+    ⚠ skipped: bass   dsmolken-double-bass:…-bass-pizz  — "…is an instrument, and the lane has no pitched steps, so there is no note to resolve from it"
+    ⚠ skipped: chords karoryfer-emilyguitar:emily-clean — 同上
+    ⚠ skipped: lead   vsco2ce:FluteSusVib               — 同上
+    ```
+  ⭐ **谜团一：为什么只有 2.6 秒** ✓ ⇒ **因为这条编排本身只有 **1 小节**（`bars=1` ✓，16 步 ✓）** ✓，
+    在它的速度下 1 小节 ≈ 2.6 秒 ✓。而 `render_arrangement` 的 `bars` 参数**是"重复整段"** ✓
+    （工具描述原文："1 is one pass through the whole arrangement; raising it **repeats** the arrangement, and **it drives the
+    duration**" ✓）⇒ **要 15–30 秒就传 `bars`（这段速度下约 6–8 ✓）** ✓
+    ⇒ 这也顺带说明我上一轮"21.9 秒"确实是**墙钟** ✗（那 21.9 s 里大半是引擎与采样准备 ✓）。
+  ⭐ **谜团二：`skippedLanes: 3` 不是采样取不到** ✓✓ ⇒ 渲染器给的理由是"**这条 lane 没有带音高的步进**，
+    所以没有音可以解析" ✓ ⇒ **曲风自己的历史数据里，bass/chords/lead 三条 melodic 轨是空的** ✗✗
+    （只有鼓的 step ✓）。⇒ 所以：
+    · 对**硬要求 A**（用曲风自己的音色 ✓）而言：解析层没问题 ✓，是**数据里就没有音** ✓ —— 这**不是**采样失败 ✓；
+    · 对**硬要求 B**（检查历史数据对不对 ✓）而言：这是一个**活生生的实例** ✓✓ ——
+      **"这条轨在片段里一个音都没响"** ✓ 正是我列进体检清单的第一类问题 ✓ ⇒ 体检必须把它报出来 ✓，
+      而且店主需要决定：**没有旋律内容的曲风，是否还应该产出一个"主题片段"** ✓（我的建议：**照产**，
+      但清单里写明"此片段的旋律轨为空" ✓，并在汇总里列出所有这类曲风 ✓ 让数据问题浮出水面 ✓）。
+  ⭐ **还有一个白送的读数 ✓**：`lufs=null` ✓ ⇒ 这条路径（mp3）**不报响度** ✗（WAV 路径才报 ✓，与渲染描述一致 ✓）
+    ⇒ 清单里 `lufs` 字段要么改走 WAV 量一次 ✓、要么允许缺省并写明 ✓（**不能**留一个看起来像"还没测"的坑 ✗）。
+  ⏭️ **下一轮（顺序明确 ✓）** ✓：①脚本按**速度算 `bars`**（目标 15–30 秒 ✓，并把算法写进注释与清单的 `bars` ✓）；
+    ②实现**体检**（第一类就报 `empty-lane` ✓，再加和弦单调/旋律贫乏/节奏千篇一律/音域越界 ✓，
+    配"必须能报、也必须能不报"的两向判据 ✓）；③重跑并逐字段核对 ✓。

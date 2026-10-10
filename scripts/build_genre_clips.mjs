@@ -165,6 +165,18 @@ for (const genreId of genreIds) {
    * named there with its reason, rather than dropped in silence. It belongs in the manifest beside the lane counts.
    */
   const skipped = Array.isArray(banner.skippedLanes) ? banner.skippedLanes : [];
+  /**
+   * ⭐ **Say the numbers that explain the clip's length** (measured 2026-10-10: the first clip came out **2.6 s** while the
+   * render took 21.9 s of wall clock — two different quantities, and only the reply's own `bars`/`passes`/`durationSec` can
+   * tell which one is the clip). And print every skipped lane with its reason, because "3 lanes skipped" is the difference
+   * between a clip that carries the genre's instruments and one that quietly does not.
+   */
+  console.log(
+    `   bars=${String(banner.bars)} passes=${String(banner.passes)} totalSteps=${String(banner.totalSteps)} ` +
+      `durationSec=${String(banner.durationSec)} sampleRate=${String(banner.sampleRate)} channels=${String(banner.channels)} ` +
+      `lufs=${String(banner.integratedLufs)}`
+  );
+  for (const lane of skipped) console.log(`   ⚠ skipped: ${JSON.stringify(lane).slice(0, 240)}`);
   console.log(`   reply keys: ${Object.keys(banner).join(", ")}`);
   const file = banner.file ?? banner.output ?? banner.path ?? banner.outputPath ?? banner.writtenTo;
   let bytes;
