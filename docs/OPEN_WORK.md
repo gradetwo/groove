@@ -21969,3 +21969,19 @@ describe("the grid's editing actions", () => {
     转成 `HealthLane[]` ✓（`trackId`／`kind`／`notes[{pitch, startBeats}]` ✓）⇒ 跑遍全部曲风 ✓ ⇒
     打印"最需要修的曲风"清单 ✓ ⇒ 接进批量脚本的 `warnings` ✓。
     若 `get_arrangement` 的音符形状还有意外 ✓，**先打印一次它的 keys** ✓（这个探针我这次会先跑 ✓ 再写代码 ✓）。
+
+### 八百九十七、🔑 **形状探针（先跑再写 ✓）拿到了：音符在 `tracks[].notes` 上**（2026-10-10 ✓）
+
+  ⭐ **这次先跑探针、再写代码 ✓**（上两条的教训落实了 ✓）——用与批量脚本同一套 stdio 骨架 ✓
+    （仍是从 `probe_eight_bar_render.mjs` 复制的 ✓），建一个 bossa-nova 编排后调 `get_arrangement` ✓，打印 **keys** ✓：
+    ```
+    PROBE reply keys: arrangementId, songId, pitchNote, steps, trackCount, tracks, templates, problems
+    PROBE tracks: 8 | first track keys: id, kind, name, muted, soloed, collapsed, sound, steps, stepsOn, notes, takes
+    ```
+  ⭐ **结论（下一步不再有形状猜测 ✓）** ✓：**音符在每条轨的 `notes` 字段上** ✓（不是单独的 `notesByTrack` ✗ ——
+    我上一次又猜了那个名字 ✓ 探针当场否掉 ✓）⇒ 体检的数据路径是：
+    `get_arrangement` → `tracks[]`（`id`／`kind`／`notes` ✓）⇒ 映射成 `HealthLane[]` ✓（`trackId`／`kind`／
+    `notes[{pitch, startBeats}]` ✓）⇒ 跑遍全部曲风 ✓ ⇒ 输出"最需要修的曲风"清单 ✓。
+  ⭐ **探针已删 ✓**（不留在仓库里 ✓）；本轮**没有红着的测试** ✓。
+  ⏭️ **下一轮（纯执行，无未知 ✓）** ✓：写"跑遍全部曲风"的体检 sweep ✓（读 `tracks[].notes` ✓），
+    打印每个曲风的 warnings 与统计 ✓，把结果接进批量脚本的清单 `warnings` ✓。
