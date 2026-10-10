@@ -24102,3 +24102,18 @@ describe("the grid's editing actions", () => {
   ⭐ **顺带 ✓**：这条判据本身也值得留着 ✓ —— 它会在**新增手机文案只写一种语言**时立刻红 ✓
     （这正是"接回手机壳"这件事该有的守卫 ✓，而不是等用户看到中英混排才发现 ✓）。
   ⭐ **最后一批进度 ✓**：`amapiano` 完成 ✓、`ambient-techno` 在跑 ✓（第 2/20 ✓）⇒ 仍按顺序跑 ✓ 不并行 ✓。
+
+### 一千、🌍✅ **决策③按"生产拓扑"验过了：清单点名 `/clips/…`，播放器照样加载并放音**（2026-10-10 ✓）
+
+  ⭐ **为什么要做这一步 ✓**：我此前只证明到"`--merge --base` 会写出绝对/根相对的 URL" ✓
+    —— 那是**清单侧** ✓；而"**应用拿到这种 URL 之后还能不能放**"是**另一件事** ✓
+    （今天已经反复学到：一侧成立 ≠ 整条链路成立 ✓）。
+  ⭐ **做法 ✓（完全不碰 git ✓）** ✓：把**构建产物** `dist/genre-clips.json` 里的 139 条 URL 改成
+    **`/clips/<file>.mp3`** ✓（正是 `--merge --base https://<worker>/clips` 会写出的形状 ✓），
+    再把 mp3 放到 **`dist/clips/`** ✓（模拟 Worker 的静态资源路径 ✓）⇒ 跑同一个浏览器探针 ✓。
+  ⭐ **读数 ✓** ✓：列表首条 `url: "/clips/chicago-house.mp3"` ✓；探针仍报
+    `compare: true` ✓、`afterSlowClick: { playbackRate: 0.75, preservesPitch: false }` ✓、
+    `afterPlay: { readyState: 4, duration: 16.6, currentTime: 1.7, paused: false }` ✓✓
+    ⇒ **加载 ✓ 放音 ✓ 变速 ✓ A/B ✓** —— 也就是说"**清单点名静态资源、应用照放**"这条**生产拓扑**成立 ✓。
+    ⚠️ 仍缺的只有**真实域名** ✓（店主侧 ✓）；`--base` 一旦有值 ✓，一条命令即可把 139 条整体改指向 ✓。
+  ⭐ **最后一批进度 ✓**：`amapiano` 完成 ✓、`ambient-techno` 仍在跑（第 2/20 ✓）⇒ 顺序执行 ✓（不并行 ✓）。
