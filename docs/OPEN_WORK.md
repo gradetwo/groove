@@ -23031,3 +23031,10 @@ describe("the grid's editing actions", () => {
   ⚠️ **为什么这一轮停在这里 ✓**：上下文将尽 ✗ ⇒ 硬改路由（核心文件 ✓）风险不对称 ✗
     （它会牵动 `App.tsx` 与整套路由测试 ✓）。**下次开工顺序 ✓**：先 `sed` 读 `RouteState` 与 `/new` 的解析片段 ✓
     ⇒ 再照抄写 `/m` ✓ ⇒ 跑 `router.test.ts` ✓ ⇒ 最后在 `App.tsx` 挂载并用真浏览器打开 `/m` 验证渲染 ✓。
+
+  ⭐ **行号也拿到了 ✓（下次开工无需再找 ✓）** ✓：`RouteState` 在 **`src/app/router.tsx:4`** ✓、
+    `parseUrlToRoute` 在 **:36** ✓、`formatRouteToUrl` 在 **:231** ✓、`RouterProvider` 在 **:305** ✓、
+    `useRouter` 在 **:357** ✓；`RouteState` 的前几个字段已 `sed` 出来备查 ✓。
+  ⭐ **于是 P1 的施工单是"四处、每处几行" ✓**：`RouteState` 加字段（:4）✓ ⇒ `parseUrlToRoute` 认出 `/m`（:36）✓
+    ⇒ `formatRouteToUrl` 写出 `/m`（:231）✓ ⇒ `App.tsx` 按该字段挂 `MobileApp` ✓；判据加在 `src/test/router.test.ts` ✓
+    （与已有两个路由测试同形 ✓）。**下次开工就能直接落 ✓。**
