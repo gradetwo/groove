@@ -280,10 +280,8 @@ for (const genreId of genreIds) {
   if (recorded === 0) {
     clipWarnings.push({ code: "no-recordings", detail: "no lane in this clip sounds through a real recording — the owner's requirement is that a clip carries its genre's own instruments" });
   }
-  const seconds = Number(banner.durationSec ?? 0);
-  if (!(seconds >= 15 && seconds <= 30)) {
-    clipWarnings.push({ code: "length-out-of-range", detail: `${seconds.toFixed(1)}s is outside the owner's 15–30s window` });
-  }
+  /** ⭐ Measured, not merely reported: the range check moves below, after the file has been read (see the ffprobe step). */
+  let seconds = Number(banner.durationSec ?? 0);
   const file = banner.file ?? banner.output ?? banner.path ?? banner.outputPath ?? banner.writtenTo;
   let bytes;
   let copied;
@@ -331,6 +329,21 @@ for (const genreId of genreIds) {
     const probe = spawnSync("ffmpeg", ["-hide_banner", "-i", produced, "-af", "volumedetect", "-f", "null", "-"], { encoding: "utf8" });
     const found = String(probe.stderr ?? "").match(/max_volume:\s*(-?[\d.]+) dB/);
     peakDb = found ? Number(found[1]) : undefined;
+    /**
+     * ⭐ **The file is the ground truth for its own length.** The render reply left `durationSec` undefined for some genres
+     * (the logs said `undefineds is outside 15–30s`), which produced a 0-second entry and a fallback to six repeats; asking
+     * the file removes that whole class of lie, and it costs one ffprobe.
+     */
+    const probed = spawnSync("ffprobe", ["-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", produced], { encoding: "utf8" });
+    const measured = Number(String(probed.stdout ?? "").trim());
+    if (measured > 0) {
+      seconds = measured;
+    } else {
+      clipWarnings.push({ code: "duration-unmeasured", detail: "the clip's real length could not be measured, so the render's own number stands" });
+    }
+    if (!(seconds >= 15 && seconds <= 30)) {
+      clipWarnings.push({ code: "length-out-of-range", detail: `${seconds.toFixed(1)}s is outside the owner's 15–30s window` });
+    }
     if (peakDb === undefined || !(peakDb > -60)) {
       clipWarnings.push({
         code: "silent-clip",

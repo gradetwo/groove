@@ -146,11 +146,11 @@ const PROPOSED = new Map([
    */
   [
     "src/components/MobileTabBar.tsx",
-    "Removed with the phone shell. OPEN_WORK.md §十三 names the component each deleted criterion used to test; this path is the record, not a claim.",
+    "Removed with the phone shell. OPEN_WORK.md §十三 names the component each deleted criterion used to test; this path is the record, not a claim. (The shell itself returned in v2.36.0 as `/m`; the criterion paths stay retired.)",
   ],
   [
     "src/components/MobileMoreSheet.tsx",
-    "Removed with the phone shell. Same line in OPEN_WORK.md §十三 as MobileTabBar; the record of what `mobileShell.test.tsx` covered.",
+    "Removed with the phone shell. Same line in OPEN_WORK.md §十三 as MobileTabBar; the record of what `mobileShell.test.tsx` covered. (The shell itself returned in v2.36.0 as `/m`; the criterion paths stay retired.)",
   ],
   [
     "src/hooks/useLabelArt.ts",
@@ -222,7 +222,7 @@ const PROPOSED = new Map([
    */
   [
     "scripts/diagnose_mobile_chrome.mjs",
-    "Removed with the phone shell: it read `mobile-tab-bar` and `mobile-transport-bar`, and neither element exists in `src` any more. PRODUCT_PLAN_v2.1.0.md names it as how the landscape-chrome numbers were reproduced — the record, not a claim.",
+    "Removed with the phone shell: it read `mobile-tab-bar` and `mobile-transport-bar`, and neither element exists in `src` any more. **The shell itself came back in v2.36.0 as the `/m` route, under the ids `mobile-shell` / `mobile-home`; these two ids stay retired, so this note stays true.** PRODUCT_PLAN_v2.1.0.md names it as how the landscape-chrome numbers were reproduced — the record, not a claim.",
   ],
   [
     "scripts/measure_phone_surface.mjs",

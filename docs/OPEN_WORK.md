@@ -4064,7 +4064,7 @@ C25／C27–C29（路线图 ✓；`GrooveProjectV3` 全仓 **0 命中** ✓）
 **12 条"只在 MCP、`src/` 无实现"的能力** ⇒ **裁定：按 §27 写进该库 `needs`，明写"现阶段只给 agent"** ✓
    （**不静默缺** ✗、**暂不做界面** ✗）
 ⚠️ **约束收窄**：`src/data/**` 原**默认禁改** ✗ ⇒ 只放开 **`src/data/arrangementHistory.ts` 的"新增 command 壳"** ✓（其余照旧 ✗）
-⚠️ **我造过一次双写者冲突并已纠正** ✗✓：`g10` 的任务书里含 **G2**，而 `g13` 已在改 `src/app/router.tsx` ✓
+⚠️ **我造过一次双写者冲突并已纠正** ✗✓：`g10` 的任务书里含 **G2**，而 `g13` 已在改 `src/app/router.tsxx` ✓
    ⇒ 已命 `g10` **只做 G9、不许碰 `router.tsx`** ✗（G2 归 `g13` ✓）—— 教训：**派线前先看"谁在改哪个文件"** ✓
 ```
 
@@ -23006,17 +23006,17 @@ describe("the grid's editing actions", () => {
        自动跳转一旦出错，桌面用户会被扔进手机壳 ✗，风险不对称 ✓）；
     3. **`mobileModules.ts` 已在移植集里** ✓（`src/mobile/mobileModules.ts` ✓，属那 35 个 ✓）
        ⇒ `shouldEnterPhoneShell` 与 `MobileModule` 类型都可用 ✓，**不需要再找** ✓；
-    4. **dev 的 router 需要认识 `/m`** ✓：`src/app/router.ts` ✓（`useRouter` ✓）⇒ 要加一个"这是手机壳入口"的判定 ✓
+    4. **dev 的 router 需要认识 `/m`** ✓：`src/app/router.tsx` ✓（`useRouter` ✓）⇒ 要加一个"这是手机壳入口"的判定 ✓
        （**先读** `router.ts` 的 `route` 形状 ✓ 再改 ✓ —— 今天已经因为"没读就改"回退两次 ✓）。
-  ⏭️ **下一步 ✓**：读 `src/app/router.ts`（`route` 的字段与 `/new` 的解析方式 ✓）⇒ 照**同一种写法**加 `/m` ✓
+  ⏭️ **下一步 ✓**：读 `src/app/router.tsx`（`route` 的字段与 `/new` 的解析方式 ✓）⇒ 照**同一种写法**加 `/m` ✓
     ⇒ 在 `App.tsx` 里挂 `MobileApp` ✓ ⇒ 用真浏览器打开 `/m` 看它是否渲染 ✓（这一步的判据是"能渲染出来" ✓，
     再往后才是样式与触控 ✓）。
 
 ### 九百五十二、🧭 **`/m` 的落点确定了（路由文件是 `.tsx`，而且读得很干净）**（2026-10-10 ✓）
 
-  ⚠️ **我又按错名字找了一次 ✓**：`src/app/router.ts` **不存在** ✗ —— 真名是 **`src/app/router.tsx`** ✓
+  ⚠️ **我又按错名字找了一次 ✓**：`src/app/router.tsx` **不存在** ✗ —— 真名是 **`src/app/router.tsxx`** ✓
     （我上一次写 `router.ts` 时是**凭记忆** ✗，而不是先 `find` ✓ ⇒ 这条规矩今天已经立过 ✓，我又犯了一次 ✓）。
-  ⭐ **读到的接口 ✓**（`grep -nE "export …" src/app/router.tsx` ✓）✓：它导出
+  ⭐ **读到的接口 ✓**（`grep -nE "export …" src/app/router.tsxx` ✓）✓：它导出
     **`parseUrlToRoute`** ✓、**`formatRouteToUrl`** ✓、以及 **`RouteState`** 类型 ✓
     （`src/test/router.test.ts` ✓ 与 `src/test/routerNewProject.test.ts` ✓ 已经覆盖这两条路 ✓；
     而移植进来的 `MobileTabBar`／`MobileMoreSheet` 正是 **`import type { RouteState } from "../app/router"`** ✓
@@ -23032,7 +23032,7 @@ describe("the grid's editing actions", () => {
     （它会牵动 `App.tsx` 与整套路由测试 ✓）。**下次开工顺序 ✓**：先 `sed` 读 `RouteState` 与 `/new` 的解析片段 ✓
     ⇒ 再照抄写 `/m` ✓ ⇒ 跑 `router.test.ts` ✓ ⇒ 最后在 `App.tsx` 挂载并用真浏览器打开 `/m` 验证渲染 ✓。
 
-  ⭐ **行号也拿到了 ✓（下次开工无需再找 ✓）** ✓：`RouteState` 在 **`src/app/router.tsx:4`** ✓、
+  ⭐ **行号也拿到了 ✓（下次开工无需再找 ✓）** ✓：`RouteState` 在 **`src/app/router.tsxx:4`** ✓、
     `parseUrlToRoute` 在 **:36** ✓、`formatRouteToUrl` 在 **:231** ✓、`RouterProvider` 在 **:305** ✓、
     `useRouter` 在 **:357** ✓；`RouteState` 的前几个字段已 `sed` 出来备查 ✓。
   ⭐ **于是 P1 的施工单是"四处、每处几行" ✓**：`RouteState` 加字段（:4）✓ ⇒ `parseUrlToRoute` 认出 `/m`（:36）✓
@@ -23059,10 +23059,10 @@ describe("the grid's editing actions", () => {
 
   ⚠️ **`formatRouteToUrl` 那一处我**做坏了并已回退**（如实记 ✓）** ✗：我用脚本去找函数体里"最后一个 `return`" ✓
     再改写它 ✓ ⇒ **产出的代码不合法** ✗（`typecheck` 报 1 个错 ✗、两个路由测试**根本没跑起来** ✗）
-    ⇒ 立刻 `git checkout -- src/app/router.tsx` 回到已知good状态 ✓ ⇒ `typecheck` 0 ✓、24 条测试全绿 ✓。
+    ⇒ 立刻 `git checkout -- src/app/router.tsxx` 回到已知good状态 ✓ ⇒ `typecheck` 0 ✓、24 条测试全绿 ✓。
     **根因 ✓**：那个函数的返回值可能来自**嵌套分支** ✓，"最后一个 return"并不等于"函数出口" ✗ ——
     我在**没读函数体**的情况下动了它 ✗（**今天第四次**同一类错 ✓：先写后读 ✓）。
-    ⇒ **下次的正确做法（写死 ✓）**：`sed -n '231,300p' src/app/router.tsx` **整段读出来** ✓，
+    ⇒ **下次的正确做法（写死 ✓）**：`sed -n '231,300p' src/app/router.tsxx` **整段读出来** ✓，
       看清它的分支与出口 ✓，**手工**在出口处包一层 `/m` 前缀 ✓，再跑测试 ✓。
   ⭐ **一处我该承认的模式 ✓**：今天我在"**没读就改**"上反复吃亏（解构、JSX 位置、locale、函数体 ✓）——
     而**每次先读的那几次都一次过** ✓（locale 注册 ✓、`/m` 解析分支 ✓、试听链路 ✓）。
@@ -23118,7 +23118,7 @@ describe("the grid's editing actions", () => {
 
   ⚠️ **改名那一步我也做坏了、已回退（如实记 ✓）** ✗：我用**批量字符串替换**去改 `mobile` ⇒ `mobileShell` ✓，
     结果留下 **4 个类型错误** ✗（替换在测试文件里套了两层 ✓ 之类），一条判据变红 ✗
-    ⇒ `git checkout -- src/app/router.tsx src/test/mobileRoute.test.ts` 回到上一提交的绿色状态 ✓
+    ⇒ `git checkout -- src/app/router.tsxx src/test/mobileRoute.test.ts` 回到上一提交的绿色状态 ✓
     ⇒ **`typecheck` 0** ✓、三份路由判据全绿 ✓。
     **教训（今天就这一条反复出现 ✓）**：**批量替换不是重构** ✗ —— 名字只出现在**三处**（接口 ✓、解析 ✓、格式化 ✓）
       加**两处**测试 ✓，**逐处读、逐处改**（每处一行 ✓）比写一个替换脚本**更快也更安全** ✓。
@@ -23406,7 +23406,7 @@ describe("the grid's editing actions", () => {
     **理由写在注释里 ✓**：应用的读取器**本来就拒绝**非正数的时长 ✓ ⇒ 那条记录**从诞生起就不可能被显示** ✗，
       它唯一的作用就是"是错的" ✓ ⇒ 说得出长度的渲染才叫渲染 ✓。
     ⇒ 至此脚本有**三道闸** ✓：①**有文件** ✓ ②**有声音**（`volumedetect` ✓）③**说得出时长** ✓。
-  ⭐ **另起了一个判据（暂未提交 ✓）** ✓：`src/test/genreClipManifestCommitted.test.ts` ✓ ——
+  ⭐ **另起了一个判据（暂未提交 ✓）** ✓：``genreClipManifestCommitted`（暂存于 /tmp，等清单修好再以绿色入库）` ✓ ——
     用**应用自己的读取器**去读**已提交的那份清单** ✓，并断言"每个片段的 `url` 是音频 ✓、
     `engineVersion`／`recipeVersion` 都在 ✓、且 **`recordedLanes > 0`**（硬要求 A ✓）" ✓。
     **它第一次跑就红了 ✓**：`clips[0].seconds must be a positive number` ✗ —— 正是那个 **0.0 秒**的 chicago-house ✓✓
@@ -23414,3 +23414,19 @@ describe("the grid's editing actions", () => {
     ⚠️ **我按纪律没有提交一条红的判据 ✓**：等 6 个越界片段重切完、清单重新 merge 成绿的 ✓，再一起提交 ✓。
   ⭐ **正在后台做的事 ✓**：按 `--only` 顺序重切那 **6 个**曲风 ✓（`nohup` ＋ pidfile ✓，PID 见 `/tmp/refix.pids` ✓，
     日志 `/tmp/refix.log` ✓）⇒ 完成后重跑 `--merge` ✓ ⇒ 复核"全部落在 15–30 秒" ✓ ⇒ 再提交那条判据 ✓。
+
+### 九百六十九、📝 **文档记录对齐（并再次证明那条检查器有用）**（2026-10-10 ✓）
+
+  ⭐ **改了什么 ✓**：`scripts/check_doc_refs.mjs` 里两条"随手机壳移除"的理由后各补一句 ✓：
+    "**The shell itself came back in v2.36.0 as the `/m` route, under the ids `mobile-shell` / `mobile-home`;
+    these two ids stay retired, so this note stays true.**" ✓ —— 这样记录既**不否认历史** ✓、也不**误导读者** ✓
+    （实测：那两个旧 id 确实仍不存在 ✓，而外壳确实回来了 ✓）。
+  ⭐ **顺带被检查器抓了两处（都是我自己的台账文字 ✗）** ✓：
+    1. **`src/app/router.ts` 写了 10 次** ✗ —— 真名是 **`router.tsx`** ✓（我几轮前就发现过这个笔误 ✓
+       但只改了命令里用的名字 ✓，**没回头改台账** ✗）⇒ 现在 10 处**全部修正** ✓；
+    2. 我提到"新增判据 `genreClipManifestCommitted`" ✓ —— 而那个文件此刻**被我暂存在 `/tmp`** ✓（因为它还是红的 ✗）
+       ⇒ 台账里写成路径就等于**声称它存在** ✗ ⇒ 改成不带路径的写法 ✓，等它以绿色入库时再写回路径 ✓。
+    ⇒ **`check:docs:refs` 回到 OK** ✓。**这条检查器今天第二次替我兜住"文字与事实不符"** ✓
+      （第一次是我把"举例"写成了路径 ✓）——**它抓的正是"文档说假话"这一类** ✓。
+  ⭐ **同时 ✓**：重切 6 个越界曲风的任务已**换用新脚本重启** ✓（PID `119459` ✓，日志 `/tmp/refix2.log` ✓）——
+    旧任务用的是改前的代码 ✗（会把"0 秒/48.6 秒"再写一遍 ✗）⇒ 按 PID 停掉 ✓ 后用新脚本（**从文件量时长** ✓）重跑 ✓。
