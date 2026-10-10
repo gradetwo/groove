@@ -24604,3 +24604,33 @@ describe("the grid's editing actions", () => {
     `[assets] directory = "./dist"` ✓ ⇒ 只要**把 MP3 拷进 `dist/clips/` 再 `npx wrangler deploy`** ✓，
     它们就会出现在 `https://groove.wangda.today/clips/<genre>.mp3` ✓✓ —— 与清单里的 URL **逐字对应** ✓。
     （我早先在本地 preview 上验过的 `/clips/…` 形状 ✓，就是按这个目录布局推出来的 ✓。）
+
+### 一千零二十三、🚀✅ **v2.36.0 已发布**（2026-10-10 ✓，全部判据实测通过 ✓）
+
+  ⭐ **发布脚本的最终输出 ✓** ✓：
+    ```
+    full CI          ok        ← 远端权威门禁通过（4 分片 + nightly 矩阵 + 构建/体积）
+    deploy           ok        ← wrangler 部署成功（店主已登录）
+    tag              ok        ← v2.36.0 已打
+    remote           ok        ← 已推送
+    ✅ deployed and published — now check /version.json against the tag
+    release exit=0
+    ```
+  ⭐ **逐条验收 ✓（全部为实测 ✓）** ✓：
+    | 判据 | 证据 |
+    | --- | --- |
+    | ① 远端 CI | `completed / success`；`Typecheck, Lint, Unit Tests & Build=success`、`E2E Desktop=success` ✓ |
+    | ② deploy | 脚本报 `deploy ok` ✓ **且线上已在服务新版本** ✓ |
+    | ③ main + tag | `refs/tags/v2.36.0` = `4cc8ad8` ✓、`refs/heads/main` = `296d518` ✓ |
+    | ④ 线上版本 | `https://groove.wangda.today/version.json` ⇒ **`"version": "2.36.0"`** ✓（`changelogCount: 10` ✓） |
+    | ⑤ 片段可用 | **线上**清单 = **155 条** ✓、首条 URL = `https://r2mirror.groove.wangda.today/clips/chicago-house.mp3` ✓、`engineVersion 2.36.0` ✓、`health` 总表在 ✓；镜像取片段 `HTTP 200 · 400030 B · audio/mpeg` ✓ |
+    | ⑤ 线上 `/m` 端到端 | **真浏览器探针打线上站点** ✓：`shell: true` ✓、`player: true` ✓、`src` 是 R2 URL ✓、`compare: true` ✓、按下播放后 `readyState 4 / duration 16.6 / currentTime 5.3 / paused false` ✓、**零 page error** ✓ |
+  ⭐ **发布前修掉的两个真实拦截（都是"远端 CI 才看得见"的那一类 ✓）** ✓：
+    ① **changelog 条目超长** ✗：上限 **200 中文字符**，我写了 **460** ⇒ 重写为 **172** ✓（单条 2.36.0 ✓、不含 2.35.11 ✓）；
+    ② **临时片段目录被提交** ✗：`git add -A` 把 `dist-repair`／`dist-missing`／`dist-fix`／`dist-refix*` 一起提交了
+      （**214 个文件** ✓，其中 `dist-repair/` 里是我为通过 merge 校验放的**绝对路径符号链接** ✓）
+      ⇒ CI 上链接全断 ⇒ `check_file_sizes.mjs` 去 `stat` 它们 ⇒ `ENOENT: stat 'dist-repair/2-step-garage.mp3'` ✗
+      ⇒ 一个**体积**判据因为一个 **MP3** 而红 ✓ ⇒ `git rm -r --cached` 五个目录 + 写进 `.gitignore` ✓。
+  ⚠️ **仍留给渲染器链路的独立缺陷 ✓（不影响本次发布 ✓）** ✓：4 个曲风没有片段（`dream-trance`／`euro-trance`／
+    `goa-trance` 试过无产物 ✓；`vocal-trance` 挂死、超时都不触发、人工中止 ✓），三种形态已分别记录 ✓，
+    并建议给渲染加**进程级看门狗** ✓。清单里没有它们是如实 ✓，不是遗漏 ✓。
