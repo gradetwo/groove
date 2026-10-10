@@ -309,6 +309,25 @@ for (const genreId of genreIds) {
    * the one failure this whole pipeline is built to avoid. The file is the evidence.
    */
   const produced = copied && existsSync(copied) && statSync(copied).size > 0 ? copied : undefined;
+  /**
+   * ⭐ **A file is not a sound.** The previous guard proves bytes exist; this one proves the audio is actually there, because
+   * a failed render can leave a perfectly sized file of digital silence (measured earlier: thirteen bands at −120 dB, which
+   * `analyze_audio` can see but **only for WAV** — its own description says "there is no MP3 decoder here"). ffmpeg reads
+   * both, so it is the check this batch uses, and its reading goes into the manifest as a warning rather than being thrown
+   * away.
+   */
+  let peakDb;
+  if (produced) {
+    const probe = spawnSync("ffmpeg", ["-hide_banner", "-i", produced, "-af", "volumedetect", "-f", "null", "-"], { encoding: "utf8" });
+    const found = String(probe.stderr ?? "").match(/max_volume:\s*(-?[\d.]+) dB/);
+    peakDb = found ? Number(found[1]) : undefined;
+    if (peakDb === undefined || !(peakDb > -60)) {
+      clipWarnings.push({
+        code: "silent-clip",
+        detail: `the clip's peak measures ${peakDb === undefined ? "unmeasurable" : `${peakDb} dB`}, so it may carry no sound`,
+      });
+    }
+  }
   if (!produced) {
     console.error(`${genreId}: the render produced no file (durationSec=${String(banner.durationSec)}) — skipped, nothing written`);
     continue;

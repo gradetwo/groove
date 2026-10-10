@@ -78,3 +78,6 @@ describe("the clip manifest", () => {
   });
 
 });
+
+// ⭐ The manifest's shape is asserted above; the batch's *use* of it (silent-clip warnings, the file-or-nothing rule) is a
+// script concern and lives with the script, because that is where it can be read as a whole.
