@@ -17,13 +17,13 @@ describe("the chooser's audition", () => {
   it("⭐ is a sibling of the row, because a button cannot be nested in a button", () => {
     const li = list.indexOf("<li key={entry.assetId}>");
     const rowClose = list.indexOf("</button>", li);
-    const audition = list.indexOf("instrument-audition-");
+    const audition = list.indexOf("instrument-audition-${entry.assetId}");
     expect(li, "the row wrapper").toBeGreaterThan(-1);
     expect(audition, "the audition control exists").toBeGreaterThan(rowClose);
   });
 
   it("⭐ is thumb-sized and names what it will play", () => {
-    const at = list.indexOf("instrument-audition-");
+    const at = list.indexOf("instrument-audition-${entry.assetId}");
     const block = list.slice(at, at + 900);
     expect(block, "44 px for a thumb").toContain("min-h-11 min-w-11");
     expect(block, "an accessible name").toContain("aria-label=");
@@ -51,5 +51,22 @@ describe("the audition's words", () => {
       expect(block, `${key} is English and Chinese`).toMatch(/en: ".*[\u4e00-\u9fff]|zh: "[\u4e00-\u9fff]/);
     }
     expect(locale.slice(locale.indexOf("instrument_auditioning:"), locale.indexOf("instrument_auditioning:") + 160)).toContain("{name}");
+  });
+});
+
+/**
+ * ⭐ **And the sentence is on screen.** The receipt is a plain `<p>` beside the query box — the first two attempts at it were
+ * reverted because they were written into a JSX position whose surrounding syntax had not been read (a `{/** */}` wrapper in
+ * a place that refused it), so this criterion also pins the shape that works.
+ */
+describe("the audition's receipt", () => {
+  it("⭐ says what is sounding, and says it in a live region", () => {
+    const list = readFileSync(resolve(__dirname, "../components/arrangement/InstrumentLibraryV2.tsx"), "utf8");
+    const at = list.indexOf('data-testid="instrument-audition-receipt"');
+    expect(at, "the receipt exists").toBeGreaterThan(-1);
+    const block = list.slice(at, at + 320);
+    expect(block, "screen readers are told").toContain('aria-live="polite"');
+    expect(block, "it names the instrument").toContain('t("instrument_auditioning", { name: auditioning })');
+    expect(block, "and teaches the ▷ when nothing is sounding").toContain('t("instrument_audition_hint")');
   });
 });

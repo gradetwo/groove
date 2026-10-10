@@ -55,6 +55,8 @@ interface Entry {
 import { instrumentMatches } from "../../data/instrumentSearch";
 
 export function InstrumentLibraryV2({ instruments, currentAssetId, onChoose, onAudition, coverage }: InstrumentLibraryV2Props) {
+  /** ⭐ What is sounding right now — the sentence that stops a working control looking like a dead one. */
+  const [auditioning, setAuditioning] = useState<string | null>(null);
   const { t, isZh } = useLanguage();
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState<string | undefined>(undefined);
@@ -109,6 +111,9 @@ export function InstrumentLibraryV2({ instruments, currentAssetId, onChoose, onA
         onChange={(event) => setQuery(event.target.value)}
         className="w-full min-h-11 sm:min-h-0 px-2 py-1 rounded text-xs bg-transparent border border-[rgb(var(--d-line))] text-text"
       />
+      <p data-testid="instrument-audition-receipt" aria-live="polite" className="px-1 pb-1 text-[10px] text-text opacity-70">
+        {auditioning ? t("instrument_auditioning", { name: auditioning }) : t("instrument_audition_hint")}
+      </p>
       <div className="flex gap-2 min-h-32">
         {/* The category column. Hidden while searching, because a search ignores it and a column that does nothing is worse than none. */}
         {!searching && (
@@ -219,7 +224,10 @@ export function InstrumentLibraryV2({ instruments, currentAssetId, onChoose, onA
                     data-testid={`instrument-audition-${entry.assetId}`}
                     aria-label={`${entry.name ?? entry.assetId} audition`}
                     title={String(entry.name ?? entry.assetId)}
-                    onClick={() => onAudition(entry.assetId)}
+                    onClick={() => {
+                      setAuditioning(String(entry.name ?? entry.assetId));
+                      onAudition(entry.assetId);
+                    }}
                     className="ml-1 inline-flex min-h-11 min-w-11 shrink-0 items-center justify-center rounded border border-[rgb(var(--d-line))] text-xs text-text transition-colors hover:border-[rgb(var(--d-accent))]/60 hover:bg-white/5"
                   >
                     ▷
