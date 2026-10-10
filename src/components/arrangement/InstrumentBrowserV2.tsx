@@ -29,6 +29,8 @@ export interface InstrumentBrowserV2Props {
   assetId?: string;
   instruments: readonly InstrumentChoice[];
   onChangeInstrument: (trackId: string, assetId: string) => void;
+  /** ⭐ Audition a candidate before choosing it; absent means the list draws no ▷ button at all. */
+  onAudition?: (assetId: string) => void;
   /** Which track's panel is open. */
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -49,6 +51,7 @@ export function InstrumentBrowserV2({
   assetId,
   instruments,
   onChangeInstrument,
+  onAudition,
   open,
   onOpenChange,
   scope = "row",
@@ -185,6 +188,7 @@ export function InstrumentBrowserV2({
             <InstrumentLibraryV2
               instruments={instruments}
               currentAssetId={assetId}
+              {...(onAudition ? { onAudition } : {})}
               onChoose={(chosen) => {
                 onChangeInstrument(trackId, chosen);
                 // Closing on a choice is what the panel is for: a person who picked one is done with it.

@@ -25,6 +25,12 @@ export interface InstrumentLibraryV2Props {
   /** Choosing one. The panel reports the choice; assigning it belongs to the caller. */
   onChoose: (assetId: string) => void;
   /**
+   * ⭐ **Hear it before choosing it** (owner's instruction, 2026-10-10: *"chooser 乐器试听也要做"*). A separate control from
+   * the choice itself: tapping the ▷ auditions, tapping the row selects. Absent when the caller has no player to audition
+   * with, and then no button is drawn at all rather than one that does nothing.
+   */
+  onAudition?: (assetId: string) => void;
+  /**
    * ⭐ **What each instrument can sound, when the caller has an engine reading to offer.**
    *
    * Absent by default, and that default matters: a surface with no catalogue behind it (the track row's own browser)
@@ -48,7 +54,7 @@ interface Entry {
  */
 import { instrumentMatches } from "../../data/instrumentSearch";
 
-export function InstrumentLibraryV2({ instruments, currentAssetId, onChoose, coverage }: InstrumentLibraryV2Props) {
+export function InstrumentLibraryV2({ instruments, currentAssetId, onChoose, onAudition, coverage }: InstrumentLibraryV2Props) {
   const { t, isZh } = useLanguage();
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState<string | undefined>(undefined);
