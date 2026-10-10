@@ -1,5 +1,7 @@
 import { captureWithBrowser } from "./audio/captureBrowser";
 import { createOpfsRecordingStore } from "./audio/opfsRecordingStore";
+import type { MobileModule } from "./mobile/mobileModules";
+const MobileApp = React.lazy(() => import("./mobile/MobileApp").then((m) => ({ default: m.MobileApp })));
 import React, { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import { LanguageProvider, useLanguage } from "./i18n/LanguageContext";
 import { useReducedMotion } from "./hooks/useReducedMotion";
@@ -84,6 +86,8 @@ const MainApp: React.FC = () => {
   // On-demand asynchronous genre loading (P1-13)
   const targetGenreId = route.genreId || "chicago-house";
   const [selectedGenre, setSelectedGenre] = useState<Genre | null>(null);
+  /** ⭐ Which phone module the shell shows — its own state, not a URL segment (the retired `/m/<module>` shape stays retired). */
+  const [mobileModule, setMobileModule] = useState<MobileModule>("home");
 
   /**
    * The default studio genre, resolved on demand.
@@ -283,6 +287,18 @@ const MainApp: React.FC = () => {
       setEngineInstance(null);
     };
   };
+
+  /**
+   * ⭐ **`/m` renders the phone shell** (owner's decision 2026-10-10). Inside `MainApp`, which is the component that holds the
+   * router, and after every one of its hooks: a conditional return above them would change how many hooks run.
+   */
+  if (route.mobileShell) {
+    return (
+      <React.Suspense fallback={null}>
+        <MobileApp module={mobileModule} onSelectModule={setMobileModule} genreId={route.genreId} />
+      </React.Suspense>
+    );
+  }
 
   return (
     /*

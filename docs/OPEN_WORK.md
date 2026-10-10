@@ -23174,3 +23174,21 @@ describe("the grid's editing actions", () => {
     （**不是**文件里第 780 行那个属于 `App` 的 ✓）。
   ⭐ **自动回退再次生效 ✓**：红 ⇒ `cp` 回备份 ✓ ⇒ `typecheck` 0 ✓、`git status` 干净 ✓（`App.tsx` 未被污染 ✓）。
     **这条模式已经稳定 ✓**：凡是要动核心文件 ✓，命令里**先备份、后改、红就回退** ✓ —— 今天第五次用它 ✓，五次都自愈 ✓。
+
+### 九百五十九、✅✅ **`/m` 挂上了（P1 4/4，只剩浏览器验收）**（2026-10-10 ✓）
+
+  ⭐ **锚点这次找对了 ✓**：`const MainApp: React.FC = () => {` 在 **第 62 行** ✓，而**它自己的** JSX `return (` 在 **287 行** ✓
+    ⇒ 规则写成"**从 `MainApp` 的定义往后找第一个 `return (`**" ✓（而不是"文件里最后一个" ✗，也不是"第 780 行那个属于 `App` 的" ✗）
+    ⇒ 分支插在 **290 行之前** ✓ ⇒ **`typecheck` GREEN** ✓✓。
+  ⭐ **插入的内容 ✓**：`import type { MobileModule }` ✓ ＋ `React.lazy(() => import("./mobile/MobileApp")…)` ✓
+    ＋ `const [mobileModule, setMobileModule] = useState<MobileModule>("home")` ✓
+    ＋ **`if (route.mobileShell) return <Suspense><MobileApp module={mobileModule} onSelectModule={setMobileModule} genreId={route.genreId} /></Suspense>`** ✓
+    —— 位置在 **`MainApp` 内部、所有 hook 之后** ✓（React 的规则 ✓：条件返回不能排在 hook 前面 ✓）。
+  ⭐ **验收 ✓**：`mobileRoute`（3 ✓）＋`router`（含退役 `/m/<module>` 那条 ✓）＋`routerNewProject` **全绿** ✓；
+    `typecheck` 0 ✓、`lint` ✓、`docs:check` ✓。
+  ⭐ **自动回退模式的价值 ✓**：这一轮它**没被触发** ✓（第一次就绿 ✓）—— 但正因为命令里预先写了"红就回退" ✓，
+    我才敢在上下文将尽时**直接尝试** ✓（前三轮里它救了我两次 ✓）。**"先备份、后改、红就回退"已经是这台机器上的标准动作 ✓。**
+  ⏭️ **P1 的最后一件事（下一轮 ✓）** ✓：用 **Playwright 打开 `/m`** ✓ ⇒ 判据是"**能渲染出手机壳**" ✓
+    （例如出现 `mobile-tab-bar`／`mobile-transport-bar` 之类的元素 ✓ —— 那两个 id 正是当年 `check:docs:refs` 说""
+    已随手机壳删除"的那两个 ✓✓ ⇒ **它们的存在本身就是"壳回来了"的证据** ✓）。
+    之后才进入店主定的两条：**独立样式域**（＋皮肤清单一致判据 ✓）与 **44 px／对比度**判据 ✓。
