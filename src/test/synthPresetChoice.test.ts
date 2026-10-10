@@ -1,4 +1,6 @@
 import { describe, expect, it } from "vitest";
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { DEFAULT_SYNTH_PRESETS } from "../audio/PolySynth";
 import { GLOBAL_DEFAULT_PRESET_KEY, resolveInstrumentPresetKey } from "../audio/instrumentPresets";
 
