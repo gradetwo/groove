@@ -124,7 +124,12 @@ const asObject = (value) => {
  * fifty becomes eleven). `list_genres` answers `{ genres: [{ id, … }] }`, so unwrapping it is the whole job — the same
  * `asObject` the tool calls use.
  */
-const listed = asObject(await callTool("list_genres", {}));
+/**
+ * ⭐ ** is not decoration: the tool's default is 50** (measured 2026-10-10 — the owner asked why only fifty genres
+ * were being cut, and the answer is that  pages at fifty while the library holds **159**). A batch that
+ * silently cuts a third of the library is the same class of mistake as the regex that scraped eleven.
+ */
+const listed = asObject(await callTool("list_genres", { limit: 200 }));
 const allGenres = (Array.isArray(listed.genres) ? listed.genres : Array.isArray(listed) ? listed : [])
   .map((entry) => (typeof entry === "string" ? entry : entry?.id))
   .filter((id) => typeof id === "string" && id.length > 0);

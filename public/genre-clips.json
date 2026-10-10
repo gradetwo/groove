@@ -2,17 +2,17 @@
   "bars": 8,
   "clips": [
     {
-      "genreId": "bossa-nova",
-      "url": "bossa-nova.wav",
+      "genreId": "chicago-house",
+      "url": "chicago-house.mp3",
       "seconds": 16.600022675736962,
-      "bytes": 2928288,
-      "lufs": -11.968353978637762,
-      "bars": 2,
+      "bytes": 399360,
+      "lufs": -9.657754902602074,
+      "bars": 1,
       "engineVersion": "2.35.11",
       "recipeVersion": "1",
       "generatedAt": "2026-10-10",
-      "recordedLanes": 6,
-      "builtInLanes": 2
+      "recordedLanes": 4,
+      "builtInLanes": 4
     }
   ]
 }
