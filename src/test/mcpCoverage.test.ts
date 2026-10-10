@@ -32,7 +32,7 @@ const EXPOSED: Record<string, string> = {
   setCollapsed: "set_arrangement_track_collapsed",
   setTrackSample: "set_arrangement_track_asset",
   // ⭐ The synth half of choosing a sound: a preset by name, which is what a synth track already sounds through.
-  setTrackInstrument: "set_arrangement_track_instrument",
+  setTrackInstrument: "set_arrangement_track_preset",
   setTrackSteps: "set_arrangement_track_steps",
   addTrackNote: "add_arrangement_note",
   addTrackNotes: "add_arrangement_notes",

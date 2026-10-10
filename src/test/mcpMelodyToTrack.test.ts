@@ -37,7 +37,7 @@ describe("a generated melody as notes", () => {
 
   it("⭐ and the tool that uses it writes onto a named track through the writer that refuses unknown ones", () => {
     const registry = readFileSync(resolve(__dirname, "../../mcp/registryExamples.ts"), "utf8");
-    expect(registry, "the tool exists").toContain('name: "melody_to_track"');
+    expect(registry, "the tool exists").toContain('name: "add_melody_to_track"');
     expect(registry, "it converts through this function").toContain("melodyNotes(");
     expect(registry, "and writes through the existing writer, which refuses an unknown track (F04)").toContain("addMcpTrackNotes(");
   });

@@ -68,7 +68,7 @@ export const EXAMPLE_TOOLS: ToolDefinition[] = [
      * This takes exactly what `generate_melody` returns and puts it on a track, so the arrays never have to be zipped and
      * `startBeats` never has to be guessed.
      */
-    name: "melody_to_track",
+    name: "add_melody_to_track",
     title: "Write a generated melody onto a track",
     description:
       "Put a melody onto a track: pass the lane-shaped arrays `generate_melody` returned (steps, pitch, velocity, gate) and they become notes. A step is a sixteenth of a bar, the grid this project uses, so `startBeats` is `steps[i] * 0.25` and a gate of 4 is a quarter note. Pass `beatsPerStep` only when the melody is not on that grid. The track must exist; an unknown trackId is refused rather than written past. Returns how many notes were written.",
