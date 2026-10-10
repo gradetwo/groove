@@ -208,6 +208,27 @@ if (MERGE) {
     if (!present) console.error(`merge: ${clip.genreId} names ${clip.url}, which is not in ${OUT}/ — left out`);
     return present;
   });
+  /**
+   * ⭐ **Say it out loud when the list and the app disagree about the engine** (owner's release rule, 2026-10-10: the changelog
+   * must never name a version that did not ship). These rows carry the version that rendered them, and `dev` currently reads
+   * `2.35.11` — a version that was deliberately never released. Re-merging does not re-stamp rows, so a release that bumps the
+   * version has exactly two honest options, and this prints both rather than choosing silently:
+   *
+   *   · the engine did **not** change since these renders ⇒ pass `--engine-version <v>` to re-stamp them;
+   *   · it **did** ⇒ re-render, because a clip is evidence of the engine that made it.
+   */
+  const ENGINE_VERSION = flag("engine-version", undefined);
+  if (ENGINE_VERSION) {
+    for (const clip of merged) clip.engineVersion = ENGINE_VERSION;
+    console.log(`re-stamped ${merged.length} clip(s) as engineVersion=${ENGINE_VERSION}`);
+  } else {
+    const shipped = JSON.parse(readFileSync("public/version.json", "utf8")).version;
+    const stale = merged.filter((clip) => clip.engineVersion !== shipped);
+    if (stale.length > 0) {
+      const seen = [...new Set(stale.map((clip) => clip.engineVersion))].join(", ");
+      console.log(`   ⚠ ${stale.length} clip(s) were rendered by a different engine than ${shipped} (${seen}); re-render them, or re-stamp with --engine-version if the engine did not change`);
+    }
+  }
   if (merged.length === 0) {
     console.error(`no shard manifests in ${OUT}/; nothing to merge`);
     process.exit(1);
