@@ -22661,3 +22661,22 @@ describe("the grid's editing actions", () => {
   ⭐ **今日进度总览（到此为止 ✓）** ✓：预生成管线 ✓（含两道闸 ✓）、清单与新鲜度 ✓、数据体检 ✓、
     静音根因修复 ✓、chooser 试听 ✓、P0 试装第一步 ✓；跑批 **31/159** ✓（load 14 ✓）；
     `/m` 路由与手机播放器**未开始** ✓；发版按店主指示**暂停** ✓（线上 v2.35.10 ✓）。
+
+### 九百三十五、🎯🎯 **P0 试装的答案拿到了：35 个文件放进 v2 只出 **14 个类型错误、集中在 7 个文件、4 类原因****（2026-10-10 ✓）
+
+  ⭐ **做法 ✓**（隔离、不碰工作树 ✓）：`git worktree add --detach /tmp/mobile-wt dev` ✓ ＋
+    **软链 `node_modules`**（不重装依赖 ✓）＋ 把 `/tmp/mobile-port` 的 35 个文件拷进去 ✓ ⇒ `npm run typecheck` ✓。
+  ⭐ **读数 ✓**：**14 个错误 / 7 个文件** ✓ —— 而且**只有四类原因** ✓：
+
+| 类 | 错误 | 文件 | 含义与代价 |
+| --- | --- | --- | --- |
+| ① **少带了几个兄弟模块** ✗ | `Cannot find module './Toolbar'`（1 ✓）、`'../hooks/useLightPlayer'`（2 ✓）、`'../../hooks/useLabelArt'`（1 ✓） | `MobileStudioSheet`／`LightPlayerToggle`／`MobilePlayerScreen` | 这些**不在我筛的 35 个路径里** ✗（我的过滤只抓 `src/mobile`＋`Mobile*` ✓）⇒ 大概率**封存树里还有** ✓ ⇒ 补进清单即可 ✓（**几乎零成本** ✓） |
+| ② **`CATEGORY_SWATCH` 不在 `genreArt` 里** ✗ | `has no exported member 'CATEGORY_SWATCH'`（4 ✓） | `MobileGenrePicker`／`MobilePlayerBar`／`MobileHomeScreen`／`MobilePlayerScreen` | 说明那个导出在**别的模块**（很可能是 `src/data/**` 或 `src/mobile/genreArt` 再导出 ✓）⇒ 补一处导入 ✓ |
+| ③ **i18n 键缺 6 个** ✗ | `mobile_detail_lineage_*`／`mobile_era_contemporary` 等（6 ✓） | `MobileGenreDetailScreen` | `locales/mobile.ts` 在 ✓，但 v2 的**键类型表**里没有这些名字 ✗ ⇒ 把键补进类型/字典 ✓（机械 ✓） |
+| ④ 其它 | **没有** ✓ | — | **没有架构性破坏** ✓✓ |
+
+  ⭐ **这份表的意义（正是我要的 ✓）** ✓：**接回手机壳不是重写** ✓ —— 35 个文件里只有 **7 个**需要动 ✓、
+    总共 **14 处** ✓，且四类都是"**补一个导入／补一个键／补一个导出**" ✓ ⇒
+    **P1（`/m` 路由）与 P2（样式独立域）的排期可以按事实给了** ✓，不再靠估 ✓。
+  ⭐ **worktree 留着 ✓**（`/tmp/mobile-wt` ✓，`node_modules` 是软链 ✓）⇒ 下一轮**直接在里面改** ✓，
+    改到 `typecheck` 干净 ✓ 再决定怎么并回 `dev` ✓（并回时要走正常判据与门禁 ✓）。
