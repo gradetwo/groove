@@ -17,7 +17,7 @@ const clip = (over: Record<string, unknown> = {}) => ({
   recipeVersion: "1",
   generatedAt: "2026-10-10",
   recordedLanes: 6,
-  synthLanes: 2,
+  builtInLanes: 2,
   ...over,
 });
 

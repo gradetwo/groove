@@ -160,6 +160,11 @@ for (const genreId of genreIds) {
    * in the server's temporary directory. The reply names where it went, so the script copies it where the batch wants it.
    */
   const banner = asObject(await callTool("render_arrangement", { arrangementId, format: "mp3", bitrateKbps: 192 }));
+  /**
+   * ⭐ **`skippedLanes` is a health check the renderer hands over for free**: a lane whose bytes could not be resolved is
+   * named there with its reason, rather than dropped in silence. It belongs in the manifest beside the lane counts.
+   */
+  const skipped = Array.isArray(banner.skippedLanes) ? banner.skippedLanes : [];
   console.log(`   reply keys: ${Object.keys(banner).join(", ")}`);
   const file = banner.file ?? banner.output ?? banner.path ?? banner.outputPath ?? banner.writtenTo;
   let bytes;
@@ -172,10 +177,14 @@ for (const genreId of genreIds) {
   clips.push({
     genreId,
     url: `${genreId}.mp3`,
-    /** ⭐ The reply's own duration, under whichever name it uses — printed above so the name is never guessed twice. */
-    seconds: Number(banner.durationSeconds ?? banner.seconds ?? banner.duration ?? banner.audioSeconds ?? 0) || 0,
+    /**
+     * ⭐ **The reply's own names** (measured 2026-10-10, printed from a real render): `durationSec`, `bytes`,
+     * `integratedLufs`, `skippedLanes`. My first version guessed four other spellings of the duration and wrote 0 —
+     * a manifest that says a 20-second clip is 0 seconds long is the kind of lie this batch must not ship.
+     */
+    seconds: Number(banner.durationSec ?? 0) || 0,
     ...(bytes === undefined ? {} : { bytes }),
-    ...(typeof banner.lufs === "number" ? { lufs: banner.lufs } : {}),
+    ...(typeof banner.integratedLufs === "number" ? { lufs: banner.integratedLufs } : {}),
     engineVersion: version,
     recipeVersion: RECIPE_VERSION,
     generatedAt: new Date().toISOString().slice(0, 10),
@@ -187,6 +196,7 @@ for (const genreId of genreIds) {
      * sound through the built-in drums). `recordedLanes + builtInLanes` is the track count, and this is the honest split.
      */
     builtInLanes: tracks.filter((track) => track?.sound?.source !== "catalogue-asset").length,
+    ...(skipped.length === 0 ? {} : { skippedLanes: skipped.length }),
   });
   console.log(
     `${genreId}: ${((Date.now() - started) / 1000).toFixed(1)}s, ${bytes ?? "?"} bytes, ` +

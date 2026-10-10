@@ -30,6 +30,8 @@ export interface GenreClip {
   generatedAt: string;
   /** ⭐ Measured, not claimed: how much of the arrangement is a real recording. */
   recordedLanes: number;
+  /** Lanes the renderer could not resolve, from its own `skippedLanes` — a free health check, recorded rather than lost. */
+  skippedLanes?: number;
   /** Lanes that sound through a built-in voice —  is the track count. */
   builtInLanes: number;
 }
