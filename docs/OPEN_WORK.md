@@ -24364,3 +24364,28 @@ describe("the grid's editing actions", () => {
   ⭐ **教训（与今天早些时候那条同源 ✓）** ✗：**渲染期间写状态** 会让"界面"与"数据"错开一帧到无限久 ✓ ——
     而它**不会**报错 ✓（`errors: []` ✓）、**不会**被 `typecheck` 抓到 ✓、**也不会**被"组件存在吗"这类判据抓到 ✓
     ⇒ 只有**浏览器实测**能发现 ✓ —— 这就是为什么我一直坚持"判据绿 ≠ 运行时好" ✓。
+
+### 一千零一十二、⚠️ **回归**没有**被那次修改治好（读数如实）——并发现两个探针自身的缺陷**（2026-10-10 ✓）
+
+  ⭐ **读数 ✓（`/tmp/regress2.txt` 全文 ✓）** ✓：
+    ```
+    { "player": false, "missing": null, "src": null, "loaded": null, "status": null,
+      "speeds": [], "compare": false, "afterSlowClick": null,
+      "afterPlay": { "readyState": 0, "duration": 0, "currentTime": 0, "paused": true } }
+    ```
+    ⇒ 片段区**仍在"加载中"** ✗ ⇒ 我改的"渲染期间写状态"那处**不是**（或不是全部）原因 ✗ ——
+      **如实记下来 ✓**：修正是对的（纯查表确实比渲染中写状态好 ✓），但它**没有解决现象** ✗。
+  ⚠️ **同时发现探针自身有两个缺陷（都是我造成的 ✓）** ✗：
+    1. **探针不收拾自己的预览服务器** ✓：`ps` 里躺着**两个早先的 `vite preview`**（一个已跑 **2 小时 17 分** ✗），
+       因为 `server.kill("SIGTERM")` 杀的是 `npx` 包装 ✓、**不是** node 子进程 ✗（今天第 N 次同一个坑 ✗）⇒
+       已按显式 PID 停掉 ✓；**修法** ✓：探针改用 `SIGKILL` ＋ 进程组 ✓；
+    2. **我读的 `<audio>` 未必是片段播放器的** ✓：`afterPlay` 里有一个 `readyState: 0 / paused: true` 的
+       `<audio>` ✓，而片段区当时并没有播放器 ✗ ⇒ 那个元素很可能来自**壳的实时引擎**（`MobilePlayerBar` ✓）
+       ⇒ 探针必须**限定在片段区内取元素** ✓（`[data-testid='mobile-clip-player'] audio` ✓），
+       否则"读到音频元素"会被误当成"播放器在" ✗。
+  ⭐ **下一轮的诊断（已经缩小 ✓，三步 ✓）** ✓：
+    ①先确认**是不是加载分支** ✓（探针读 `[data-testid='mobile-clip-loading']` ✓）；
+    ②在 `MobileClipPlayer` 的 effect 里**加一行 console.log** ✓（探针已能捕获 console ✓），
+      看它到底有没有跑、fetch 到底有没有回 ✓ —— 这是**在浏览器里问代码** ✓，而不是继续推理 ✗；
+    ③按读到的结果修 ✓（若 effect 根本没跑 ⇒ 看挂载条件 ✓；若 fetch 挂起 ⇒ 看 URL 与 `BASE_URL` 的实际值 ✓）。
+  ⭐ **顺带 ✓**：本轮把两个**残留的预览服务器**清掉了 ✓（它们一直在占端口与内存 ✓，也可能干扰后续探针 ✓）。
