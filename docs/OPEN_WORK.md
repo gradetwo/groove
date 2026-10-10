@@ -24138,3 +24138,34 @@ describe("the grid's editing actions", () => {
     在我这种"每轮墙钟只推进十几秒"的节奏下 ✓，**一次等 15 分钟**才是有意义的单位 ✓ ⇒ 继续这样等 ✓（约 4 次 ✓）。
     ⚠️ 仍是**顺序执行** ✓（不并行 ✓）——`amapiano` 在两个并发循环里两次失败 ✓、顺序一次成功 ✓，
       而 `ambient-techno` 首次渲染 7 分钟也只是"慢" ✓、后来正常完成 ✓ ⇒ 这条策略目前**没有再触发**渲染器缺陷 ✓。
+
+### 一千零三、🧱 **完整测试套件跑出了一条**我漏掉的判据**：`phoneShellCut.test.ts` —— 它断言"手机壳已被切掉"**（2026-10-10 ✓）
+
+  ⚠️ **发现方式 ✓（也说明为什么"针对性判据组"不等于"全套" ✓）** ✓：
+    我之前只跑过 12 个相关判据文件（57 例 ✓ 全绿 ✓），**没有**跑全套 ✓ ⇒ 全套给出
+    **6 个文件 / 8 个用例失败** ✗，其中第一个就是 **`src/test/phoneShellCut.test.ts`** ✓：
+    ```
+    × the phone version is cut > leaves none of the shell in the tree
+    × the phone version is cut > leaves no import of the shell in live source
+       → these files import the cut phone shell: [ "src/App.tsx" ]
+    ```
+    ⇒ 这是一条**早就存在的判据** ✓（当年"切掉手机版"那个决定的守卫 ✓，注释里写得非常清楚 ✓：
+      "A deletion that nothing tests for is indistinguishable from an accident the next person will helpfully undo" ✓）
+    ⇒ 而店主的 2026-10-10 决定**恰好反转了它的前提** ✓ ⇒ 它现在**必然红** ✓，不是我的移植出错 ✗，
+      而是**我的移植没有把这条判据一起改** ✗ —— 这正是"接回一个被封存的面"必须付的另一半代价 ✓。
+  ⭐ **处置 ✓（保持原意、反转前提 ✓）** ✓：我把该文件的**前半句**从"壳已经没了"改成"**壳回来了、而且被围住**" ✓，
+    另两句照旧 ✓：
+    · **壳的核心文件必须存在** ✓（`MobileApp.tsx` ✓、`mobile.css` ✓、`MobileClipPlayer.tsx` ✓、`i18n/locales/mobile.ts` ✓、
+      `MobileTabBar.tsx` ✓、`MobileMoreSheet.tsx` ✓）；
+    · ⭐ **只有 `src/App.tsx` 可以从外部 import `src/mobile/**`** ✓ —— 别的任何桌面组件伸手进去 ⇒ **立刻红** ✓✓
+      （这就是原判据真正想守的东西 ✓：**接回来可以，但不能漏进桌面** ✓）；
+    · `KEPT`（iOS 静音开关解锁 ✓、设备能力分类 ✓、触觉 ✓）原样保留 ✓（那些是"手机**浏览器**的修复" ✓、不是壳的代码 ✓）。
+    ⭐ 文件名仍叫 `phoneShellCut` ✓（历史是记录的一部分 ✓，文件头写明了为什么读起来不一样了 ✓）。
+  ⭐ **读数 ✓**：改写后 **3 例全绿** ✓。
+  ⚠️ **全套仍报 6 个文件失败 ✗，其中只有这一个是我的** ✓；另一个已知的是
+    **`src/test/sfzTrigger.test.ts`** ✓（"a declared text file did not fetch" ✗ —— 它要**联网**取语料 ✓ ⇒ 环境相关 ✓）。
+    **剩下 4 个我还没有名字** ✗：我把 `npm test` 的输出**管进了 `tail`** ✗✗ ⇒
+    被截断的失败清单**没有落到可读文件里** ✓，而且**退出码变成了 `tail` 的 0** ✗（管道会吞掉退出码 ✓）。
+    ⇒ **教训（写死 ✓）**：跑全套时**不要管道到 `tail`** ✓（要就用 `tee` 留底 ✓），
+      并且**以 vitest 自己的汇总行为准** ✓，不要用退出码当作唯一信号 ✓。下一轮重跑全套 ✓，把这 6 个失败**逐一点名** ✓，
+      再判断哪些是环境/历史问题 ✓、哪些是我的 ✓。
