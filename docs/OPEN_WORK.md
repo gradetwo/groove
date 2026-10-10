@@ -24634,3 +24634,24 @@ describe("the grid's editing actions", () => {
   ⚠️ **仍留给渲染器链路的独立缺陷 ✓（不影响本次发布 ✓）** ✓：4 个曲风没有片段（`dream-trance`／`euro-trance`／
     `goa-trance` 试过无产物 ✓；`vocal-trance` 挂死、超时都不触发、人工中止 ✓），三种形态已分别记录 ✓，
     并建议给渲染加**进程级看门狗** ✓。清单里没有它们是如实 ✓，不是遗漏 ✓。
+
+### 一千零二十四、🏷️ **v2.36.1 发布前的第三次拦截：我自己那条"新鲜度"判据**（2026-10-11 ✓）
+
+  ⭐ **远端原文 ✓** ✓：
+    ```
+    Failed Tests 1
+    FAIL src/test/genreClips.test.ts > the clip manifest > …
+    AssertionError: these clips were cut by another build: chicago-house (cut by engine 2.36.0 …
+    ```
+    ⇒ 这不是别人的 bug ✓，而是**我在片段管线里建的规则在正常工作** ✓：
+      清单记着"这些片段由 **2.36.0** 切出" ✓，而应用现在自称 **2.36.1** ✗ ⇒ 新鲜度判据（`staleClips`）**如实报警** ✓✓。
+    ⭐ **为什么这次是"重新盖戳"而不是"重切" ✓**：2.36.1 这个补丁只动了
+      `App.tsx` 一行懒加载 ✓、`mobile.css` 一个色值 ✓、`ChordProgressionsView` 三处 className ✓ ——
+      **没有任何音频引擎改动** ✓ ⇒ 切出这些片段的引擎**就是** 2.36.1 的引擎 ✓ ⇒ 盖戳是**把名字对齐** ✓，不是篡改记录 ✓
+      （`--merge --engine-version` 这个开关当初就是为这种情况加的 ✓）。
+    ✅ **处置 ✓**：`--merge --out dist-repair --base https://r2mirror.groove.wangda.today/clips --engine-version 2.36.1`
+      ⇒ **155 条全部盖成 2.36.1** ✓、URL 不变 ✓ ⇒ 4 个判据文件（`genreClips`／`genreClipManifestCommitted`／
+      `genreClipWarnings`／`changelogSize`）**13 例全绿** ✓。
+    ⚠️ **教训（写死 ✓）**：**每次提版本号，必须重跑片段那几条判据** ✓ ——
+      我上一轮只跑了手机相关的判据 ✗（`changelogSize`／`mobileContrast`／`phoneShellCut`／`mobileSkinParity` ✓），
+      恰好漏掉了会因版本号变化而报警的这一条 ✓ ⇒ 白跑了一次远端 CI（约 25 分钟 ✗）。
