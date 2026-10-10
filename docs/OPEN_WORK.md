@@ -22860,3 +22860,21 @@ describe("the grid's editing actions", () => {
     （今天已经因为"没读原文就写替换"回退过两次 ✓），不如**把起点指准** ✓ 让下一轮一次过 ✓。
   ⭐ **本轮之外的进展 ✓**：跑批 **57/159** ✓（约 1 分钟/片段 ✓，load 14 ✓，`--merge` 未执行 ✓）；
     手机壳 **9 个错误**（3 缺依赖 ＋ 6 键 ✓）；发版仍按店主指示**暂停** ✓（线上 v2.35.10 ✓）。
+
+### 九百四十五、⚡ **9 → 3：注册一处 locale 就修掉了 6 个错误**（2026-10-10 ✓）
+
+  ⭐ **读到了注册表的写法 ✓**（27 行 ✓，极简 ✓）：`src/i18n/locales/index.ts` 就是
+    ```ts
+    import { commonMessages } from "./common"; … 
+    export const DICTIONARY = { ...commonMessages, ...studioMessages, …, ...helpMessages } as const;
+    export type MessageKey = keyof typeof DICTIONARY;
+    ```
+    ⇒ 也就是说 `t()` 的键联合**直接由这个对象推导** ✓ ⇒ 移动端的键只要**并进来**就合法 ✓。
+  ⭐ **改动 ✓（两行 ✓）** ✓：加 `import { mobileMessages } from "./mobile";` ✓ ＋ 在 `DICTIONARY` 里加 `...mobileMessages,` ✓
+    （**照抄现有写法** ✓，没有另创一套 ✓）⇒ 复量：**9 → 3** ✓✓（6 个 `mobile_detail_*` 报错一次消失 ✓）。
+  ⭐ **剩余 3 个 ✓**：`src/hooks/useLightPlayer.ts` **2** ✓、`src/components/sequencer/Toolbar.tsx` **1** ✓
+    —— 都是**我取回的旧文件自己缺依赖** ✓ ⇒ 编译器驱动循环继续 ✓（预计再一两次就清零 ✓）。
+  ⭐ **这条正好印证了我改的方法 ✓**：与其打磨闭包分析 ✗，不如**照报错逐个取回** ✓ ——
+    9→3 这一步的**真正修法只有两行** ✓，而"算清楚依赖"花了三轮还不准 ✗。
+    而且这次的修法**是照抄仓库既有的注册写法** ✓（不是发明 ✓）—— 今天两次回退都源于"没读原文就写" ✓，
+    这次先读了 27 行，两行改动一次过 ✓。
