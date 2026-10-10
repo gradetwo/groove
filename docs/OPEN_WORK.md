@@ -24003,3 +24003,34 @@ describe("the grid's editing actions", () => {
   ⭐ **顺带 ✓**：`length-out-of-range` 这条警告已**从清单里消失** ✓（139 条全部落在窗口内 ✓），
     剩下的 `skipped-lanes` ×8 ✓ 是渲染期就报出来的"有轨没解析到采样" ✓ —— 与体检的空轨发现**互相印证** ✓。
   ⏭️ **最后一批 ✓**：20 个尚无片段的曲风仍在两个循环里切 ✓（`dist-missing` ✓）⇒ 落盘后以 **159 全集**为底装配 + 体检 + merge ✓。
+
+### 九百九十五、🔎✅ **"幽灵片段"的根因终于现身了（诊断补丁当场见效）**（2026-10-10 ✓）
+
+  ⭐ **日志原文 ✓（这就是我上一轮加那句"把 text 打出来"换来的东西 ✓）** ✓：
+    ```
+    ⚠ the harness reply was not JSON; its text begins:
+       page.evaluate: Execution context was destroyed, most likely because of a navigation.
+      0s (measured from the reply) is outside 15–30s; asking for 6 repeat(s) instead
+    …reply keys: ok, text
+    amapiano: the render reported durationSec=undefined — skipped, nothing written
+    ```
+    ⇒ **渲染失败的原因与曲风数据无关** ✓：是**无头浏览器那一页在求值途中被销毁了** ✗
+      （"Execution context was destroyed, most likely because of a navigation" ✓）——
+      也就是说：**是渲染环境的浏览器层出了问题** ✓，而不是"这个曲风的和弦太单调"之类 ✗。
+  ⭐ **这条把好几个谜团一次串起来 ✓** ✓：
+    · 早先那 **20 个"幽灵"**（渲染完成却无产物 ✓）＝同一原因 ✓；
+    · 间歇出现的 **`durationSec: undefined`** ✓＝同一原因 ✓（回复是错误文本 ✓，字段自然全 undefined ✓）；
+    · 我为此加的三道闸（有文件／有声音／说得出时长 ✓）**每一次都正确拦住了它** ✓✓
+      —— 于是这些失败**从未变成假片段** ✓，只是变成了"什么都没写" ✓。
+    · 而**修复侧**（"产物优先"＋再渲一遍 ✓）也确实救回了大多数 ✓（139/159 成功 ✓）。
+  ⭐ **判断与处置 ✓**：既然根因是**浏览器层**（而非数据 ✓）⇒ 可尝试的方向是**降低并发以减轻内存/进程压力** ✓，
+    以及**失败重试** ✓。因此我把这最后 20 个从"两个并发循环"改成**单进程顺序跑** ✓
+    （PID 见 `/tmp/miss-seq.pids` ✓，日志 `/tmp/miss-seq.log` ✓）——
+    ⚠️ 这仍属**缓解**而非根治 ✓：真正的根治要看渲染器那侧为什么会被导航打断 ✓（那是 `dist-mcp` / Playwright 的地盘 ✓），
+    我会把这条作为**独立缺陷**记下 ✓，不在这一轮顺手改渲染器 ✗。
+  ⚠️ **又一次自己砍到自己（第三次，如实记 ✗）**：我在同一条命令里既用 `grep "[b]uild_genre_clips"` 找 PID 去 `kill` ✓、
+    又在**同一命令行里写了 `build_genre_clips.mjs`**（nohup 的那段 ✓）✗
+    ⇒ 方括号技巧只防 `grep` 自己 ✓、防不住同一条命令里的其它文字 ✗ ⇒ **又把自己 SIGTERM 了** ✗
+    ⇒ 那条命令的"顺序重跑"没发生 ✓（已用**纯重启、不含任何 kill** 的命令补上 ✓）。
+    ⇒ **规矩再收紧（这次的教训是"同一个词不要既出现在匹配式里、又出现在同一条命令的其它部分" ✓）**：
+      找 PID 与 kill 分成两条命令 ✓；或者干脆把 PID **事先算好写进注释** ✓（像我早先对 `/tmp/*.pids` 做的那样 ✓）。
