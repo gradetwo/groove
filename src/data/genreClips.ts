@@ -32,6 +32,13 @@ export interface GenreClip {
   recordedLanes: number;
   /** Lanes the renderer could not resolve, from its own `skippedLanes` — a free health check, recorded rather than lost. */
   skippedLanes?: number;
+  /**
+   * ⭐ **What was wrong with this clip's source material** (owner's instruction 2026-10-10). The observable half is written
+   * here by the batch — a skipped lane, a clip with no recording at all, a length outside the owner's window. The musical
+   * half (chords that never move, a melody of two pitches, every bar identical) is judged by `genrePatternHealth`, which
+   * runs over the library in the test suite so it speaks on every change rather than only when somebody cuts clips.
+   */
+  warnings?: Array<{ code: string; detail: string }>;
   /** Lanes that sound through a built-in voice —  is the track count. */
   builtInLanes: number;
 }

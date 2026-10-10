@@ -60,4 +60,21 @@ describe("the clip manifest", () => {
     const stale = staleClips(manifest, version, "1");
     expect(stale, `these clips were cut by another build: ${stale.map((s) => `${s.genreId} (${s.reason})`).join(", ")}`).toEqual([]);
   });
+
+  it("⭐ carries what the batch could see for itself, and refuses a clip that breaks the owner's rules", () => {
+    /**
+     * ⭐ **The observable half of the owner's instruction** (2026-10-10: clips must be *checked*, not just cut). Each code
+     * here is a fact the renderer's own reply answers: a lane the resolver skipped, a clip with no recording at all (which
+     * would break the requirement that a clip carries its genre's own instruments), and a length outside 15–30 s. The
+     * musical half — chords that never move, a melody of two pitches, every bar identical — is `genrePatternHealth`'s and
+     * runs over the library in the suite.
+     */
+    const withWarnings = readClipManifest({
+      clips: [clip({ warnings: [{ code: "skipped-lanes", detail: "3 lane(s) had nothing to resolve" }, { code: "length-out-of-range", detail: "2.6s is outside the owner's 15–30s window" }] })],
+    });
+    expect(withWarnings.clips[0]?.warnings?.map((warning) => warning.code)).toEqual(["skipped-lanes", "length-out-of-range"]);
+    // ⭐ A clip with no warnings is the normal case, and the field is simply absent then.
+    expect(readClipManifest({ clips: [clip()] }).clips[0]?.warnings).toBeUndefined();
+  });
+
 });

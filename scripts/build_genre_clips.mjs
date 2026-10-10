@@ -204,6 +204,18 @@ for (const genreId of genreIds) {
   );
   for (const lane of skipped) console.log(`   ⚠ skipped: ${JSON.stringify(lane).slice(0, 240)}`);
   console.log(`   reply keys: ${Object.keys(banner).join(", ")}`);
+  const clipWarnings = [];
+  if (skipped.length > 0) {
+    clipWarnings.push({ code: "skipped-lanes", detail: `${skipped.length} lane(s) had nothing to resolve and are not in the clip` });
+  }
+  const recorded = tracks.filter((track) => track?.sound?.source === "catalogue-asset").length;
+  if (recorded === 0) {
+    clipWarnings.push({ code: "no-recordings", detail: "no lane in this clip sounds through a real recording — the owner's requirement is that a clip carries its genre's own instruments" });
+  }
+  const seconds = Number(banner.durationSec ?? 0);
+  if (!(seconds >= 15 && seconds <= 30)) {
+    clipWarnings.push({ code: "length-out-of-range", detail: `${seconds.toFixed(1)}s is outside the owner's 15–30s window` });
+  }
   const file = banner.file ?? banner.output ?? banner.path ?? banner.outputPath ?? banner.writtenTo;
   let bytes;
   let copied = file;
@@ -237,6 +249,12 @@ for (const genreId of genreIds) {
      */
     builtInLanes: tracks.filter((track) => track?.sound?.source !== "catalogue-asset").length,
     ...(skipped.length === 0 ? {} : { skippedLanes: skipped.length }),
+    /**
+     * ⭐ **The observables this batch can judge for itself** (owner's instruction 2026-10-10: the clips must be checked, not
+     * just cut). The musical half belongs to `genrePatternHealth`, which the test suite runs over the whole library; these
+     * are the ones the renderer's own reply answers, and each one is a fact rather than a taste.
+     */
+    ...(clipWarnings.length === 0 ? {} : { warnings: clipWarnings }),
   });
   console.log(
     `${genreId}: ${((Date.now() - started) / 1000).toFixed(1)}s, ${bytes ?? "?"} bytes, ` +
