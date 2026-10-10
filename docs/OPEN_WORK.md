@@ -24655,3 +24655,28 @@ describe("the grid's editing actions", () => {
     ⚠️ **教训（写死 ✓）**：**每次提版本号，必须重跑片段那几条判据** ✓ ——
       我上一轮只跑了手机相关的判据 ✗（`changelogSize`／`mobileContrast`／`phoneShellCut`／`mobileSkinParity` ✓），
       恰好漏掉了会因版本号变化而报警的这一条 ✓ ⇒ 白跑了一次远端 CI（约 25 分钟 ✗）。
+
+### 一千零二十五、🚧 **v2.36.1 发布进行中：第 4 次尝试（交接记录）**（2026-10-11 ✓）
+
+  ⭐ **当前现场 ✓**：发布脚本 PID `223738`，日志 `/tmp/release6.log` ✓；已过
+    `version:check ok / version:new ok / build ok / budget ok` ✓，正停在 **`full CI`** ✓
+    （远端矩阵 ＝ 4 分片 ＋ nightly，历史上这一步约 30–60 分钟 ✓）。
+    线上仍 **2.36.0** ✓、`v2.36.1` tag **尚未存在** ✓ ⇒ **没有提前发布任何东西** ✓。
+  ⭐ **前三次被远端 CI 拦下的都是真实失败（均已修 ✓）** ✓：
+    1. `changelogSize`：条目 **460 > 200** 中文字符 ✗ ⇒ 重写为 **172**（2.36.0）／**93**（2.36.1）✓；
+    2. `fileSizeBudget`：`ENOENT: stat 'dist-repair/…mp3'` ✗ ⇒ `git add -A` 把**临时片段目录**
+       （**214 个文件**，含绝对路径符号链接）提交了 ✓ ⇒ `git rm -r --cached` 五个目录 ＋ `.gitignore` ✓；
+    3. `genreClips`：`these clips were cut by another build … 2.36.0` ✗ ⇒ **我自己建的新鲜度判据**在版本升到
+       2.36.1 后如实报警 ✓ ⇒ `--merge --engine-version 2.36.1` **重新盖戳**（该补丁无音频引擎改动 ✓）✓。
+  ⭐ **六条判据的当前状态 ✓**：
+    ① 远端 CI ⏳（第 4 次尝试）；② deploy ⏳；③ main＋tag ⏳；
+    ④ changelog 侧**已核**（首条 2.36.1 ✓、**93** 中文字符 ✓、10 条 ✓、**无 2.35.11** ✓、仓库里该串出现 0 次 ✓），
+      线上侧 ⏳；
+    ⑤ 报告三处修复**证据已得** ✓（`phoneShellCut` 通过 ✓、`mobileContrast` **新增断言** ≥4.5:1 实测 **5.24:1** ✓、
+      `check:css` 通过 ✓）；
+    ⑥ 155 个片段**已预验** ✓（155 条 URL 全为 `https://r2mirror.groove.wangda.today/clips/` ✓，抽 3 条皆 `HTTP 200 · audio/mpeg` ✓）。
+  ⭐ **恢复方式（给下一轮／下一次会话 ✓）** ✓：`tail /tmp/release6.log` 看脚本走到哪一步 ✓；
+    若 CI 失败 ⇒ `rid=$(gh run list --limit 1 --json databaseId -q '.[0].databaseId')` ✓
+    ⇒ `gh run view $rid --json jobs -q '…select(.conclusion=="failure")…'` ✓ 找到失败作业 ✓
+    ⇒ `gh run view --job <id> --log | sed 's/\x1b\[[0-9;]*m//g' | grep -aE "Failed Tests|FAIL |AssertionError"` ✓
+      取出**真实失败** ✓（这三次都是这样定位的 ✓，不要绕过 CI ✗）。
