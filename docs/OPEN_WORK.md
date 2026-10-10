@@ -22900,3 +22900,26 @@ describe("the grid's editing actions", () => {
   ⏭️ **下一步 ✓**：改那两处调用（读文件 → 按 dev 的函数式 API 改 ✓，**先读再改** ✓）⇒ `typecheck` 清零 ✓
     ⇒ 那就得到**编译器确认的移植集**（35 ＋ 3 ＋ `src/utils/genreArt.ts` ＋ `toolbarTiers.ts` 等 ✓，
     具体以"清零时 worktree 里多出来的文件"为准 ✓）。
+
+### 九百四十七、🎉🎉 **手机壳对 v2 的 `typecheck` 清零了** —— 编译器确认的移植集**就此定稿**（2026-10-10 ✓）
+
+  ⭐ **最终读数 ✓**：`/tmp/mobile-wt`（worktree ＋ 软链 `node_modules` ✓）里 **`npm run typecheck` = 0 个错误** ✓✓。
+  ⭐ **这个"移植集"的构成（全部由编译器确认 ✓，不是估的 ✓）** ✓：
+    1. **35 个手机壳文件** ✓（`src/mobile/**` ✓、`Mobile*.tsx` ✓、`locales/mobile.ts` ✓ —— 与一开始筛的一致 ✓）；
+    2. **取回的 4 个依赖文件** ✓（按报错逐个取回 ✓）：
+       `src/utils/genreArt.ts` ✓、`src/components/sequencer/Toolbar.tsx` ✓、
+       `src/components/sequencer/toolbarTiers.ts` ✓、`src/hooks/useLabelArt.ts` ✓；
+    3. **一处登记** ✓（2 行 ✓）：`src/i18n/locales/index.ts` 里并入 `mobileMessages` ✓；
+    4. **两处适配** ✓：`LightPlayerToggle.tsx`／`MobilePlayerScreen.tsx` 把已退休的 `useLightPlayer`
+       改成 dev 现在的**函数式** API（`applyStoredLightPlayer()` 读 ✓、`applyLightPlayer(next)` 写 ✓），
+       并给前者补上 `useState` 导入 ✓。
+  ⭐ **14 → 13 → 9 → 3 → 2 → 1 → 0 的完整轨迹 ✓**（每一步都有读数 ✓，且**没有一次**把红留在仓库里 ✓ ——
+    所有试错都在**隔离的 worktree** 里 ✓，主工作树始终干净 ✓）。
+  ⭐ **对店主那份"工作量"问题的**最终事实答案** ✓** ✓：
+    · **移植**：35 ＋ 4 个文件 ＋ 3 处小改（1 处登记 ＋ 2 处适配 ✓）✓ ⇒ **编译器已证明它可编译** ✓；
+    · **接入**（尚未开始 ✓）：`/m` 路由 ✓、样式独立域 ＋ 两组判据 ✓、手机播放器（`<audio>` ＋ 变速 ＋ 对比 ✓）、
+      触控与性能复验 ✓；
+    · 并且这次移植**没有回退任何 v2 的改进** ✓（同名文件用 dev 版 ✓ —— "缺的取回、在的别覆盖" ✓）。
+  ⏭️ **下一步 ✓**：把这 39 个文件 ＋ 那 3 处改动**从 worktree 并回 `dev`** ✓（照常走判据与门禁 ✓），
+    并**为它对上"登记"**：`UI_LEDGER`／`docs/`／手机壳自己的判据（皮肤清单一致 ✓、44 px ✓、对比度 ✓）✓ ——
+    这几项前面都记过，届时一次做完 ✓。
