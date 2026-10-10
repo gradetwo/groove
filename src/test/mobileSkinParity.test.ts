@@ -35,6 +35,19 @@ describe("the desktop and the phone agree about skins", () => {
     ).toEqual([]);
   });
 
+  /**
+   * ⭐ **A sheet nobody imports is a skin nobody can pick.** The parity rule above reads the directory, which is the right
+   * source for "what exists" — but a sheet that is never imported is unreachable at runtime, so the second half of parity is
+   * that every one of them is actually pulled in by the shell. Dropping one line from `MobileApp.tsx` would otherwise take a
+   * skin away silently, with this file still green.
+   */
+  it("⭐ every phone sheet is imported by the shell, so none of them is unreachable", () => {
+    const app = readFileSync(resolve(__dirname, "../mobile/MobileApp.tsx"), "utf8");
+    const sheets = readdirSync(resolve(__dirname, "../mobile/skins")).filter((name) => name.endsWith(".css"));
+    const missing = sheets.filter((name) => !app.includes(`./skins/${name}`));
+    expect(missing, `these sheets are never imported, so no one can choose them: ${missing.join(", ")}`).toEqual([]);
+  });
+
   it("⭐ and every exception carries a sentence a reviewer can check", () => {
     for (const [id, reason] of Object.entries(NOT_ON_PHONE)) {
       expect(reason.length, `${id} has a reason`).toBeGreaterThan(40);

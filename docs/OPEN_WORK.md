@@ -23338,3 +23338,29 @@ describe("the grid's editing actions", () => {
   ⭐ **验收 ✓**：6 例绿 ✓、`typecheck` 0 ✓、`lint`／`docs:check` ✓。
   ⏭️ **下一块 ✓**：**`/m` 的样式独立域落地** ✓（把 7 张皮肤表与 `mobile.css` 作为独立域接上 ✓，
     现在"一致"和"对比度"两条判据都已就位 ✓，接法做完就能立刻被它们检验 ✓）；随后是**手机播放器** ✓。
+
+### 九百六十六、🏠✅ **"独立样式域（路 B）"**浏览器实测通过**：手机皮肤真的只作用在手机上，且可切换**（2026-10-10 ✓）
+
+  ⚠️ **先记一次我自己的误读 ✓**：我第一次探测时读的是 **`:root`** ✗ ⇒ `--m-bg` 读出**空** ✗ ⇒
+    差点得出"样式域没生效"的错误结论 ✗。读 `mobile.css` 开头才看到**它自己写着的设计说明** ✓：
+    > "**Scoped to `.mobile-root` rather than `:root` on purpose.** The desktop UI has its own token set in
+    > `src/index.css`; a redesign that rewrote the shared tokens would restyle the desktop as a side effect,
+    > and the two surfaces are meant to be **independently replaceable**." ✓
+    ⇒ **这正是路 B，而且是原作者当年就写下的** ✓✓ —— 我这一轮的工作不是"实现它" ✓，而是**验证它** ✓。
+  ⭐ **改读 `.mobile-root` 之后的读数 ✓（决定性 ✓）** ✓：
+    | 页面 | 宿主 | 基线 `--m-bg` | `data-skin="soviet"` | `data-skin="pixel"` |
+    | --- | --- | --- | --- | --- |
+    | **`/m`（手机）** | `.mobile-root` ✓ | **`#0b0b14`** ✓ | **`#1b1e21`** ✓ | **`#10121c`** ✓ |
+    | **`/`（桌面）** | `.dark` ✓ | **空** ✓ | **空** ✓ | **空** ✓ |
+    ⇒ 三个结论 ✓：①手机有自己的调色板 ✓；②**换 `data-skin` 会真的换掉手机的底色** ✓（说明那 7 张表**在 `/m` 上确实加载了** ✓）；
+    ③**桌面访问拿不到手机域** ✓（`.mobile-root` 的变量在 `/` 上根本不存在 ✓）——**"独立样式域"成立 ✓**。
+  ⭐ **皮肤表的选取方式 ✓**（`grep` 得到 ✓）：`soviet.css` 的写法是
+    **`:root[data-skin="soviet"] .mobile-root { … }`** ✓ ⇒ **桌面皮肤属性 + 手机根** 两级限定 ✓
+    ⇒ 桌面皮肤**不可能**把手机壳重刷成桌面样 ✓，反过来也一样 ✓（"两个域各有自己的底" ✓ —— 与皮肤一致判据里
+    `default` 的那句理由正好互相印证 ✓）。
+  ⭐ **皮肤选择器 ✓**：`src/mobile/SkinPicker.tsx` **复用共享的 `useSkin()`** ✓（`const { skin, setSkin, skins } = useSkin();` ✓）
+    ⇒ 手机与桌面**同一份清单来源** ✓ —— 这就是"皮肤清单两边一致"这条判据**能成立的根本原因** ✓。
+  ⭐ **判据也补强了一处 ✓**：新增"**每张手机表都必须被 `MobileApp.tsx` import**" ✓（`mobileSkinParity` 现 **3 例** ✓）——
+    因为"目录里有" ≠ "运行时选得到" ✗：删掉一行 import 就会**悄悄**少一套皮肤 ✓ 而原判据仍绿 ✗ ⇒ 现在会红 ✓。
+    实测：7 张表（`minimal` ✓、`comic` ✓、`soviet` ✓、`sovietYears` ✓、`pixel` ✓、`legacySkin` ✓、`panelSkin` ✓）**全部已 import** ✓。
+  ⭐ **验收 ✓**：`mobileSkinParity` 3 例绿 ✓、`typecheck` 0 ✓。
