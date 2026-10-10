@@ -22396,3 +22396,19 @@ describe("the grid's editing actions", () => {
     量出"省多少、损失什么" ✓ 再决定手机片段用不用 ✓——**音质取舍要店主点头** ✓，我不擅自降 ✓）；
     ③看**每轨 worklet/限幅器**是否在离线路径上白跑 ✓（离线渲染是否真的需要实时那套 ✓）。
     ⚠️ **纪律 ✓**：这三条都**先给读数** ✓（例如"降到 22.05 kHz 省 X%，频谱损失 Y dB" ✓），再决定动不动 ✓。
+
+### 九百二十、🎧 **试听接线的完整链条查清了（4 个文件，机械但必须一次做完）**（2026-10-10 ✓）
+
+  ⭐ **读数 ✓**：chooser **不是在**编排视图里直接渲染的 ✗ —— 它出现在**两个**渲染器里 ✓：
+    · `src/components/arrangement/TrackHeaderV2.tsx:175` ✓（表头副本 ✓）
+    · `src/components/arrangement/TrackListV2.tsx:175` ✓（列表副本 ✓）
+    ⇒ 于是 `onAudition` 的链条是 **`ArrangementViewV2` → `TrackListV2`／`TrackHeaderV2` → `InstrumentBrowserV2`** ✓，
+      而 **`player` 只在视图那一层拿得到** ✓ ⇒ 试听回调必须在视图里造 ✓、逐层透传 ✓（**与 `onChangeInstrument` 完全同形** ✓
+      ⇒ 是**机械照抄** ✓，没有新概念 ✓）。
+  ⚠️ **为什么这轮不硬做 ✓**：四处同一属性（声明／解构／透传／使用 ✓）＋ 两个渲染器 ✓ ＋ 视图 ✓ ⇒
+    按我前面栽过的经验（`TrackListV2` 与 `InstrumentBrowserV2` 各忘过一次解构 ✗），**一次改完四处的成功率不高** ✗
+    ⇒ 我把它留成**一条清晰的机械清单** ✓，下一轮照 `onChangeInstrument` 的现成路径**一比一复制** ✓（含判据 ✓），
+    而不是在上下文将尽时硬拼 ✗（半接的控件比没接更糟 ✓）。
+  ⭐ **跑批状态 ✓**：`shard0/1/2 done=0/1/1` ✓（仍在跑 ✓）；`--merge` 未执行 ⇒ 清单未被改动 ✓。
+  ⏭️ **下一次两条线 ✓**：①**接线**（照抄 `onChangeInstrument` 四处 ＋ 判据"点击 ▷ 会调用带该 assetId 的 audition" ✓）；
+    ②**WAV 慢的三步量测**（加载 vs 渲染 vs 编码 ✓、采样率/声道的影响与音质代价 ✓、离线路径上的 worklet 是否白跑 ✓）✓。
