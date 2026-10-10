@@ -69,6 +69,19 @@ describe("the phone palette's contrast", () => {
     }
   });
 
+  /**
+   * ⭐ **The dimmest layer is body text too.** It used to measure **3.95:1** on the page, so the criterion only *printed* it
+   * rather than asserting anything — the honest answer for a value that is deliberately weak. The `v2.36.0` fix patch moved
+   * `--m-ink-3` from `#6e6e85` to `#82829b`, which measures **5.24:1** on the page and **4.88:1** on a card, so it is now held
+   * to the same floor as everything else a person reads. A criterion is allowed to get *stricter* when the design does.
+   */
+  it("⭐ the dimmest layer clears the body-text floor now that the palette was fixed", () => {
+    for (const background of ["bg", "card"]) {
+      const measured = ratio(base["ink-3"]!, base[background]!);
+      expect(measured, `--m-ink-3 on --m-${background} measured ${measured.toFixed(2)}:1`).toBeGreaterThanOrEqual(4.5);
+    }
+  });
+
   it("⭐ and the accent colours are legible enough to be read as text", () => {
     // Reported rather than asserted at body-text level: these are used for labels and status words, where WCAG's floor for
     // large/UI text is 3:1. Printing the numbers keeps the reading honest instead of hiding it behind one threshold.

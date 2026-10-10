@@ -960,7 +960,7 @@ export const ChordProgressionsView: React.FC<ChordProgressionsViewProps> = ({
                   <span className="text-xs font-mono text-amber-400 font-bold">{strumConfig.speedMs} ms</span>
                 </div>
                 <div className="flex items-center gap-3 bg-[#090d14] px-3 py-2 rounded-lg border border-[#20293d]">
-                  <span className="text-[10px] text-zinc-500 shrink-0">{t("chords_strum_fast")}</span>
+                  <span className="text-[10px] text-text-sub shrink-0">{t("chords_strum_fast")}</span>
                   <input
                     type="range"
                     min={15}
@@ -970,7 +970,7 @@ export const ChordProgressionsView: React.FC<ChordProgressionsViewProps> = ({
                     onChange={(e) => setStrumConfig((prev) => ({ ...prev, speedMs: Number(e.target.value) }))}
                     className="flex-1 accent-amber-400 h-1.5 bg-[#232a3b] rounded cursor-pointer"
                   />
-                  <span className="text-[10px] text-zinc-500 shrink-0">{t("chords_strum_slow")}</span>
+                  <span className="text-[10px] text-text-sub shrink-0">{t("chords_strum_slow")}</span>
                 </div>
               </div>
             </div>
@@ -1067,7 +1067,7 @@ export const ChordProgressionsView: React.FC<ChordProgressionsViewProps> = ({
 
                   {/* Bottom: Play Chord Audition */}
                   <div className="mt-2 pt-2 border-t border-white/5 flex items-center justify-between text-[10px]">
-                    <span className="text-zinc-500 font-mono">
+                    <span className="text-text-sub font-mono">
                       {chord.inversion 
                         ? t("chords_inversion_n", { n: chord.inversion }) 
                         : t("chords_inversion_root")}

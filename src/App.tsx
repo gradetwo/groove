@@ -1,7 +1,6 @@
 import { captureWithBrowser } from "./audio/captureBrowser";
 import { createOpfsRecordingStore } from "./audio/opfsRecordingStore";
 import type { MobileModule } from "./mobile/mobileModules";
-const MobileApp = React.lazy(() => import("./mobile/MobileApp").then((m) => ({ default: m.MobileApp })));
 import React, { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import { LanguageProvider, useLanguage } from "./i18n/LanguageContext";
 import { useReducedMotion } from "./hooks/useReducedMotion";
@@ -60,6 +59,7 @@ const AnalyzerView = React.lazy(() => import("./views/AnalyzerView").then((m) =>
 const CustomGenreMakerView = React.lazy(() => import("./views/CustomGenreMakerView").then((m) => ({ default: m.CustomGenreMakerView })));
 const HardwareConsoleView = React.lazy(() => import("./views/HardwareConsoleView").then((m) => ({ default: m.HardwareConsoleView })));
 const HelpCenterModal = React.lazy(() => import("./components/help/HelpCenterModal").then((m) => ({ default: m.HelpCenterModal })));
+const MobileApp = React.lazy(() => import("./mobile/MobileApp").then((m) => ({ default: m.MobileApp })));
 
 const MainApp: React.FC = () => {
   const { t, isZh } = useLanguage();
