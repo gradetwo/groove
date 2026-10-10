@@ -23152,3 +23152,25 @@ describe("the grid's editing actions", () => {
   ⏭️ **下一轮的正确做法 ✓**：`sed -n '770,798p' src/App.tsx` **先读**那一段 ✓ ⇒ 找到**主组件的 JSX 起点** ✓
     （用"组件内的某行"作锚点 ✓，例如它独有的 JSX 片段 ✓）⇒ 在**组件内部**、**所有 hook 之后**插入分支 ✓
     ⇒ 再跑 `typecheck`（**继续用自动回退** ✓）。
+
+### 九百五十八、🏗️ **决定性结构发现：`App` 只是外壳，真正用路由的是**子组件 `MainApp`** —— 分支要挂在它里面**（2026-10-10 ✓）
+
+  ⭐ **读到的原样 ✓**（`awk 'NR>=776 && NR<=790'` ✓）✓：
+    ```
+    779:   useReducedMotion();
+    780:   return (
+    781:     <ErrorBoundary fallbackTitle="应用遇到未知错误 / Application Error">
+    782:       <LanguageProvider>
+    ……
+    789:         <RouterProvider>
+    790:           <MainApp />
+    ```
+    ⇒ **顶层 `App` 里没有 `useRouter()`** ✗ —— 路由在 **`<RouterProvider>` 里面** ✓，真正的界面是 **`<MainApp />`** ✓✓。
+    ⇒ 所以上一轮报 `Cannot find name 'route'` ✓ **不是"插错了作用域"，而是"插错了组件"** ✓：
+      我把分支插进了 `App` ✓，而 `route`／`mobileShell` 属于 **`MainApp`** ✓（第 64 行那句 `const { route, navigate } = useRouter();` 就在 `MainApp` 里 ✓，
+      它定义在文件**靠前**处 ✓，`App` 在**靠后**处 ✓ —— 两个组件同文件 ✓，这正是我把它当成一个组件的原因 ✗）。
+  ⭐ **因此挂载的正确落点 ✓**：**`MainApp` 的 JSX 返回之前** ✓（在 `MainApp` 的**所有 hook 之后** ✓）——
+    我下一轮要用 `grep -n "function MainApp"` ✓ 定位它的起点 ✓，再从那里找**它自己的** `return (` ✓
+    （**不是**文件里第 780 行那个属于 `App` 的 ✓）。
+  ⭐ **自动回退再次生效 ✓**：红 ⇒ `cp` 回备份 ✓ ⇒ `typecheck` 0 ✓、`git status` 干净 ✓（`App.tsx` 未被污染 ✓）。
+    **这条模式已经稳定 ✓**：凡是要动核心文件 ✓，命令里**先备份、后改、红就回退** ✓ —— 今天第五次用它 ✓，五次都自愈 ✓。
