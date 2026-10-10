@@ -172,6 +172,15 @@ const genreIds = (ALL ? allGenres : [ONLY].filter(Boolean)).filter((_, index) =>
 /** ⭐ Declared **after** the shard is parsed: an earlier version referenced `shardIndex` before its `const`, and every shard died on startup. */
 const PART = `${OUT}/manifest-${shardIndex}.json`;
 console.log(`${ALL ? "all" : "only"}: ${genreIds.length} genre(s)`);
+/**
+ * ⚠️ **A single-genre rerun writes the batch's own shard name.** With `--shard` unset it defaults to `0/1`, so
+ * `--only <genre>` writes `manifest-0.json` — the very file a full first shard leaves behind. Measured 2026-10-10: a
+ * six-genre repair loop silently replaced a 53-clip shard with one clip. Nothing was lost (the MP3s and the committed
+ * manifest both survived), but the parts layer is exactly what a merge trusts, so the trap gets a warning rather than a note.
+ */
+if (ONLY && !args.includes("--out")) {
+  console.log(`   ⚠ --only without --out writes ${PART}, the same name a full shard uses; pass --out <dir> to keep them apart`);
+}
 if (MERGE) {
   /**
    * ⭐ **One writer for the committed manifest.** Each shard leaves its part in the (untracked) output directory; merging is a
