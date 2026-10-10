@@ -99,7 +99,7 @@ export const PianoKeyboardVisualizer: React.FC<PianoKeyboardVisualizerProps> = (
             } else if (isExactActive) {
               bgColor = `bg-accent/70 ${onAccent} font-semibold shadow-[0_0_10px_rgba(74,216,200,0.7)] z-10`;
             } else if (isActive) {
-              bgColor = "bg-accent-soft text-text";
+              bgColor = `bg-accent-soft ${onAccent}`;
             }
 
             return (
@@ -110,7 +110,11 @@ export const PianoKeyboardVisualizer: React.FC<PianoKeyboardVisualizerProps> = (
                 className={`relative flex-1 h-full rounded-b border border-zinc-400/40 transition-colors flex flex-col justify-end items-center pb-1.5 text-[10px] cursor-pointer active:brightness-90 touch-action-none select-none ${bgColor}`}
               >
                 {k.note === "C" && (
-                  <span className="absolute bottom-5 text-[8px] font-mono text-zinc-600">
+                  <span
+                    className={`absolute bottom-5 text-[8px] font-mono ${
+                      isExactRoot || isExactActive || isActive ? onAccent : "text-zinc-600"
+                    }`}
+                  >
                     C{k.octave}
                   </span>
                 )}
@@ -150,7 +154,7 @@ export const PianoKeyboardVisualizer: React.FC<PianoKeyboardVisualizerProps> = (
             } else if (isExactActive) {
               bkColor = `bg-accent/70 ${onAccent} font-semibold shadow-[0_0_12px_rgba(74,216,200,0.8)]`;
             } else if (isActive) {
-              bkColor = "bg-accent-soft text-text";
+              bkColor = `bg-accent-soft ${onAccent}`;
             }
 
             return (

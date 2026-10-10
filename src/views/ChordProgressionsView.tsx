@@ -423,7 +423,7 @@ export const ChordProgressionsView: React.FC<ChordProgressionsViewProps> = ({
               )}
             </div>
 
-            <h1 className="text-2xl sm:text-3xl lg:text-4xl font-light tracking-tight text-white font-[Space_Grotesk]">
+            <h1 className="text-2xl sm:text-3xl lg:text-4xl font-light tracking-tight text-text font-[Space_Grotesk]">
               {t("chords_studio_title")}
               <span className="block text-sm sm:text-base font-normal text-[#d8b988] mt-1 font-serif">
                 Chord Progressions & Harmonic Voicing Studio
@@ -453,7 +453,7 @@ export const ChordProgressionsView: React.FC<ChordProgressionsViewProps> = ({
                 <select
                   value={keyRoot}
                   onChange={(e) => setKeyRoot(e.target.value)}
-                  className={`w-full bg-[#0a0d14] border border-[#333a4a] rounded px-2 py-1.5 text-xs text-white focus:outline-none focus:border-accent ${isMobile ? "min-h-11" : ""}`}
+                  className={`w-full bg-[#0a0d14] border border-[#333a4a] rounded px-2 py-1.5 text-xs text-text focus:outline-none focus:border-accent ${isMobile ? "min-h-11" : ""}`}
                 >
                   {NOTE_NAMES.map((n) => (
                     <option key={n} value={n}>{n}</option>
@@ -469,7 +469,7 @@ export const ChordProgressionsView: React.FC<ChordProgressionsViewProps> = ({
                 <select
                   value={isMinorKey ? "minor" : "major"}
                   onChange={(e) => setIsMinorKey(e.target.value === "minor")}
-                  className={`w-full bg-[#0a0d14] border border-[#333a4a] rounded px-2 py-1.5 text-xs text-white focus:outline-none focus:border-accent ${isMobile ? "min-h-11" : ""}`}
+                  className={`w-full bg-[#0a0d14] border border-[#333a4a] rounded px-2 py-1.5 text-xs text-text focus:outline-none focus:border-accent ${isMobile ? "min-h-11" : ""}`}
                 >
                   <option value="major">{t("chords_mode_major")}</option>
                   <option value="minor">{t("chords_mode_minor")}</option>
@@ -496,7 +496,7 @@ export const ChordProgressionsView: React.FC<ChordProgressionsViewProps> = ({
           <div>
             <div className="flex items-center gap-2">
               <span className="w-2.5 h-2.5 rounded-full bg-[#4ad8c8] shadow-[0_0_8px_#4ad8c8]" />
-              <h2 className="text-xl sm:text-2xl font-semibold text-white font-[Space_Grotesk]">
+              <h2 className="text-xl sm:text-2xl font-semibold text-text font-[Space_Grotesk]">
                 {t("chords_builder_title")}
               </h2>
               {isBuilderCollapsed && (
@@ -560,7 +560,7 @@ export const ChordProgressionsView: React.FC<ChordProgressionsViewProps> = ({
                 onChange={(e) => setBpm(Number(e.target.value))}
                 className="w-20 accent-accent h-1.5 bg-[#232a3b] rounded cursor-pointer"
               />
-              <span className="text-xs font-mono font-bold text-white w-8 text-right">{bpm}</span>
+              <span className="text-xs font-mono font-bold text-text w-8 text-right">{bpm}</span>
             </div>
 
             {/* Copy Progression Text */}
@@ -578,7 +578,7 @@ export const ChordProgressionsView: React.FC<ChordProgressionsViewProps> = ({
             <button
               type="button"
               onClick={handleExportMidi}
-              className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-[#141824] hover:bg-[#1a2030] border border-[#232a3b] text-xs text-white transition-colors shrink-0"
+              className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-[#141824] hover:bg-[#1a2030] border border-[#232a3b] text-xs text-text transition-colors shrink-0"
               title={t("chords_export_midi_title")}
             >
               <Download className="w-3.5 h-3.5 shrink-0" />
@@ -628,7 +628,7 @@ export const ChordProgressionsView: React.FC<ChordProgressionsViewProps> = ({
               type="button"
               data-testid="chord-builder-toggle"
               onClick={() => setIsBuilderCollapsed(!isBuilderCollapsed)}
-              className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-[#141824] hover:bg-[#1f2638] border border-[#2b3348] text-xs text-[#eae6dc] transition-colors shrink-0"
+              className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-[#141824] hover:bg-[#1f2638] border border-[#2b3348] text-xs text-text transition-colors shrink-0"
               title={isBuilderCollapsed ? t("chords_expand_builder_title") : t("chords_collapse_builder_title")}
             >
               {isBuilderCollapsed ? <ChevronDown className="w-3.5 h-3.5 text-accent shrink-0" /> : <ChevronUp className="w-3.5 h-3.5 text-accent shrink-0" />}
@@ -654,7 +654,7 @@ export const ChordProgressionsView: React.FC<ChordProgressionsViewProps> = ({
                     className={`px-2 py-0.5 rounded text-xs font-mono font-bold cursor-pointer transition-colors outline-none focus-visible:ring-2 focus-visible:ring-accent ${
                       activePlaybackChordIdx === i && isPlaying
                         ? "bg-accent text-black shadow-[0_0_8px_rgba(245,183,61,0.6)]"
-                        : "bg-[#181d28] text-white hover:bg-[#23293a] border border-[#2a3244]"
+                        : "bg-[#181d28] text-text hover:bg-[#23293a] border border-[#2a3244]"
                     }`}
                     title={t("chords_click_to_edit")}
                   >
@@ -698,7 +698,7 @@ export const ChordProgressionsView: React.FC<ChordProgressionsViewProps> = ({
                 type="button"
                 onClick={() => setTimbre("piano")}
                 className={`px-2 py-1.5 rounded text-xs font-medium transition-colors ${
-                  timbre === "piano" ? "bg-accent text-zinc-950 font-bold" : "text-text-sub hover:text-white"
+                  timbre === "piano" ? "bg-accent text-zinc-950 font-bold" : "text-text-sub hover:text-text"
                 }`}
               >
                 {t("chords_timbre_piano")}
@@ -707,7 +707,7 @@ export const ChordProgressionsView: React.FC<ChordProgressionsViewProps> = ({
                 type="button"
                 onClick={() => setTimbre("guitar")}
                 className={`px-2 py-1.5 rounded text-xs font-medium transition-colors ${
-                  timbre === "guitar" ? "bg-accent text-zinc-950 font-bold" : "text-text-sub hover:text-white"
+                  timbre === "guitar" ? "bg-accent text-zinc-950 font-bold" : "text-text-sub hover:text-text"
                 }`}
               >
                 {t("chords_timbre_guitar")}
@@ -716,7 +716,7 @@ export const ChordProgressionsView: React.FC<ChordProgressionsViewProps> = ({
                 type="button"
                 onClick={() => setTimbre("power-guitar")}
                 className={`px-2 py-1.5 rounded text-xs font-medium transition-colors ${
-                  timbre === "power-guitar" ? "bg-accent text-zinc-950 font-bold" : "text-text-sub hover:text-white"
+                  timbre === "power-guitar" ? "bg-accent text-zinc-950 font-bold" : "text-text-sub hover:text-text"
                 }`}
               >
                 {t("chords_timbre_power")}
@@ -742,7 +742,7 @@ export const ChordProgressionsView: React.FC<ChordProgressionsViewProps> = ({
                   onClick={() => setStyle(candidate)}
                   data-testid={`chord-style-${candidate}`}
                   className={`px-1.5 py-1.5 rounded text-[11px] font-medium transition-colors ${
-                    style === candidate ? "bg-[#4ad8c8] text-zinc-950 font-bold" : "text-text-sub hover:text-white"
+                    style === candidate ? "bg-[#4ad8c8] text-zinc-950 font-bold" : "text-text-sub hover:text-text"
                   }`}
                 >
                   {t(STYLE_LABEL_KEYS[candidate])}
@@ -766,7 +766,7 @@ export const ChordProgressionsView: React.FC<ChordProgressionsViewProps> = ({
                 type="button"
                 onClick={() => setVisualizerTab("piano")}
                 className={`flex-1 py-1.5 rounded text-xs font-medium transition-colors ${
-                  visualizerTab === "piano" ? "bg-[#2a3346] text-white font-bold" : "text-text-sub hover:text-white"
+                  visualizerTab === "piano" ? "bg-[#2a3346] text-text font-bold" : "text-text-sub hover:text-text"
                 }`}
               >
                 {t("chords_piano_keyboard")}
@@ -775,7 +775,7 @@ export const ChordProgressionsView: React.FC<ChordProgressionsViewProps> = ({
                 type="button"
                 onClick={() => setVisualizerTab("guitar")}
                 className={`flex-1 py-1.5 rounded text-xs font-medium transition-colors ${
-                  visualizerTab === "guitar" ? "bg-[#2a3346] text-white font-bold" : "text-text-sub hover:text-white"
+                  visualizerTab === "guitar" ? "bg-[#2a3346] text-text font-bold" : "text-text-sub hover:text-text"
                 }`}
               >
                 {t("chords_guitar_fretboard")}
@@ -790,7 +790,7 @@ export const ChordProgressionsView: React.FC<ChordProgressionsViewProps> = ({
             <div className="flex items-center justify-between flex-wrap gap-2">
               <div className="flex items-center gap-2">
                 <Sparkles className="w-4 h-4 text-emerald-400 shrink-0" />
-                <span className="text-xs font-bold text-white tracking-wide">
+                <span className="text-xs font-bold text-text tracking-wide">
                   {t("chords_arp_panel_title")}
                 </span>
                 <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 font-semibold">
@@ -811,7 +811,7 @@ export const ChordProgressionsView: React.FC<ChordProgressionsViewProps> = ({
                   <button
                     type="button"
                     onClick={() => handleBakeToStudio("chords")}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#1f293d] hover:bg-[#2a3752] text-zinc-200 hover:text-white border border-[#3b4b6b] text-xs font-medium transition-all active:scale-95 cursor-pointer"
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#1f293d] hover:bg-[#2a3752] text-text hover:text-text border border-[#3b4b6b] text-xs font-medium transition-all active:scale-95 cursor-pointer"
                     title={t("chords_bake_tooltip")}
                   >
                     <span>{t("chords_bake_to_chords")}</span>
@@ -823,7 +823,7 @@ export const ChordProgressionsView: React.FC<ChordProgressionsViewProps> = ({
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 pt-1">
               {/* Pattern Type */}
               <div className="flex flex-col gap-1.5">
-                <span className="text-[11px] font-semibold text-zinc-300">{t("chords_arp_pattern")}</span>
+                <span className="text-[11px] font-semibold text-text">{t("chords_arp_pattern")}</span>
                 <div className="grid grid-cols-5 gap-1 bg-[#090d14] p-1 rounded-lg border border-[#20293d]">
                   {(["up", "down", "up_down", "converge", "random"] as ArpPatternType[]).map((pat) => (
                     <button
@@ -833,7 +833,7 @@ export const ChordProgressionsView: React.FC<ChordProgressionsViewProps> = ({
                       className={`px-1 py-1.5 rounded text-[10px] font-medium transition-all text-center cursor-pointer ${
                         arpConfig.pattern === pat
                           ? "bg-emerald-500 text-zinc-950 font-bold shadow-sm"
-                          : "text-zinc-400 hover:text-white"
+                          : "text-text-sub hover:text-text"
                       }`}
                     >
                       {pat === "up" && (t("chords_arp_short_up"))}
@@ -848,7 +848,7 @@ export const ChordProgressionsView: React.FC<ChordProgressionsViewProps> = ({
 
               {/* Rate */}
               <div className="flex flex-col gap-1.5">
-                <span className="text-[11px] font-semibold text-zinc-300">{t("chords_arp_rate")}</span>
+                <span className="text-[11px] font-semibold text-text">{t("chords_arp_rate")}</span>
                 <div className="grid grid-cols-4 gap-1 bg-[#090d14] p-1 rounded-lg border border-[#20293d]">
                   {(["1/8", "1/16", "1/8T", "1/16T"] as ArpRate[]).map((rate) => (
                     <button
@@ -858,7 +858,7 @@ export const ChordProgressionsView: React.FC<ChordProgressionsViewProps> = ({
                       className={`px-1.5 py-1.5 rounded text-[11px] font-mono transition-all text-center cursor-pointer ${
                         arpConfig.rate === rate
                           ? "bg-emerald-500 text-zinc-950 font-bold shadow-sm"
-                          : "text-zinc-400 hover:text-white"
+                          : "text-text-sub hover:text-text"
                       }`}
                     >
                       {rate}
@@ -869,7 +869,7 @@ export const ChordProgressionsView: React.FC<ChordProgressionsViewProps> = ({
 
               {/* Octaves */}
               <div className="flex flex-col gap-1.5">
-                <span className="text-[11px] font-semibold text-zinc-300">{t("chords_arp_octaves")}</span>
+                <span className="text-[11px] font-semibold text-text">{t("chords_arp_octaves")}</span>
                 <div className="grid grid-cols-3 gap-1 bg-[#090d14] p-1 rounded-lg border border-[#20293d]">
                   {[1, 2, 3].map((oct) => (
                     <button
@@ -879,7 +879,7 @@ export const ChordProgressionsView: React.FC<ChordProgressionsViewProps> = ({
                       className={`px-2 py-1.5 rounded text-[11px] font-mono transition-all text-center cursor-pointer ${
                         arpConfig.octaves === oct
                           ? "bg-emerald-500 text-zinc-950 font-bold shadow-sm"
-                          : "text-zinc-400 hover:text-white"
+                          : "text-text-sub hover:text-text"
                       }`}
                     >
                       {oct} Oct
@@ -890,7 +890,7 @@ export const ChordProgressionsView: React.FC<ChordProgressionsViewProps> = ({
 
               {/* Gate */}
               <div className="flex flex-col gap-1.5">
-                <span className="text-[11px] font-semibold text-zinc-300">{t("chords_arp_gate")}</span>
+                <span className="text-[11px] font-semibold text-text">{t("chords_arp_gate")}</span>
                 <div className="grid grid-cols-3 gap-1 bg-[#090d14] p-1 rounded-lg border border-[#20293d]">
                   {[
                     { val: 0.4, label: t("chords_gate_stacc") },
@@ -904,7 +904,7 @@ export const ChordProgressionsView: React.FC<ChordProgressionsViewProps> = ({
                       className={`px-1.5 py-1.5 rounded text-[11px] font-medium transition-all text-center cursor-pointer ${
                         Math.abs(arpConfig.gate - g.val) < 0.1
                           ? "bg-emerald-500 text-zinc-950 font-bold shadow-sm"
-                          : "text-zinc-400 hover:text-white"
+                          : "text-text-sub hover:text-text"
                       }`}
                     >
                       {g.label}
@@ -921,7 +921,7 @@ export const ChordProgressionsView: React.FC<ChordProgressionsViewProps> = ({
           <div className="p-4 rounded-xl bg-gradient-to-b from-[#171a24] to-[#11141c] border border-[#2d3445] shadow-md flex flex-col gap-3 transition-all animate-fadeIn">
             <div className="flex items-center gap-2">
               <Sliders className="w-4 h-4 text-amber-400 shrink-0" />
-              <span className="text-xs font-bold text-white tracking-wide">
+              <span className="text-xs font-bold text-text tracking-wide">
                 {t("chords_strum_micro")}
               </span>
               <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30 font-semibold">
@@ -932,7 +932,7 @@ export const ChordProgressionsView: React.FC<ChordProgressionsViewProps> = ({
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
               {/* Direction */}
               <div className="flex flex-col gap-1.5">
-                <span className="text-[11px] font-semibold text-zinc-300">{t("chords_strum_direction")}</span>
+                <span className="text-[11px] font-semibold text-text">{t("chords_strum_direction")}</span>
                 <div className="grid grid-cols-3 gap-1 bg-[#090d14] p-1 rounded-lg border border-[#20293d]">
                   {(["down", "up", "alternate"] as StrumDirection[]).map((dir) => (
                     <button
@@ -942,7 +942,7 @@ export const ChordProgressionsView: React.FC<ChordProgressionsViewProps> = ({
                       className={`px-2 py-1.5 rounded text-xs font-medium transition-all text-center cursor-pointer ${
                         strumConfig.direction === dir
                           ? "bg-amber-500 text-zinc-950 font-bold shadow-sm"
-                          : "text-zinc-400 hover:text-white"
+                          : "text-text-sub hover:text-text"
                       }`}
                     >
                       {dir === "down" && (t("chords_strum_dir_down"))}
@@ -1057,7 +1057,7 @@ export const ChordProgressionsView: React.FC<ChordProgressionsViewProps> = ({
 
                   {/* Chord Large Display */}
                   <div className="text-center py-2">
-                    <div className="text-2xl font-bold font-mono tracking-tight text-white group-hover:text-accent transition-colors">
+                    <div className="text-2xl font-bold font-mono tracking-tight text-text group-hover:text-accent transition-colors">
                       {chordName}
                     </div>
                     <div className="text-[11px] text-text-sub font-serif mt-0.5">
@@ -1091,7 +1091,7 @@ export const ChordProgressionsView: React.FC<ChordProgressionsViewProps> = ({
             <button
               type="button"
               onClick={handleAddChord}
-              className="shrink-0 w-28 sm:w-32 rounded-xl border-2 border-dashed border-[#2b3345] hover:border-accent hover:bg-[#181d28]/60 text-text-sub hover:text-white flex flex-col items-center justify-center gap-2 transition-all p-4"
+              className="shrink-0 w-28 sm:w-32 rounded-xl border-2 border-dashed border-[#2b3345] hover:border-accent hover:bg-[#181d28]/60 text-text-sub hover:text-text flex flex-col items-center justify-center gap-2 transition-all p-4"
             >
               <Plus className="w-5 h-5 text-accent" />
               <span className="text-xs font-medium">{t("chords_add_chord")}</span>
@@ -1107,7 +1107,7 @@ export const ChordProgressionsView: React.FC<ChordProgressionsViewProps> = ({
                 <span className="px-2 py-0.5 rounded text-xs font-mono font-bold bg-accent text-black">
                   {t("chords_editing_bar", { n: selectedChordIdx + 1 })}
                 </span>
-                <span className="text-base font-bold text-white font-mono">
+                <span className="text-base font-bold text-text font-mono">
                   {formatChordName(currentChord.root, currentChord.quality, currentChord.inversion)}
                 </span>
               </div>
@@ -1334,7 +1334,7 @@ export const ChordProgressionsView: React.FC<ChordProgressionsViewProps> = ({
         {/* 3.3 Live Piano / Guitar Visualizer Panel */}
         <div className="flex flex-col gap-3">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-white flex items-center gap-1.5">
+            <span className="text-xs font-semibold text-text flex items-center gap-1.5">
               <Sparkles className="w-3.5 h-3.5 text-accent" />
               <span>
                 {t("chords_live_voicing_title")}
@@ -1379,7 +1379,7 @@ export const ChordProgressionsView: React.FC<ChordProgressionsViewProps> = ({
       <section className="flex flex-col gap-5">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            <div className="flex items-center gap-2 text-lg sm:text-xl font-medium text-white">
+            <div className="flex items-center gap-2 text-lg sm:text-xl font-medium text-text">
               <BookOpen className="w-5 h-5 text-accent" />
               <h2>
                 {t("chords_categorized_title")}
@@ -1398,7 +1398,7 @@ export const ChordProgressionsView: React.FC<ChordProgressionsViewProps> = ({
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder={t("chords_search_placeholder")} aria-label={t("chords_search_placeholder")}
-              className="w-full bg-[#121622] border border-line rounded-lg pl-9 pr-3 py-1.5 text-xs text-white placeholder-text-dim focus:outline-none focus:border-accent"
+              className="w-full bg-[#121622] border border-line rounded-lg pl-9 pr-3 py-1.5 text-xs text-text placeholder-text-dim focus:outline-none focus:border-accent"
             />
           </div>
         </div>
@@ -1412,7 +1412,7 @@ export const ChordProgressionsView: React.FC<ChordProgressionsViewProps> = ({
               className={`px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-all ${
                 selectedCategory === cat.id
                   ? "bg-accent text-zinc-950 shadow-[0_0_12px_rgba(245,183,61,0.3)] font-semibold"
-                  : "bg-[#121622] text-text-sub hover:bg-[#181e2e] hover:text-white border border-line"
+                  : "bg-[#121622] text-text-sub hover:bg-[#181e2e] hover:text-text border border-line"
               }`}
             >
               {isZh ? cat.nameZh : cat.nameEn}
@@ -1447,7 +1447,7 @@ export const ChordProgressionsView: React.FC<ChordProgressionsViewProps> = ({
                       <span className="text-[10px] font-semibold text-accent uppercase tracking-wider block mb-1">
                         {prog.emotion[language]}
                       </span>
-                      <h3 className="text-base font-semibold text-white group-hover:text-accent transition-colors leading-snug">
+                      <h3 className="text-base font-semibold text-text group-hover:text-accent transition-colors leading-snug">
                         {isZh ? prog.name.zh : prog.name.en}
                       </h3>
                       {isZh && (
@@ -1483,7 +1483,7 @@ export const ChordProgressionsView: React.FC<ChordProgressionsViewProps> = ({
                       <span className="text-[10px] text-text-dim">
                         {t("chords_voiced_in", { key: keyRoot })}
                       </span>
-                      <span className="font-mono text-white font-semibold">
+                      <span className="font-mono text-text font-semibold">
                         {translatedChords.join(" ─ ")}
                       </span>
                     </div>
@@ -1521,7 +1521,7 @@ export const ChordProgressionsView: React.FC<ChordProgressionsViewProps> = ({
                     className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
                       isThisPreviewing
                         ? "bg-accent text-zinc-950 font-bold shadow-[0_0_10px_rgba(245,183,61,0.5)]"
-                        : "bg-[#1c2230] text-white hover:bg-[#252e42]"
+                        : "bg-[#1c2230] text-text hover:bg-[#252e42]"
                     }`}
                   >
                     {isThisPreviewing ? (

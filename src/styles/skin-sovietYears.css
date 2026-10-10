@@ -732,13 +732,13 @@
   [data-surface="desktop"]
   [class~="min-w-[560px]"]
   > [class~="h-full"]
-  > button,
+  > button:not([class*="bg-accent"]),
 :root[data-skin="sovietYears"]
   [data-surface="desktop"]
   [class~="min-w-[560px]"]
   > [class~="h-full"]
   > [class~="justify-center"]
-  > button {
+  > button:not([class*="bg-accent"]) {
   background-color: rgb(var(--d-panel));
   color: rgb(var(--d-ink));
 }
@@ -749,7 +749,7 @@
   [class~="min-w-[560px]"]
   > [class~="h-full"]
   > [class~="justify-center"]
-  > button {
+  > button:not([class*="bg-accent"]) {
   background-color: rgb(var(--d-ink));
   color: rgb(var(--d-bg));
 }

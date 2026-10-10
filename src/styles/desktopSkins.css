@@ -1400,7 +1400,6 @@
 [class~="hover:bg-[#45e0c9]/20"][class~="text-white"]:hover { color: rgb(var(--d-on-accent)); }
 [class~="hover:bg-[#e84855]"][class~="text-white"]:hover { color: rgb(var(--d-on-accent)); }
 [class~="hover:bg-[#ff5566]"][class~="text-white"]:hover { color: rgb(var(--d-on-accent)); }
-[class~="hover:bg-accent/20"][class~="text-white"]:hover { color: rgb(var(--d-on-accent)); }
 [class~="to-[#38bdf8]/20"][class~="text-white"] { color: rgb(var(--d-on-accent)); }
 [class~="to-accent"][class~="text-white"] { color: rgb(var(--d-on-accent)); }
 [class~="to-accent/60"][class~="text-white"] { color: rgb(var(--d-on-accent)); }
