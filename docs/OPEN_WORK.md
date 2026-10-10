@@ -21747,3 +21747,26 @@ describe("the grid's editing actions", () => {
   ⏭️ **下一步 ✓**：写 `scripts/build_genre_clips.mjs`（`--only <genre>`／`--all` ✓）：用**应用自己的离线渲染**
     （不是协议层 ✓，理由见上一条：MCP 的 arrangement 存进程内 ✓）渲染 15–30 秒片段 ✓ → 编码 MP3 ✓ →
     写出音频目录（交给 Worker ✓）＋ **重写这份清单**（含版本、时间、录音/synth 轨数 ✓）。
+
+### 八百八十七、🔧 **批量脚本已写好骨架，但"回复解包"还没对；顺手发现一个**简化**：`create_arrangement` 的回复本身就带 tracks 与 assetId**（2026-10-10 ✓）
+
+  ⭐ **已落地 ✓**：`scripts/build_genre_clips.mjs` ✓ —— **直接复用**已验证的 stdio 往返骨架 ✓
+    （从 `scripts/probe_eight_bar_render.mjs` **逐字复制**那 67 行 harness ✓，而不是重写一遍 ✗——上一轮的教训："先看签名再写调用" ✓）；
+    流程：`create_arrangement` →（原计划 `describe_arrangement {format:"json"}` ✓）→ `render_arrangement {format:"mp3"}` ✓
+    → 写 `dist-clips/<genre>.mp3`（**不入 git** ✓）＋ 重写 `public/genre-clips.json` ✓；
+    用法 `--only <genre>` / `--all` / `--out <dir>` ✓；`RECIPE_VERSION = "1"` ✓。
+  ⭐ **两次跑的失败都在"解包"上（都不是设计问题 ✓）** ✓：
+    1. 第一次：`created.match is not a function` ✗ ⇒ 我假设 `callTool` 返回**字符串** ✓，其实**成功时是对象** ✓
+       （失败时才包成 `{raw: "…"}` ✓）⇒ 已加 `asObject()` ✓ 两种都收 ✓；
+    2. 第二次：`created.slice is not a function` ✗ ⇒ 报错分支里我又当字符串用了一次 ✗ ⇒ **这一处还没改** ✓。
+  ⭐ **顺手发现（下一轮直接用 ✓）** ✓：`mcp_call.mjs create_arrangement '{genreId:"bossa-nova"}'` 的真实回复**很长且有用** ✓：
+    `arrangementId` ＋ `trackCount` ＋ **`tracks[]` 每条的 `id`/`kind`/`name`/`sound.source`/`sound.assetId`/`sound.detail`** ✓
+    ⇒ 例如 kick 就是 `source: "catalogue-asset"` ＋ `assetId: "virtuosity-drums-basic"` ✓✓
+    ⇒ **"这个片段有几轨是真实录音"可以直接从 create 的回复里数** ✓，**不必**再调 `describe_arrangement` ✓
+      ⇒ 下一轮把脚本简化成"**一次 create ＋ 一次 render**"✓，少一次往返 ✓、也少一处解包 ✗✓。
+    ⚠️ 附带读到一条重要说明 ✓：那条 detail 写着"…**a configured sample mirror must serve it, or the lane falls back to
+       the built-in preset**" ✓ ⇒ **采样取不到时会退回内置预设** ✓⇒ 批量生成时必须**确认镜像可用** ✓，
+      否则会悄悄生成一堆"其实是 synth"的片段 ✗✗ —— 这正是店主那条硬要求最容易被无声违反的地方 ✓
+      ⇒ 下一轮要在脚本里**把 `sound.source` 落进清单**（不只数个数 ✓），并对"本该录音却回退成预设"的轨**报出来** ✓。
+  ⭐ **当前仓库状态 ✓**：`public/genre-clips.json`（空清单＋理由 ✓）**未被破坏** ✓；`dist-clips/` 未产生 ✓（脚本未跑通 ✓）；
+    脚本语法 OK ✓（`node --check` ✓）。
