@@ -23038,3 +23038,21 @@ describe("the grid's editing actions", () => {
   ⭐ **于是 P1 的施工单是"四处、每处几行" ✓**：`RouteState` 加字段（:4）✓ ⇒ `parseUrlToRoute` 认出 `/m`（:36）✓
     ⇒ `formatRouteToUrl` 写出 `/m`（:231）✓ ⇒ `App.tsx` 按该字段挂 `MobileApp` ✓；判据加在 `src/test/router.test.ts` ✓
     （与已有两个路由测试同形 ✓）。**下次开工就能直接落 ✓。**
+
+### 九百五十三、🧭✅ **`/m` 前两处落地，并被**既有判据**纠了一次：只有**裸 `/m`** 可以复活，`/m/<module>` 必须是"已退役"**（2026-10-10 ✓）
+
+  ⭐ **做的事（两处 ✓）** ✓：
+    1. `RouteState` 加 **`mobile?: boolean`** ✓（写在 `tab` 之后 ✓，注释里点明"与 `/new`／`/console` 同一先例" ✓）；
+    2. `parseUrlToRoute` 里加分支 ✓：**裸 `/m`** ⇒ 返回 `{...parse("/"), mobile: true}` ✓
+       （**照该函数既有的 hash 递归写法** ✓ —— 这正是"照抄现有写法"而不是另创一套 ✓）。
+  ⭐ **被既有判据当场纠错 ✓（今天第三次 ✓，每次都让改动变好 ✓）** ✓：
+    我先写的是 `pathname.startsWith("/m/")` ✓ ⇒ 于是 `/m/<module>` 也会被解析 ✓ ⇒
+    `router.test.ts` 里那条**"the retired phone route (`/m/<module>`) — **no longer parses** `/m/<module>` into a route of its own"**
+    **立刻变红** ✗✗ ⇒ 说明 **dev 当年是**故意**退役 `/m/<module>` 的** ✓，
+    而店主今天要的是 **`/m` 这个入口** ✓ ⇒ 两者**不冲突** ✓，冲突的只是我的写法 ✗。
+    ⇒ 改成**只认裸 `/m`（含 `/m/`）** ✓ ⇒ 24 条测试全绿 ✓、`typecheck` 0 ✓。
+    ⭐ **顺带确认了一个设计事实 ✓**：手机壳的**模块切换走自身状态** ✓（`mobileModules.ts` ✓），**不写进 URL** ✓
+      —— 这也解释了为什么退役那条路由是合理的 ✓。
+  ⭐ **P1 剩余（下一轮 ✓）** ✓：`formatRouteToUrl` 对 `mobile` 写出 `/m` ✓（保证"解析→格式化"闭环 ✓）、
+    `App.tsx` 按该字段 `React.lazy` 挂 `MobileApp` ✓、并在 `router.test.ts` 加三条新判据
+    （**裸 `/m` 解析出 mobile 为真** ✓、**`/m` 往返不变** ✓、**普通路由不受影响** ✓）。

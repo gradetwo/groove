@@ -4,6 +4,12 @@ import type { NavTab } from "./navigation";
 export interface RouteState {
   tab: NavTab;
   /**
+   * ⭐ **The phone shell's own entry point** (owner's decision 2026-10-10: `/m`). The preserved shell used to mount on a
+   * capability check plus a route flag; the owner chose an explicit path instead, which is why this is a route of its own —
+   * the same precedent `/new` and `/console` already set.
+   */
+  mobile?: boolean;
+  /**
    * ⭐ **A new project rather than a place to browse** — and this route is the one that must **not** get a genre.
    *
    * Every other route in this file may fall back to the studio's default genre, because a missing genre there means "the user did not say". Here it means "the user asked for a blank project", which is why the
@@ -39,6 +45,19 @@ export function parseUrlToRoute(pathname: string, search: string, hash: string =
     const rawHash = hash.slice(1);
     const [hPath, hSearch] = rawHash.split("?");
     return parseUrlToRoute(hPath || "/", hSearch ? `?${hSearch}` : "", "");
+  }
+
+  /**
+   * ⭐ **`/m` is the phone shell** — the prefix is stripped and the rest parsed by the same code, the way the hash branch
+   * above already recurses. Doing it here rather than in `App.tsx` means every consumer of a route sees the same answer.
+   */
+  if (pathname === "/m" || pathname === "/m/") {
+    /**
+     * ⚠️ **Only the bare `/m`.** A criterion in `router.test.ts` pins that the *retired* `/m/<module>` shape must **not**
+     * parse into a route of its own — that rule was a deliberate removal, and reviving it by accepting a prefix would
+     * break it. The phone shell switches modules in its own state (`mobileModules.ts`), not in the URL.
+     */
+    return { ...parseUrlToRoute("/", search, hash), mobile: true };
   }
 
   const params = new URLSearchParams(search);
