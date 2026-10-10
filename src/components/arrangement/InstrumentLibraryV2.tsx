@@ -208,6 +208,23 @@ export function InstrumentLibraryV2({ instruments, currentAssetId, onChoose, onA
                     </span>
                   )}
                 </button>
+                {/**
+                  * ⭐ **Audition beside the choice, never instead of it** (owner's instruction 2026-10-10). The row itself is a
+                  * `<button>`, and HTML forbids nesting one inside another, so this is a **sibling** in the `<li>`: tap the
+                  * row to select, tap ▷ to hear it first. `min-h-11 min-w-11` is the 44 px the phone targets need.
+                  */}
+                {onAudition && (
+                  <button
+                    type="button"
+                    data-testid={`instrument-audition-${entry.assetId}`}
+                    aria-label={`${entry.name ?? entry.assetId} audition`}
+                    title={String(entry.name ?? entry.assetId)}
+                    onClick={() => onAudition(entry.assetId)}
+                    className="ml-1 inline-flex min-h-11 min-w-11 shrink-0 items-center justify-center rounded border border-[rgb(var(--d-line))] text-xs text-text transition-colors hover:border-[rgb(var(--d-accent))]/60 hover:bg-white/5"
+                  >
+                    ▷
+                  </button>
+                )}
               </li>
             ))
           )}
