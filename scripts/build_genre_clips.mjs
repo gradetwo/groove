@@ -98,6 +98,17 @@ const RECIPE_VERSION = "1";
 
 /** ⭐ `callTool` answers with the reply already parsed when it is JSON, and with text when it is not: accept both. */
 const asObject = (value) => {
+  /**
+   * ⭐ **The harness answers `{ok, text}`** (measured 2026-10-10: `{"ok":true,"text":"{\n  \"arrangementId\": \"arrangement-1\"…"}`)
+   * — the reply's JSON is a *string* inside `text`, so unwrapping it is the step that turns the tool's answer into data.
+   */
+  if (value && typeof value === "object" && typeof value.text === "string") {
+    try {
+      return JSON.parse(value.text);
+    } catch {
+      return value;
+    }
+  }
   if (value && typeof value === "object") return value;
   try {
     return JSON.parse(String(value));
@@ -119,17 +130,32 @@ const version = JSON.parse(readFileSync("public/version.json", "utf8")).version;
 const clips = [];
 for (const genreId of genreIds) {
   const started = Date.now();
+  /**
+   * ⭐ **One create, then one render** — the create reply already carries everything the manifest needs. Measured
+   * 2026-10-10 with `mcp_call.mjs`: it answers with `arrangementId`, `trackCount`, and a `tracks[]` whose entries carry
+   * `kind`, `name` and `sound: { source, assetId, detail }`. Asking `describe_arrangement` for the same facts would be a
+   * second round trip that can disagree with the first.
+   */
   const created = asObject(await callTool("create_arrangement", { genreId }));
-  const arrangementId = created.arrangementId ?? created.id ?? undefined;
+  const arrangementId = created.arrangementId ?? created.id;
   if (!arrangementId) {
-    console.error(`${genreId}: could not create an arrangement: ${created.slice(0, 120)}`);
+    console.error(`${genreId}: could not create an arrangement: ${JSON.stringify(created).slice(0, 200)}`);
     continue;
   }
-  const described = asObject(await callTool("describe_arrangement", { arrangementId, format: "json" }));
+  const tracks = Array.isArray(created.tracks) ? created.tracks : [];
+  /**
+   * ⭐ **A lane that should be a recording and is not is the failure this batch must not hide.** The create reply's own
+   * `sound.detail` says it: "a configured sample mirror must serve it, **or the lane falls back to the built-in preset**".
+   * A clip cut while the mirror was unreachable would look complete and sound like the synth — precisely the silent
+   * downgrade the owner's requirement forbids.
+   */
+  const fallbacks = tracks.filter((track) => {
+    const source = track?.sound?.source;
+    return source !== undefined && source !== "catalogue-asset" && track?.sound?.assetId === undefined;
+  });
   const banner = asObject(await callTool("render_arrangement", { arrangementId, format: "mp3", outputDir: OUT, filename: `${genreId}.mp3` }));
-  const file = banner.file ?? banner.output ?? banner.path ?? undefined;
+  const file = banner.file ?? banner.output ?? banner.path;
   const bytes = file && existsSync(file) ? statSync(file).size : undefined;
-  const tracks = Array.isArray(described.tracks) ? described.tracks : [];
   clips.push({
     genreId,
     url: `${genreId}.mp3`,
@@ -139,10 +165,28 @@ for (const genreId of genreIds) {
     engineVersion: version,
     recipeVersion: RECIPE_VERSION,
     generatedAt: new Date().toISOString().slice(0, 10),
-    recordedLanes: tracks.filter((track) => track?.sample?.assetId || /:[a-z0-9-]+$/.test(String(track?.sound?.detail ?? ""))).length,
+    /** ⭐ Counted from the create reply, and the sources are carried into the log so a fallback cannot pass unnoticed. */
+    recordedLanes: tracks.filter((track) => track?.sound?.source === "catalogue-asset").length,
     synthLanes: tracks.filter((track) => track?.kind === "synth").length,
   });
-  console.log(`${genreId}: ${((Date.now() - started) / 1000).toFixed(1)}s, ${bytes ?? "?"} bytes, ${clips.at(-1).recordedLanes}/${tracks.length} lanes with a recording`);
+  console.log(
+    `${genreId}: ${((Date.now() - started) / 1000).toFixed(1)}s, ${bytes ?? "?"} bytes, ` +
+      `${clips.at(-1).recordedLanes}/${tracks.length} lanes with a recording` +
+      (fallbacks.length ? ` — ⚠ ${fallbacks.length} lane(s) fell back to the built-in preset` : "")
+  );
+  for (const track of tracks) {
+    console.log(`   ${String(track?.id ?? track?.name)}: ${String(track?.sound?.source ?? "?")} ${String(track?.sound?.assetId ?? "")}`);
+  }
+}
+/**
+ * ⭐ **A failed batch must not replace the manifest with an empty one.** The first run of this script did exactly that
+ * (measured 2026-10-10): it wrote `{"bars":8,"clips":[]}` with no reason, which the manifest's own reader refuses —
+ * "an empty clip manifest must say why it is empty". Leaving the committed manifest untouched is the honest outcome of a
+ * run that produced nothing.
+ */
+if (clips.length === 0) {
+  console.error("no clips were produced; public/genre-clips.json was left as it was");
+  process.exit(1);
 }
 writeFileSync("public/genre-clips.json", JSON.stringify({ bars: 8, clips }, null, 2) + "\n");
 console.log(`wrote public/genre-clips.json with ${clips.length} clip(s); MP3s are in ${OUT}/ (not in git)`);

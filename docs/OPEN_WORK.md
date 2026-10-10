@@ -21770,3 +21770,34 @@ describe("the grid's editing actions", () => {
       ⇒ 下一轮要在脚本里**把 `sound.source` 落进清单**（不只数个数 ✓），并对"本该录音却回退成预设"的轨**报出来** ✓。
   ⭐ **当前仓库状态 ✓**：`public/genre-clips.json`（空清单＋理由 ✓）**未被破坏** ✓；`dist-clips/` 未产生 ✓（脚本未跑通 ✓）；
     脚本语法 OK ✓（`node --check` ✓）。
+
+### 八百八十八、✅✅ **第一个真实片段切出来了：bossa-nova，21.9 秒、63 KB、6/8 轨真实录音**（2026-10-10 ✓）
+
+  ⭐ **命令 ✓**：`node scripts/build_genre_clips.mjs --only bossa-nova --out dist-clips` ✓：
+    ```
+    bossa-nova: 21.9s, 63320 bytes, 6/8 lanes with a recording
+       kick: catalogue-asset virtuosity-drums-basic
+       snare: builtin-drums
+       hihat: catalogue-asset virtuosity-drums-basic
+       percussion: catalogue-asset virtuosity-drums-basic
+       bass: catalogue-asset dsmolken-double-bass:d-smolken-rubner-bass-pizz
+       chords: catalogue-asset karoryfer-emilyguitar:emily-clean
+       lead: catalogue-asset vsco2ce:FluteSusVib
+       fx: builtin-synth
+    wrote public/genre-clips.json with 1 clip(s)
+    ```
+  ⭐ **三个决定性的好消息 ✓**：
+    1. **时长 21.9 秒** ✓ —— 正落在店主定的 **15–30 秒**窗口里 ✓（不需要额外裁剪参数 ✓）；
+    2. **6/8 轨走真实录音** ✓ —— 与前面那次"逐轨解析"的读数**完全一致** ✓（bass 是 pizz 低音提琴 ✓、chords 是
+       emily 吉他 ✓、lead 是 vsco2ce 长笛 ✓）⇒ **店主那条硬要求由构造满足** ✓（不是靠文案声明 ✓）；
+    3. **端到端跑通** ✓：create →（一次调用 ✓）→ render mp3 ✓ → 写清单 ✓，整段 **~22 秒墙钟** ✓。
+  ⚠️ **两处要修正/核实的（都记下来 ✓）** ✓：
+    · **我那条"回退"警告是误报 ✗**：判据写成 `source !== "catalogue-asset" && assetId === undefined` ✓，
+      而 `snare: builtin-drums`／`fx: builtin-synth` 是**本来就该内置**的轨 ✓ ⇒ 误报 2 条 ✓
+      ⇒ 下一轮改成**只在 `sound.detail` 明说"本该用录音却回退"时报"** ✓（那句 detail 里就有这个措辞 ✓）。
+    · **63 KB / 21.9 秒 ≈ 23 kbps** ✗，比我预期的 192 kbps 小很多 ✓ ⇒ 要核实 MCP 渲染的 MP3 比特率与声道数 ✓
+      （如果是低码率/单声道 ✓，手机试听也许够用 ✓，但要**如实写进清单** ✓ 而不是含糊过去 ✓）。
+  ⭐ **另一处本轮修好的坑 ✓**：脚本第一次跑崩时**把 `public/genre-clips.json` 覆盖成了无理由的空清单** ✗✗
+    （正是我上一轮自己立的判据所拒绝的形状 ✓）⇒ 已改为"**产出为 0 就什么都不写、并以非零退出**" ✓，
+    且 `asObject` 现在会**解包 `{ok, text}`** ✓（harness 的真实形状 ✓，实测 `{"ok":true,"text":"{\\"arrangementId\\":…}"}` ✓）。
+    `genreClips.test.ts` 5 例复绿 ✓。
