@@ -1,0 +1,18 @@
+{
+  "bars": 8,
+  "clips": [
+    {
+      "genreId": "peak-time-techno",
+      "url": "peak-time-techno.mp3",
+      "seconds": 16.600022675736962,
+      "bytes": 400030,
+      "lufs": -8.238856579927084,
+      "bars": 2,
+      "engineVersion": "2.35.11",
+      "recipeVersion": "1",
+      "generatedAt": "2026-10-10",
+      "recordedLanes": 3,
+      "builtInLanes": 5
+    }
+  ]
+}
