@@ -108,6 +108,11 @@ import { DEFAULT_FX_STATE } from "../../audio/EffectsRack";
 import { generateEuclidean } from "../../audio/Euclidean";
 import { useDensityPreference } from "../../hooks/useDensityPreference";
 import { useGs1Setting } from "../../features/sequencer/useGs1Setting";
+import { DEFAULT_SYNTH_PRESETS } from "../../audio/PolySynth";
+import { setTrackInstrumentCommand } from "../../data/arrangementHistory";
+
+/** ⭐ The names a synth track may choose from — the keys of the engine's own preset table, in one place. */
+const SYNTH_PRESET_KEYS = Object.keys(DEFAULT_SYNTH_PRESETS);
 import { FirstRunPrompt } from "../onboarding/FirstRunPrompt";
 import { ArrangementClickTrackV2 } from "./ArrangementClickTrackV2";
 import { useFirstRunPrompt } from "../../features/sequencer/hooks/useFirstRunPrompt";
@@ -2236,6 +2241,8 @@ export function ArrangementViewV2({ currentSong, songId, capture, bar = 0, playe
         }}
         instruments={instruments}
         onChangeInstrument={(trackId, assetId) => commit(setTrackSampleCommand(trackId, trackFor(trackId)?.sample?.assetId ?? DEFAULT_SAMPLER_ASSET, assetId))}
+        presets={SYNTH_PRESET_KEYS}
+        onChangePreset={(trackId, preset) => commit(setTrackInstrumentCommand(trackId, trackFor(trackId)?.instrument ?? "", preset))}
         onToggleStep={(trackId, index) => commit(toggleStepCommand(trackId, index))}
         bar={stripBar}
         onChangeGain={(trackId, gainDb) => commit(setTrackGainCommand(trackId, trackFor(trackId)?.gainDb ?? 0, gainDb))}

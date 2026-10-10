@@ -59,6 +59,7 @@ import {
   setTrackRegion,
   setTrackSample,
   toggleStep,
+  setTrackInstrument,
 } from "./arrangementEdits";
 import type { PlannedTake } from "./takePlanning";
 
@@ -278,6 +279,14 @@ export function setTrackRegionCommand(trackId: string, before: TrackRegion | und
 
 export function setTrackSampleCommand(trackId: string, before: string, after: string): ArrangementCommand {
   return setterCommand("instrument", (arrangement, next: string) => setTrackSample(arrangement, trackId, next), before, after);
+}
+
+/**
+ * ⭐ **The synth half of choosing a sound** (fifth Web evaluation of v2.35.9, P2). Same shape as `setTrackSampleCommand`:
+ * the view commits a before/after pair, so undo and redo work without the component knowing how a preset is stored.
+ */
+export function setTrackInstrumentCommand(trackId: string, before: string, after: string): ArrangementCommand {
+  return setterCommand("instrument", (arrangement, next: string) => setTrackInstrument(arrangement, trackId, next), before, after);
 }
 
 export function setArrangementTempoCommand(before: number, after: number): ArrangementCommand {

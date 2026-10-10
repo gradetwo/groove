@@ -28,6 +28,9 @@ export interface TrackListV2Props {
    */
   instruments?: readonly InstrumentChoice[];
   onChangeInstrument?: (trackId: string, assetId: string) => void;
+  /** ⭐ The synth presets a track may name, and what to do when one is chosen (fifth Web evaluation, P2). */
+  presets?: readonly string[];
+  onChangePreset?: (trackId: string, preset: string) => void;
   /**
    * Turn one of a track's own steps on or off. Optional so the list can be rendered as a report of the arrangement, without an editing surface.
    */
@@ -96,7 +99,7 @@ function depthOf(track: TrackV2, all: readonly TrackV2[], seen = new Set<string>
 /** The kinds the add menu offers — one table, shared with the new-project panel and the kind chooser. */
 const ADDABLE = TRACK_KIND_ORDER;
 
-export function TrackListV2({ arrangement, onAddTrack, onRemoveTrack, onToggle, onToggleCollapse, onChangeKind, instruments = [], onChangeInstrument, onToggleStep, bar = 0, onChangeGain, onChangePan }: TrackListV2Props) {
+export function TrackListV2({ arrangement, onAddTrack, onRemoveTrack, onToggle, onToggleCollapse, onChangeKind, instruments = [], onChangeInstrument, presets, onChangePreset, onToggleStep, bar = 0, onChangeGain, onChangePan }: TrackListV2Props) {
   const { t } = useLanguage();
   // Which row's library panel is open. One at a time: two panels open would make the list jump as each one changes its height.
   const [openLibraryFor, setOpenLibraryFor] = useState<string | undefined>(undefined);
@@ -146,6 +149,28 @@ export function TrackListV2({ arrangement, onAddTrack, onRemoveTrack, onToggle, 
                 duplicated when the grid layout arrived, and two copies of a control is how a header and a list come
                 to disagree about what a track plays.
               */}
+              {track.kind === "synth" && onChangePreset && (presets?.length ?? 0) > 0 && (
+                /**
+                 * ⭐ **A synth track names its preset here** (fifth Web evaluation of v2.35.9, P2: *"非 sampler 軌道沒有樂器
+                 * 切換入口"*). A synth's sound *is* a preset — `instrument` is the field the engine's resolver reads first —
+                 * so this is the control that was missing, not a new concept. Only `synth` tracks get it: a drum track
+                 * plays one built-in kit through its roles and a sampler takes an asset id, so a list there would be a
+                 * choice nobody can hear.
+                 */
+                <select
+                  data-testid={`track-preset-${track.id}`}
+                  aria-label={`${track.name} preset`}
+                  value={presets!.includes(track.instrument ?? "") ? track.instrument : ""}
+                  onChange={(event) => onChangePreset(track.id, event.target.value)}
+                  className="h-7 shrink-0 rounded border border-[rgb(var(--d-line))] bg-transparent text-center text-[10px] text-text"
+                >
+                  {presets!.map((preset) => (
+                    <option key={preset} value={preset} label={preset}>
+                      {preset}
+                    </option>
+                  ))}
+                </select>
+              )}
               {track.kind === "sampler" && onChangeInstrument && instruments.length > 0 && (
                 <InstrumentBrowserV2
                   trackId={track.id}

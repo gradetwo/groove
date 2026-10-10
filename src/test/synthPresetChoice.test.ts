@@ -62,3 +62,22 @@ describe("pointing a synth track at a preset", () => {
   });
 });
 
+/**
+ * ⭐ **And the interface reaches it** (fifth Web evaluation, P2). The project's ledger rule is that an operation changing the
+ * model must be reachable from Web source *and* from the protocol; both halves now exist, so this pins the web half to the
+ * one place it lives rather than to "somewhere".
+ */
+describe("the preset chooser in the arrangement", () => {
+  it("⭐ the track list draws it for synth tracks, and commits the command", () => {
+    const list = readFileSync(resolve(__dirname, "../components/arrangement/TrackListV2.tsx"), "utf8");
+    expect(list, "only a synth track gets the chooser").toMatch(/track\.kind === "synth" && onChangePreset/);
+    expect(list, "with its own id").toContain("track-preset-${track.id}");
+    expect(list, "and its options are the engine's preset names").toContain("presets!.map");
+
+    const view = readFileSync(resolve(__dirname, "../components/arrangement/ArrangementViewV2.tsx"), "utf8");
+    expect(view, "the view passes the preset names").toContain("presets={SYNTH_PRESET_KEYS}");
+    expect(view, "and commits the command, so undo works").toContain("setTrackInstrumentCommand(trackId");
+    expect(view, "the names come from the engine's table rather than a second list").toContain("Object.keys(DEFAULT_SYNTH_PRESETS)");
+  });
+});
+
