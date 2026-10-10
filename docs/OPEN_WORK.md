@@ -22036,3 +22036,33 @@ describe("the grid's editing actions", () => {
   ⚠️ **一处我自己的疏漏 ✓**：`--format wav` 那次把 WAV 写成了 `bossa-nova.mp3` 的名字 ✗（我的重命名只改到了
     文件名参数的一处 ✓ 另一处没改 ✓）⇒ 产物在 `dist-clips/`（**不入 git** ✓，无污染 ✓），但**文件名与内容不符** ✗
     ⇒ 已记下，下一轮顺手修脚本的那一处 ✓（也提醒：**改文件名拼接要两处一起看** ✓）。
+
+### 九百、🎯 **静音的根因找到了，而且是**代码里明写的一行**：MCP 建的编排**故意清空 `notesByTrack`****（2026-10-10 ✓）
+
+  ⭐ **决定性代码（`mcp/arrangement.ts:474-495` ✓，连同它自己的注释 ✓）** ✓：
+    ```ts
+    const seeded = input.genreId ? arrangementSeededFromGenre(songId, genre) : …;
+    /**
+     * ⭐ **An MCP-created arrangement carries no starter notes.**
+     * … "two field reports describe receiving four notes at pitch 60 nobody wrote" …
+     * The starter notes are dropped here and the track's own `sample` is kept …
+     */
+    const base: ArrangementV2 = { ...seeded, notesByTrack: {}, … };
+    ```
+    ⇒ **`notesByTrack: {}` 把内容清空了** ✓✓ —— 所以：
+    · `create_arrangement {genreId}` 建的编排**一个音符都没有** ✓；
+    · 我的探针读到的 `bars=undefined notesByTrackKeys=-` ✓ 与此一致 ✓；
+    · `render_arrangement` 渲出来的**就是数字静音** ✓（13 个频段全 −120 dB ✓）✓；
+    · 体检报的 `empty-lane — kick … has no notes` ✓ **完全正确** ✓。
+  ⭐ **这不是"手滑的 bug"，而是一个**有正当理由的决定** ✓** ✓：当年有**两份现场报告**说 agent 收到了"没人写的、pitch 60 的四个音符" ✓
+    ⇒ 为了不让工具表面凭空产生内容 ✓，MCP 建编排时**刻意不带 starter notes** ✓。
+    但**副作用**是：**任何靠"曲风种子"的片段都无法经这条路渲出声音** ✗✗ —— 我的批量脚本正好踩在这上面 ✓。
+  ⭐ **修法（两条，下一轮选并实施 ✓）** ✓：
+    · **A（脚本侧、最小 ✓）** ✓：建完编排后**把曲风内容写回去** ✓ —— 鼓轨用 `set_arrangement_track_steps` ✓、
+      旋律轨用 `add_arrangement_notes` ✓（曲风的 pattern 里本来就有这些 ✓）；代价是脚本多几步 ✓，
+      但**不动 MCP 的既有决定** ✓（那条决定有现场报告背书 ✓，我不该为了自己的方便推翻它 ✓）；
+    · **B（MCP 侧 ✓）** ✓：给 `create_arrangement` 加一个**显式**参数（如 `withGenreNotes: true` ✓）
+      ⇒ 默认行为不变 ✓（仍然不凭空产生音符 ✓），要内容的人**自己说要** ✓。这也符合那条决定的初衷 ✓。
+    **我倾向 B ＋ A 作为回退** ✓：B 让"我要曲风内容"成为一句明确的话 ✓，A 让脚本在没有 B 时也能工作 ✓。
+  ⚠️ **本轮探针已删 ✓**（它自己在读曲风形状时崩了 ✗ ⇒ 不留红 ✓）；曲风 pattern 的真实形状**仍未确认** ✗
+    ⇒ 下一轮做 A/B 之前**先跑一次形状探针**（我已经把这条写进流程 ✓，这次也一样 ✓）。
