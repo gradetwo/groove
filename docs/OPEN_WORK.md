@@ -23115,3 +23115,12 @@ describe("the grid's editing actions", () => {
       "A bare route on a phone: … until it does the shell still needs one" ✓）⇒ 再加 `mobilePlayer`／`genreId` ✓。
   ⚠️ **又一次印证 ✓**：这正是"**先读原文再动手**"的价值 ✓ —— 如果我上一轮直接把 `<MobileApp module={route.mobile}>` 写上 ✓，
     就会把一个 boolean 塞进 module ✓；而**读一眼当年的 JSX** 就发现了这个坑 ✓（成本 12 行 ✓）。
+
+  ⚠️ **改名那一步我也做坏了、已回退（如实记 ✓）** ✗：我用**批量字符串替换**去改 `mobile` ⇒ `mobileShell` ✓，
+    结果留下 **4 个类型错误** ✗（替换在测试文件里套了两层 ✓ 之类），一条判据变红 ✗
+    ⇒ `git checkout -- src/app/router.tsx src/test/mobileRoute.test.ts` 回到上一提交的绿色状态 ✓
+    ⇒ **`typecheck` 0** ✓、三份路由判据全绿 ✓。
+    **教训（今天就这一条反复出现 ✓）**：**批量替换不是重构** ✗ —— 名字只出现在**三处**（接口 ✓、解析 ✓、格式化 ✓）
+      加**两处**测试 ✓，**逐处读、逐处改**（每处一行 ✓）比写一个替换脚本**更快也更安全** ✓。
+      我在这件事上已经连续栽了三次（解构 ✓、函数体 ✓、改名 ✓）⇒ **下次凡是"改名/改结构"，一律逐处手改 ✓**，
+      改完立刻 `typecheck` ✓。
