@@ -23067,3 +23067,26 @@ describe("the grid's editing actions", () => {
   ⭐ **一处我该承认的模式 ✓**：今天我在"**没读就改**"上反复吃亏（解构、JSX 位置、locale、函数体 ✓）——
     而**每次先读的那几次都一次过** ✓（locale 注册 ✓、`/m` 解析分支 ✓、试听链路 ✓）。
     两者对比非常清楚 ✓：**读的成本是几十行，猜的成本是一次回退** ✓。
+
+### 九百五十四、✅ **`/m` 的"解析 ↔ 格式化"闭环通了（P1 3/4）**（2026-10-10 ✓）
+
+  ⭐ **这次的修法（先想清楚、再动手 ✓）** ✓：上一轮我用脚本改函数体**做坏了** ✗ ⇒ 这次改用一个**早返回** ✓：
+    ```ts
+    export function formatRouteToUrl(route: RouteState): string {
+      if (route.mobile) return "/m";   // ⭐ 在函数体**之前**就答完，不动下面任何分支
+      …
+    }
+    ```
+    **为什么早返回是对的（不只是省事 ✓）**：手机壳的模块走**自身状态** ✓（`mobileModules.ts` ✓），
+    曲风走**已有的 query 参数** ✓（`parseUrlToRoute` 已经带过来 ✓）⇒ "手机壳，就是它现在的样子"**恰好**就是 `/m` ✓
+    ⇒ 早返回表达的是**真实的语义** ✓，而不是"绕过读不懂的代码" ✓。
+  ⭐ **读数 ✓**：`typecheck` **0** ✓、`router.test.ts` ＋ `routerNewProject.test.ts` **24 条全绿** ✓
+    （**退役的 `/m/<module>` 判据仍然是绿的** ✓ —— 因为只认裸 `/m` ✓）。
+  ⭐ **新判据 ✓（`src/test/mobileRoute.test.ts` 3 例 ✓）** ✓：
+    ①裸 `/m`（含 `/m/`）解析出 `mobile === true` ✓；
+    ②**往返**：`formatRouteToUrl(parse("/m")) === "/m"` ✓；
+    ③**别的不受影响** ✓：`/studio`／`/new` 的 `mobile` 是 `undefined` ✓、
+      **`/m/jam` 仍然是 `undefined`**（退役形状不复活 ✓）、`/studio` 格式化结果**不含 `/m`** ✓。
+  ⭐ **P1 进度 ✓**：`RouteState.mobile` ✓、`parseUrlToRoute` 认 `/m` ✓、`formatRouteToUrl` 写 `/m` ✓、
+    判据 ✓ —— **3.5/4** ✓；只剩 **`App.tsx` 里按该字段挂 `MobileApp`** ✓（当年就是 `React.lazy` 挂的 ✓，
+    只换判定条件 ✓），以及用真浏览器打开 `/m` 看它是否渲染 ✓。

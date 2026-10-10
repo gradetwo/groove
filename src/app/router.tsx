@@ -248,6 +248,13 @@ export function parseUrlToRoute(pathname: string, search: string, hash: string =
 }
 
 export function formatRouteToUrl(route: RouteState): string {
+  /**
+   * ⭐ **`/m` round-trips** (owner's decision 2026-10-10). An early return rather than surgery on the body below: the phone
+   * shell keeps its module in its own state (`mobileModules.ts`) and its genre in query params that `parseUrlToRoute` already
+   * carried over, so "the phone shell, as it is" is exactly `/m`. Parsing and formatting stay a closed pair, which is how
+   * `router.test.ts` uses them.
+   */
+  if (route.mobile) return "/m";
   // Use clean paths where possible, with fallback query params
   switch (route.tab) {
     case "detail":
