@@ -22252,3 +22252,24 @@ describe("the grid's editing actions", () => {
   ⏭️ **下一轮（跑批继续 ✓）** ✓：读 `AudioEngine` 那个隔离预览的**签名**（先签名、后调用 ✓）＋
     `InstrumentBrowserV2` 的选中回调 ✓ ⇒ 判断"预览候选 asset"能否复用 ✓：
     能 ⇒ 直接实现（含 44 px、门控、暂停走带、回执 ✓）；不能 ⇒ 描述需要的最小扩展 ✓ 再动它 ✓。
+
+### 九百一十一、🎧📉 **试听的两个落点找到了；同时发现**6 路并行可能把机器压住了**（观测，未下结论）**（2026-10-10 ✓）
+
+  ⭐ **试听侧读数 ✓**：
+    · **隔离预览确实存在** ✓（`AudioEngine.ts` 里那段注释讲得很清楚 ✓）：
+      "**Isolated preview of one track's lane** — the piano roll's 'play just this part'" ✓，
+      而且语义是**刻意设计过的** ✓：它**不去动 `trackStates`**（即不靠"独奏这条轨"实现 ✓），
+      而是在设了 scope 时**让调度器跳过其它轨** ✓ ⇒
+      "**the previewed track is heard as it is mixed** — its own mute/solo state still applies, so the preview cannot claim
+      a track is audible when the arrangement says otherwise" ✓，且"nothing outside this object changes" ✓
+      ⇒ 这正好是我要的语义 ✓（试听不能骗人 ✓）；
+    · **chooser 的选中落点只有一个** ✓：`InstrumentBrowserV2.tsx:189` 的 `onChangeInstrument(trackId, chosen)` ✓
+      ⇒ 试听按钮就挂在它旁边 ✓（点"▷"试听候选 ✓，点选项本身仍然是选择 ✓，两个动作不混 ✓）。
+  ⚠️ **一个必须承认的观测（不下结论 ✓）** ✓：**跑了 ~25 分钟，6 个 shard 合计完成 0 个片段** ✗。
+    按单进程 ~350 秒/片段估 ✓，此刻至少该有几个了 ✓ ⇒ **很可能是 6 个 Chromium ＋ 6 个渲染进程把本机 CPU 压住了** ✗
+    （我不测 CPU 就下结论 ✗ ⇒ 只列为**最可能** ✓）。⇒ **下一轮先看 CPU 与单 shard 日志** ✓：
+    若确实饱和 ⇒ **减到 3 个 shard** ✓（哪怕单片段变慢，总吞吐更可控 ✓，而且不至于把机器拖垮 ✓）；
+    若并不饱和 ⇒ 那 0 就是"首片段本来就慢" ✓（每个 shard 都要付一次冷启动 ✓）。
+  ⏭️ **下一轮** ✓：①看 CPU 与各 shard 日志 ✓ ⇒ 决定是否把并行度降到 3 ✓；
+    ②读隔离预览的**方法签名**（这次只读到注释 ✓）⇒ 判断能否"预览候选 asset" ✓；
+    ③若不能 ⇒ 写清最小扩展 ✓（例如让预览接受一个 asset 覆盖 ✓）再动 ✓。
