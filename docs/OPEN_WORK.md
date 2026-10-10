@@ -22343,3 +22343,21 @@ describe("the grid's editing actions", () => {
     ⇒ **首次全量付一次双倍代价 ✓，之后每次重跑只渲一次** ✓（这正是把 9–10 小时压向 5 小时的关键一步 ✓）。
   ⚠️ **当前正在跑的 3 个 shard 不会**受益** ✗**（它们跑的是改动前的代码 ✓）⇒ **我没有重启它们** ✓ ——
     重启会丢掉已完成的片段 ✓，而这次的产出正好可以当"首次基线" ✓（缓存从下一次重跑起生效 ✓）。
+
+### 九百一十七、🎧 **chooser 试听的接线位置确定了（三个文件，下一轮一次做完）**（2026-10-10 ✓）
+
+  ⭐ **侦察到位 ✓**（这轮读了两处 ✓）：选项行**不在** `InstrumentBrowserV2` 里造 ✗ ——
+    它把列表委托给了 **`InstrumentLibraryV2`** ✓（`onChoose={(chosen) => { onChangeInstrument(trackId, chosen); onOpenChange(false); }}` ✓
+    就挂在那一层 ✓）⇒ 试听按钮应当加在 **`InstrumentLibraryV2` 的选项行上** ✓，
+    再由 `InstrumentBrowserV2` 透传、最后在 `ArrangementViewV2` 接到 `player.audition(...)` ✓。
+  ⭐ **接线清单（一次做完 ✓，避免半接 ✗）** ✓：
+    1. `InstrumentLibraryV2`：每个选项加"▷"试听按钮 ✓（**44 px** ✓、`aria-label` ✓、带上乐器名 ✓），
+       调 `onAudition?.(assetId)` ✓ —— **与"选中"分开** ✓（点选项＝选中 ✓、点 ▷＝试听 ✓）；
+    2. `InstrumentBrowserV2`：新增 `onAudition?` 并透传 ✓（**两份 chip 共用同一套列表** ✓，所以只需一处 ✓）；
+    3. `ArrangementViewV2`：`onAudition={(assetId) => void player?.audition?.({ assetId, midi: 60 })}` ✓
+       —— **`audition` 已确认现成** ✓（`playArrangementV2.ts:74` ✓）；**播放器不存在时按钮禁用** ✓
+       （而不是点了没反应 ✓），`title` 说明"先启动音频引擎" ✓；
+    4. 判据 ✓：源码断言"按钮存在 ✓、44 px ✓、传的是**该选项的 assetId** ✓、没有播放器时是 disabled ✓"。
+  ⏳ **仍挂着的两件小事（明确记下 ✓）** ✓：**可见回执**（"正在试听 <乐器名>" ✓ —— 需要一条状态行 ✓，
+    我下一轮做，不半接 ✓）与**门控未开时的引导**（先开门再试听 ✓ —— 与 gate 那条同源 ✓）。
+  ⭐ **跑批状态 ✓**：`shard0 done=0 / shard1 done=1 / shard2 done=1` ✓（仍在跑 ✓，`--merge` 未执行 ✓）。
