@@ -25,7 +25,8 @@
       "recipeVersion": "1",
       "generatedAt": "2026-10-10",
       "recordedLanes": 3,
-      "builtInLanes": 5
+      "builtInLanes": 5,
+      "warnings": []
     },
     {
       "genreId": "bass-house",
@@ -38,7 +39,8 @@
       "recipeVersion": "1",
       "generatedAt": "2026-10-10",
       "recordedLanes": 3,
-      "builtInLanes": 5
+      "builtInLanes": 5,
+      "warnings": []
     },
     {
       "genreId": "acid-house",
@@ -51,7 +53,8 @@
       "recipeVersion": "1",
       "generatedAt": "2026-10-10",
       "recordedLanes": 3,
-      "builtInLanes": 5
+      "builtInLanes": 5,
+      "warnings": []
     },
     {
       "genreId": "afro-house",
@@ -64,7 +67,8 @@
       "recipeVersion": "1",
       "generatedAt": "2026-10-10",
       "recordedLanes": 4,
-      "builtInLanes": 4
+      "builtInLanes": 4,
+      "warnings": []
     },
     {
       "genreId": "detroit-techno",
@@ -91,7 +95,13 @@
       "recipeVersion": "1",
       "generatedAt": "2026-10-10",
       "recordedLanes": 2,
-      "builtInLanes": 6
+      "builtInLanes": 6,
+      "warnings": [
+        {
+          "code": "health:empty-lane",
+          "detail": "chords (synth) has no notes at all, so this lane is silent in the clip"
+        }
+      ]
     },
     {
       "genreId": "schranz",
@@ -104,7 +114,21 @@
       "recipeVersion": "1",
       "generatedAt": "2026-10-10",
       "recordedLanes": 2,
-      "builtInLanes": 6
+      "builtInLanes": 6,
+      "warnings": [
+        {
+          "code": "health:empty-lane",
+          "detail": "chords (synth) has no notes at all, so this lane is silent in the clip"
+        },
+        {
+          "code": "health:empty-lane",
+          "detail": "lead (synth) has no notes at all, so this lane is silent in the clip"
+        },
+        {
+          "code": "health:melody-poverty",
+          "detail": "8 melodic notes use only 2 distinct pitch(es)"
+        }
+      ]
     },
     {
       "genreId": "psytrance",
@@ -131,7 +155,8 @@
       "recipeVersion": "1",
       "generatedAt": "2026-10-10",
       "recordedLanes": 2,
-      "builtInLanes": 6
+      "builtInLanes": 6,
+      "warnings": []
     },
     {
       "genreId": "riddim",
@@ -144,7 +169,13 @@
       "recipeVersion": "1",
       "generatedAt": "2026-10-10",
       "recordedLanes": 2,
-      "builtInLanes": 6
+      "builtInLanes": 6,
+      "warnings": [
+        {
+          "code": "health:empty-lane",
+          "detail": "chords (synth) has no notes at all, so this lane is silent in the clip"
+        }
+      ]
     },
     {
       "genreId": "post-dubstep",
@@ -157,7 +188,8 @@
       "recipeVersion": "1",
       "generatedAt": "2026-10-10",
       "recordedLanes": 4,
-      "builtInLanes": 4
+      "builtInLanes": 4,
+      "warnings": []
     },
     {
       "genreId": "deathstep",
@@ -170,7 +202,13 @@
       "recipeVersion": "1",
       "generatedAt": "2026-10-10",
       "recordedLanes": 4,
-      "builtInLanes": 4
+      "builtInLanes": 4,
+      "warnings": [
+        {
+          "code": "health:empty-lane",
+          "detail": "chords (synth) has no notes at all, so this lane is silent in the clip"
+        }
+      ]
     },
     {
       "genreId": "neurofunk",
@@ -183,7 +221,8 @@
       "recipeVersion": "1",
       "generatedAt": "2026-10-10",
       "recordedLanes": 3,
-      "builtInLanes": 5
+      "builtInLanes": 5,
+      "warnings": []
     },
     {
       "genreId": "halftime",
@@ -196,7 +235,8 @@
       "recipeVersion": "1",
       "generatedAt": "2026-10-10",
       "recordedLanes": 2,
-      "builtInLanes": 6
+      "builtInLanes": 6,
+      "warnings": []
     },
     {
       "genreId": "sambass",
@@ -209,7 +249,8 @@
       "recipeVersion": "1",
       "generatedAt": "2026-10-10",
       "recordedLanes": 7,
-      "builtInLanes": 1
+      "builtInLanes": 1,
+      "warnings": []
     },
     {
       "genreId": "speed-garage",
@@ -222,7 +263,8 @@
       "recipeVersion": "1",
       "generatedAt": "2026-10-10",
       "recordedLanes": 3,
-      "builtInLanes": 5
+      "builtInLanes": 5,
+      "warnings": []
     },
     {
       "genreId": "uk-funky",
@@ -235,7 +277,8 @@
       "recipeVersion": "1",
       "generatedAt": "2026-10-10",
       "recordedLanes": 5,
-      "builtInLanes": 3
+      "builtInLanes": 3,
+      "warnings": []
     },
     {
       "genreId": "edm-trap",
@@ -248,7 +291,8 @@
       "recipeVersion": "1",
       "generatedAt": "2026-10-10",
       "recordedLanes": 2,
-      "builtInLanes": 6
+      "builtInLanes": 6,
+      "warnings": []
     },
     {
       "genreId": "brooklyn-drill",
@@ -261,7 +305,8 @@
       "recipeVersion": "1",
       "generatedAt": "2026-10-10",
       "recordedLanes": 4,
-      "builtInLanes": 4
+      "builtInLanes": 4,
+      "warnings": []
     },
     {
       "genreId": "kawaii-future-bass",
@@ -274,7 +319,8 @@
       "recipeVersion": "1",
       "generatedAt": "2026-10-10",
       "recordedLanes": 4,
-      "builtInLanes": 4
+      "builtInLanes": 4,
+      "warnings": []
     },
     {
       "genreId": "chillwave",
@@ -287,7 +333,8 @@
       "recipeVersion": "1",
       "generatedAt": "2026-10-10",
       "recordedLanes": 2,
-      "builtInLanes": 6
+      "builtInLanes": 6,
+      "warnings": []
     },
     {
       "genreId": "glitch-hop",
@@ -300,7 +347,8 @@
       "recipeVersion": "1",
       "generatedAt": "2026-10-10",
       "recordedLanes": 3,
-      "builtInLanes": 5
+      "builtInLanes": 5,
+      "warnings": []
     },
     {
       "genreId": "ambient-dub",
@@ -327,7 +375,13 @@
       "recipeVersion": "1",
       "generatedAt": "2026-10-10",
       "recordedLanes": 2,
-      "builtInLanes": 6
+      "builtInLanes": 6,
+      "warnings": [
+        {
+          "code": "health:empty-lane",
+          "detail": "chords (synth) has no notes at all, so this lane is silent in the clip"
+        }
+      ]
     },
     {
       "genreId": "electro",
@@ -340,7 +394,13 @@
       "recipeVersion": "1",
       "generatedAt": "2026-10-10",
       "recordedLanes": 2,
-      "builtInLanes": 6
+      "builtInLanes": 6,
+      "warnings": [
+        {
+          "code": "health:empty-lane",
+          "detail": "chords (synth) has no notes at all, so this lane is silent in the clip"
+        }
+      ]
     },
     {
       "genreId": "rock-and-roll",
@@ -353,7 +413,8 @@
       "recipeVersion": "1",
       "generatedAt": "2026-10-10",
       "recordedLanes": 7,
-      "builtInLanes": 1
+      "builtInLanes": 1,
+      "warnings": []
     },
     {
       "genreId": "punk-rock",
@@ -366,7 +427,13 @@
       "recipeVersion": "1",
       "generatedAt": "2026-10-10",
       "recordedLanes": 7,
-      "builtInLanes": 1
+      "builtInLanes": 1,
+      "warnings": [
+        {
+          "code": "health:empty-lane",
+          "detail": "percussion (drumkit) has no notes at all, so this lane is silent in the clip"
+        }
+      ]
     },
     {
       "genreId": "heavy-metal",
@@ -379,7 +446,8 @@
       "recipeVersion": "1",
       "generatedAt": "2026-10-10",
       "recordedLanes": 7,
-      "builtInLanes": 1
+      "builtInLanes": 1,
+      "warnings": []
     },
     {
       "genreId": "black-metal",
@@ -398,6 +466,14 @@
         {
           "code": "skipped-lanes",
           "detail": "2 lane(s) had nothing to resolve and are not in the clip"
+        },
+        {
+          "code": "health:empty-lane",
+          "detail": "percussion (drumkit) has no notes at all, so this lane is silent in the clip"
+        },
+        {
+          "code": "health:empty-lane",
+          "detail": "lead (synth) has no notes at all, so this lane is silent in the clip"
         }
       ]
     },
@@ -412,7 +488,8 @@
       "recipeVersion": "1",
       "generatedAt": "2026-10-10",
       "recordedLanes": 7,
-      "builtInLanes": 1
+      "builtInLanes": 1,
+      "warnings": []
     },
     {
       "genreId": "math-rock",
@@ -425,7 +502,8 @@
       "recipeVersion": "1",
       "generatedAt": "2026-10-10",
       "recordedLanes": 6,
-      "builtInLanes": 2
+      "builtInLanes": 2,
+      "warnings": []
     },
     {
       "genreId": "boom-bap",
@@ -438,7 +516,8 @@
       "recipeVersion": "1",
       "generatedAt": "2026-10-10",
       "recordedLanes": 7,
-      "builtInLanes": 1
+      "builtInLanes": 1,
+      "warnings": []
     },
     {
       "genreId": "conscious-hip-hop",
@@ -451,7 +530,8 @@
       "recipeVersion": "1",
       "generatedAt": "2026-10-10",
       "recordedLanes": 7,
-      "builtInLanes": 1
+      "builtInLanes": 1,
+      "warnings": []
     },
     {
       "genreId": "east-coast-hip-hop",
@@ -464,7 +544,8 @@
       "recipeVersion": "1",
       "generatedAt": "2026-10-10",
       "recordedLanes": 7,
-      "builtInLanes": 1
+      "builtInLanes": 1,
+      "warnings": []
     },
     {
       "genreId": "cloud-rap",
@@ -477,7 +558,8 @@
       "recipeVersion": "1",
       "generatedAt": "2026-10-10",
       "recordedLanes": 2,
-      "builtInLanes": 6
+      "builtInLanes": 6,
+      "warnings": []
     },
     {
       "genreId": "texas-blues",
@@ -490,7 +572,8 @@
       "recipeVersion": "1",
       "generatedAt": "2026-10-10",
       "recordedLanes": 7,
-      "builtInLanes": 1
+      "builtInLanes": 1,
+      "warnings": []
     },
     {
       "genreId": "bebop",
@@ -503,7 +586,8 @@
       "recipeVersion": "1",
       "generatedAt": "2026-10-10",
       "recordedLanes": 7,
-      "builtInLanes": 1
+      "builtInLanes": 1,
+      "warnings": []
     },
     {
       "genreId": "modal-jazz",
@@ -536,7 +620,8 @@
       "recipeVersion": "1",
       "generatedAt": "2026-10-10",
       "recordedLanes": 6,
-      "builtInLanes": 2
+      "builtInLanes": 2,
+      "warnings": []
     },
     {
       "genreId": "traditional-pop",
@@ -549,7 +634,8 @@
       "recipeVersion": "1",
       "generatedAt": "2026-10-10",
       "recordedLanes": 6,
-      "builtInLanes": 2
+      "builtInLanes": 2,
+      "warnings": []
     },
     {
       "genreId": "eurodance",
@@ -562,7 +648,8 @@
       "recipeVersion": "1",
       "generatedAt": "2026-10-10",
       "recordedLanes": 4,
-      "builtInLanes": 4
+      "builtInLanes": 4,
+      "warnings": []
     },
     {
       "genreId": "motown",
@@ -575,7 +662,8 @@
       "recipeVersion": "1",
       "generatedAt": "2026-10-10",
       "recordedLanes": 7,
-      "builtInLanes": 1
+      "builtInLanes": 1,
+      "warnings": []
     },
     {
       "genreId": "j-pop",
@@ -608,7 +696,8 @@
       "recipeVersion": "1",
       "generatedAt": "2026-10-10",
       "recordedLanes": 6,
-      "builtInLanes": 2
+      "builtInLanes": 2,
+      "warnings": []
     },
     {
       "genreId": "afrobeat",
@@ -621,7 +710,8 @@
       "recipeVersion": "1",
       "generatedAt": "2026-10-10",
       "recordedLanes": 7,
-      "builtInLanes": 1
+      "builtInLanes": 1,
+      "warnings": []
     },
     {
       "genreId": "samba",
@@ -634,7 +724,8 @@
       "recipeVersion": "1",
       "generatedAt": "2026-10-10",
       "recordedLanes": 7,
-      "builtInLanes": 1
+      "builtInLanes": 1,
+      "warnings": []
     },
     {
       "genreId": "deep-house",
@@ -647,7 +738,8 @@
       "recipeVersion": "1",
       "generatedAt": "2026-10-10",
       "recordedLanes": 3,
-      "builtInLanes": 5
+      "builtInLanes": 5,
+      "warnings": []
     },
     {
       "genreId": "progressive-house",
@@ -660,7 +752,8 @@
       "recipeVersion": "1",
       "generatedAt": "2026-10-10",
       "recordedLanes": 3,
-      "builtInLanes": 5
+      "builtInLanes": 5,
+      "warnings": []
     },
     {
       "genreId": "ghetto-house",
@@ -673,7 +766,13 @@
       "recipeVersion": "1",
       "generatedAt": "2026-10-10",
       "recordedLanes": 3,
-      "builtInLanes": 5
+      "builtInLanes": 5,
+      "warnings": [
+        {
+          "code": "health:empty-lane",
+          "detail": "chords (synth) has no notes at all, so this lane is silent in the clip"
+        }
+      ]
     },
     {
       "genreId": "french-house",
@@ -686,7 +785,8 @@
       "recipeVersion": "1",
       "generatedAt": "2026-10-10",
       "recordedLanes": 4,
-      "builtInLanes": 4
+      "builtInLanes": 4,
+      "warnings": []
     },
     {
       "genreId": "nu-disco-house",
@@ -699,7 +799,8 @@
       "recipeVersion": "1",
       "generatedAt": "2026-10-10",
       "recordedLanes": 5,
-      "builtInLanes": 3
+      "builtInLanes": 3,
+      "warnings": []
     },
     {
       "genreId": "industrial-techno",
@@ -712,7 +813,13 @@
       "recipeVersion": "1",
       "generatedAt": "2026-10-10",
       "recordedLanes": 2,
-      "builtInLanes": 6
+      "builtInLanes": 6,
+      "warnings": [
+        {
+          "code": "health:empty-lane",
+          "detail": "chords (synth) has no notes at all, so this lane is silent in the clip"
+        }
+      ]
     },
     {
       "genreId": "dubstep",
@@ -725,7 +832,8 @@
       "recipeVersion": "1",
       "generatedAt": "2026-10-10",
       "recordedLanes": 2,
-      "builtInLanes": 6
+      "builtInLanes": 6,
+      "warnings": []
     },
     {
       "genreId": "melodic-dubstep",
@@ -738,7 +846,8 @@
       "recipeVersion": "1",
       "generatedAt": "2026-10-10",
       "recordedLanes": 3,
-      "builtInLanes": 5
+      "builtInLanes": 5,
+      "warnings": []
     },
     {
       "genreId": "tearout-dubstep",
@@ -751,7 +860,13 @@
       "recipeVersion": "1",
       "generatedAt": "2026-10-10",
       "recordedLanes": 2,
-      "builtInLanes": 6
+      "builtInLanes": 6,
+      "warnings": [
+        {
+          "code": "health:empty-lane",
+          "detail": "chords (synth) has no notes at all, so this lane is silent in the clip"
+        }
+      ]
     },
     {
       "genreId": "jungle",
@@ -764,7 +879,8 @@
       "recipeVersion": "1",
       "generatedAt": "2026-10-10",
       "recordedLanes": 4,
-      "builtInLanes": 4
+      "builtInLanes": 4,
+      "warnings": []
     },
     {
       "genreId": "jump-up",
@@ -777,7 +893,8 @@
       "recipeVersion": "1",
       "generatedAt": "2026-10-10",
       "recordedLanes": 3,
-      "builtInLanes": 5
+      "builtInLanes": 5,
+      "warnings": []
     },
     {
       "genreId": "breakcore",
@@ -790,7 +907,8 @@
       "recipeVersion": "1",
       "generatedAt": "2026-10-10",
       "recordedLanes": 3,
-      "builtInLanes": 5
+      "builtInLanes": 5,
+      "warnings": []
     },
     {
       "genreId": "uk-garage",
@@ -803,7 +921,8 @@
       "recipeVersion": "1",
       "generatedAt": "2026-10-10",
       "recordedLanes": 5,
-      "builtInLanes": 3
+      "builtInLanes": 3,
+      "warnings": []
     },
     {
       "genreId": "grime",
@@ -816,7 +935,13 @@
       "recipeVersion": "1",
       "generatedAt": "2026-10-10",
       "recordedLanes": 3,
-      "builtInLanes": 5
+      "builtInLanes": 5,
+      "warnings": [
+        {
+          "code": "health:empty-lane",
+          "detail": "chords (synth) has no notes at all, so this lane is silent in the clip"
+        }
+      ]
     },
     {
       "genreId": "dub",
@@ -829,7 +954,8 @@
       "recipeVersion": "1",
       "generatedAt": "2026-10-10",
       "recordedLanes": 5,
-      "builtInLanes": 3
+      "builtInLanes": 3,
+      "warnings": []
     },
     {
       "genreId": "hard-trap",
@@ -842,7 +968,13 @@
       "recipeVersion": "1",
       "generatedAt": "2026-10-10",
       "recordedLanes": 2,
-      "builtInLanes": 6
+      "builtInLanes": 6,
+      "warnings": [
+        {
+          "code": "health:empty-lane",
+          "detail": "chords (synth) has no notes at all, so this lane is silent in the clip"
+        }
+      ]
     },
     {
       "genreId": "jersey-drill",
@@ -859,7 +991,7 @@
       "warnings": [
         {
           "code": "length-out-of-range",
-          "detail": "48.6s is outside the owner's 15\u201330s window"
+          "detail": "48.6s is outside the owner's 15–30s window"
         }
       ]
     },
@@ -874,7 +1006,8 @@
       "recipeVersion": "1",
       "generatedAt": "2026-10-10",
       "recordedLanes": 3,
-      "builtInLanes": 5
+      "builtInLanes": 5,
+      "warnings": []
     },
     {
       "genreId": "downtempo",
@@ -887,7 +1020,8 @@
       "recipeVersion": "1",
       "generatedAt": "2026-10-10",
       "recordedLanes": 7,
-      "builtInLanes": 1
+      "builtInLanes": 1,
+      "warnings": []
     },
     {
       "genreId": "idm",
@@ -900,7 +1034,8 @@
       "recipeVersion": "1",
       "generatedAt": "2026-10-10",
       "recordedLanes": 3,
-      "builtInLanes": 5
+      "builtInLanes": 5,
+      "warnings": []
     },
     {
       "genreId": "lofi-house",
@@ -913,7 +1048,8 @@
       "recipeVersion": "1",
       "generatedAt": "2026-10-10",
       "recordedLanes": 4,
-      "builtInLanes": 4
+      "builtInLanes": 4,
+      "warnings": []
     },
     {
       "genreId": "hardcore-gabber",
@@ -926,7 +1062,13 @@
       "recipeVersion": "1",
       "generatedAt": "2026-10-10",
       "recordedLanes": 2,
-      "builtInLanes": 6
+      "builtInLanes": 6,
+      "warnings": [
+        {
+          "code": "health:empty-lane",
+          "detail": "chords (synth) has no notes at all, so this lane is silent in the clip"
+        }
+      ]
     },
     {
       "genreId": "moombahton",
@@ -939,7 +1081,8 @@
       "recipeVersion": "1",
       "generatedAt": "2026-10-10",
       "recordedLanes": 3,
-      "builtInLanes": 5
+      "builtInLanes": 5,
+      "warnings": []
     },
     {
       "genreId": "phonk",
@@ -952,7 +1095,8 @@
       "recipeVersion": "1",
       "generatedAt": "2026-10-10",
       "recordedLanes": 3,
-      "builtInLanes": 5
+      "builtInLanes": 5,
+      "warnings": []
     },
     {
       "genreId": "breakbeat",
@@ -965,7 +1109,8 @@
       "recipeVersion": "1",
       "generatedAt": "2026-10-10",
       "recordedLanes": 4,
-      "builtInLanes": 4
+      "builtInLanes": 4,
+      "warnings": []
     },
     {
       "genreId": "post-punk",
@@ -978,7 +1123,8 @@
       "recipeVersion": "1",
       "generatedAt": "2026-10-10",
       "recordedLanes": 6,
-      "builtInLanes": 2
+      "builtInLanes": 2,
+      "warnings": []
     },
     {
       "genreId": "thrash-metal",
@@ -991,7 +1137,13 @@
       "recipeVersion": "1",
       "generatedAt": "2026-10-10",
       "recordedLanes": 6,
-      "builtInLanes": 2
+      "builtInLanes": 2,
+      "warnings": [
+        {
+          "code": "health:empty-lane",
+          "detail": "percussion (drumkit) has no notes at all, so this lane is silent in the clip"
+        }
+      ]
     },
     {
       "genreId": "doom-metal",
@@ -1004,7 +1156,13 @@
       "recipeVersion": "1",
       "generatedAt": "2026-10-10",
       "recordedLanes": 7,
-      "builtInLanes": 1
+      "builtInLanes": 1,
+      "warnings": [
+        {
+          "code": "health:empty-lane",
+          "detail": "percussion (drumkit) has no notes at all, so this lane is silent in the clip"
+        }
+      ]
     },
     {
       "genreId": "alternative-rock",
@@ -1017,7 +1175,8 @@
       "recipeVersion": "1",
       "generatedAt": "2026-10-10",
       "recordedLanes": 7,
-      "builtInLanes": 1
+      "builtInLanes": 1,
+      "warnings": []
     },
     {
       "genreId": "shoe-gaze",
@@ -1030,7 +1189,8 @@
       "recipeVersion": "1",
       "generatedAt": "2026-10-10",
       "recordedLanes": 7,
-      "builtInLanes": 1
+      "builtInLanes": 1,
+      "warnings": []
     },
     {
       "genreId": "g-funk",
@@ -1043,7 +1203,8 @@
       "recipeVersion": "1",
       "generatedAt": "2026-10-10",
       "recordedLanes": 4,
-      "builtInLanes": 4
+      "builtInLanes": 4,
+      "warnings": []
     },
     {
       "genreId": "emo-rap",
@@ -1056,7 +1217,8 @@
       "recipeVersion": "1",
       "generatedAt": "2026-10-10",
       "recordedLanes": 3,
-      "builtInLanes": 5
+      "builtInLanes": 5,
+      "warnings": []
     },
     {
       "genreId": "west-coast-hip-hop",
@@ -1075,6 +1237,10 @@
         {
           "code": "skipped-lanes",
           "detail": "1 lane(s) had nothing to resolve and are not in the clip"
+        },
+        {
+          "code": "health:empty-lane",
+          "detail": "chords (synth) has no notes at all, so this lane is silent in the clip"
         }
       ]
     },
@@ -1089,7 +1255,17 @@
       "recipeVersion": "1",
       "generatedAt": "2026-10-10",
       "recordedLanes": 7,
-      "builtInLanes": 1
+      "builtInLanes": 1,
+      "warnings": [
+        {
+          "code": "health:empty-lane",
+          "detail": "snare (drumkit) has no notes at all, so this lane is silent in the clip"
+        },
+        {
+          "code": "health:empty-lane",
+          "detail": "hihat (drumkit) has no notes at all, so this lane is silent in the clip"
+        }
+      ]
     },
     {
       "genreId": "electric-blues",
@@ -1102,7 +1278,8 @@
       "recipeVersion": "1",
       "generatedAt": "2026-10-10",
       "recordedLanes": 7,
-      "builtInLanes": 1
+      "builtInLanes": 1,
+      "warnings": []
     },
     {
       "genreId": "hard-bop",
@@ -1135,7 +1312,8 @@
       "recipeVersion": "1",
       "generatedAt": "2026-10-10",
       "recordedLanes": 7,
-      "builtInLanes": 1
+      "builtInLanes": 1,
+      "warnings": []
     },
     {
       "genreId": "acid-jazz",
@@ -1148,7 +1326,8 @@
       "recipeVersion": "1",
       "generatedAt": "2026-10-10",
       "recordedLanes": 5,
-      "builtInLanes": 3
+      "builtInLanes": 3,
+      "warnings": []
     },
     {
       "genreId": "synth-pop",
@@ -1161,7 +1340,8 @@
       "recipeVersion": "1",
       "generatedAt": "2026-10-10",
       "recordedLanes": 3,
-      "builtInLanes": 5
+      "builtInLanes": 5,
+      "warnings": []
     },
     {
       "genreId": "funk",
@@ -1174,7 +1354,8 @@
       "recipeVersion": "1",
       "generatedAt": "2026-10-10",
       "recordedLanes": 5,
-      "builtInLanes": 3
+      "builtInLanes": 3,
+      "warnings": []
     },
     {
       "genreId": "contemporary-rnb",
@@ -1187,7 +1368,8 @@
       "recipeVersion": "1",
       "generatedAt": "2026-10-10",
       "recordedLanes": 3,
-      "builtInLanes": 5
+      "builtInLanes": 5,
+      "warnings": []
     },
     {
       "genreId": "city-pop",
@@ -1200,7 +1382,8 @@
       "recipeVersion": "1",
       "generatedAt": "2026-10-10",
       "recordedLanes": 5,
-      "builtInLanes": 3
+      "builtInLanes": 3,
+      "warnings": []
     },
     {
       "genreId": "salsa",
@@ -1213,7 +1396,8 @@
       "recipeVersion": "1",
       "generatedAt": "2026-10-10",
       "recordedLanes": 7,
-      "builtInLanes": 1
+      "builtInLanes": 1,
+      "warnings": []
     },
     {
       "genreId": "dancehall",
@@ -1226,7 +1410,8 @@
       "recipeVersion": "1",
       "generatedAt": "2026-10-10",
       "recordedLanes": 4,
-      "builtInLanes": 4
+      "builtInLanes": 4,
+      "warnings": []
     },
     {
       "genreId": "cumbia",
@@ -1239,7 +1424,8 @@
       "recipeVersion": "1",
       "generatedAt": "2026-10-10",
       "recordedLanes": 7,
-      "builtInLanes": 1
+      "builtInLanes": 1,
+      "warnings": []
     },
     {
       "genreId": "tech-house",
@@ -1252,7 +1438,8 @@
       "recipeVersion": "1",
       "generatedAt": "2026-10-10",
       "recordedLanes": 3,
-      "builtInLanes": 5
+      "builtInLanes": 5,
+      "warnings": []
     },
     {
       "genreId": "electro-house",
@@ -1265,7 +1452,8 @@
       "recipeVersion": "1",
       "generatedAt": "2026-10-10",
       "recordedLanes": 2,
-      "builtInLanes": 6
+      "builtInLanes": 6,
+      "warnings": []
     },
     {
       "genreId": "tropical-house",
@@ -1278,7 +1466,8 @@
       "recipeVersion": "1",
       "generatedAt": "2026-10-10",
       "recordedLanes": 4,
-      "builtInLanes": 4
+      "builtInLanes": 4,
+      "warnings": []
     },
     {
       "genreId": "microhouse",
@@ -1311,7 +1500,13 @@
       "recipeVersion": "1",
       "generatedAt": "2026-10-10",
       "recordedLanes": 3,
-      "builtInLanes": 5
+      "builtInLanes": 5,
+      "warnings": [
+        {
+          "code": "health:empty-lane",
+          "detail": "chords (synth) has no notes at all, so this lane is silent in the clip"
+        }
+      ]
     },
     {
       "genreId": "raw-techno",
@@ -1324,7 +1519,13 @@
       "recipeVersion": "1",
       "generatedAt": "2026-10-10",
       "recordedLanes": 3,
-      "builtInLanes": 5
+      "builtInLanes": 5,
+      "warnings": [
+        {
+          "code": "health:empty-lane",
+          "detail": "chords (synth) has no notes at all, so this lane is silent in the clip"
+        }
+      ]
     },
     {
       "genreId": "tech-trance",
@@ -1337,7 +1538,13 @@
       "recipeVersion": "1",
       "generatedAt": "2026-10-10",
       "recordedLanes": 2,
-      "builtInLanes": 6
+      "builtInLanes": 6,
+      "warnings": [
+        {
+          "code": "health:empty-lane",
+          "detail": "chords (synth) has no notes at all, so this lane is silent in the clip"
+        }
+      ]
     },
     {
       "genreId": "brostep",
@@ -1350,7 +1557,8 @@
       "recipeVersion": "1",
       "generatedAt": "2026-10-10",
       "recordedLanes": 3,
-      "builtInLanes": 5
+      "builtInLanes": 5,
+      "warnings": []
     },
     {
       "genreId": "future-garage",
@@ -1363,7 +1571,8 @@
       "recipeVersion": "1",
       "generatedAt": "2026-10-10",
       "recordedLanes": 3,
-      "builtInLanes": 5
+      "builtInLanes": 5,
+      "warnings": []
     },
     {
       "genreId": "chillstep",
@@ -1376,7 +1585,8 @@
       "recipeVersion": "1",
       "generatedAt": "2026-10-10",
       "recordedLanes": 3,
-      "builtInLanes": 5
+      "builtInLanes": 5,
+      "warnings": []
     },
     {
       "genreId": "liquid-dnb",
@@ -1389,7 +1599,8 @@
       "recipeVersion": "1",
       "generatedAt": "2026-10-10",
       "recordedLanes": 4,
-      "builtInLanes": 4
+      "builtInLanes": 4,
+      "warnings": []
     },
     {
       "genreId": "techstep",
@@ -1402,7 +1613,8 @@
       "recipeVersion": "1",
       "generatedAt": "2026-10-10",
       "recordedLanes": 2,
-      "builtInLanes": 6
+      "builtInLanes": 6,
+      "warnings": []
     },
     {
       "genreId": "ragga-jungle",
@@ -1415,7 +1627,8 @@
       "recipeVersion": "1",
       "generatedAt": "2026-10-10",
       "recordedLanes": 3,
-      "builtInLanes": 5
+      "builtInLanes": 5,
+      "warnings": []
     },
     {
       "genreId": "2-step-garage",
@@ -1428,7 +1641,8 @@
       "recipeVersion": "1",
       "generatedAt": "2026-10-10",
       "recordedLanes": 3,
-      "builtInLanes": 5
+      "builtInLanes": 5,
+      "warnings": []
     },
     {
       "genreId": "bassline",
@@ -1441,7 +1655,8 @@
       "recipeVersion": "1",
       "generatedAt": "2026-10-10",
       "recordedLanes": 3,
-      "builtInLanes": 5
+      "builtInLanes": 5,
+      "warnings": []
     },
     {
       "genreId": "speedbass",
@@ -1454,7 +1669,8 @@
       "recipeVersion": "1",
       "generatedAt": "2026-10-10",
       "recordedLanes": 3,
-      "builtInLanes": 5
+      "builtInLanes": 5,
+      "warnings": []
     },
     {
       "genreId": "hybrid-trap",
@@ -1467,7 +1683,8 @@
       "recipeVersion": "1",
       "generatedAt": "2026-10-10",
       "recordedLanes": 3,
-      "builtInLanes": 5
+      "builtInLanes": 5,
+      "warnings": []
     },
     {
       "genreId": "uk-drill",
@@ -1480,7 +1697,8 @@
       "recipeVersion": "1",
       "generatedAt": "2026-10-10",
       "recordedLanes": 3,
-      "builtInLanes": 5
+      "builtInLanes": 5,
+      "warnings": []
     },
     {
       "genreId": "future-bass",
@@ -1493,7 +1711,8 @@
       "recipeVersion": "1",
       "generatedAt": "2026-10-10",
       "recordedLanes": 2,
-      "builtInLanes": 6
+      "builtInLanes": 6,
+      "warnings": []
     },
     {
       "genreId": "trip-hop",
@@ -1506,7 +1725,8 @@
       "recipeVersion": "1",
       "generatedAt": "2026-10-10",
       "recordedLanes": 4,
-      "builtInLanes": 4
+      "builtInLanes": 4,
+      "warnings": []
     },
     {
       "genreId": "ambient",
@@ -1519,7 +1739,25 @@
       "recipeVersion": "1",
       "generatedAt": "2026-10-10",
       "recordedLanes": 3,
-      "builtInLanes": 5
+      "builtInLanes": 5,
+      "warnings": [
+        {
+          "code": "health:empty-lane",
+          "detail": "kick (drumkit) has no notes at all, so this lane is silent in the clip"
+        },
+        {
+          "code": "health:empty-lane",
+          "detail": "snare (drumkit) has no notes at all, so this lane is silent in the clip"
+        },
+        {
+          "code": "health:empty-lane",
+          "detail": "hihat (drumkit) has no notes at all, so this lane is silent in the clip"
+        },
+        {
+          "code": "health:empty-lane",
+          "detail": "percussion (drumkit) has no notes at all, so this lane is silent in the clip"
+        }
+      ]
     },
     {
       "genreId": "chiptune",
@@ -1532,7 +1770,8 @@
       "recipeVersion": "1",
       "generatedAt": "2026-10-10",
       "recordedLanes": 2,
-      "builtInLanes": 6
+      "builtInLanes": 6,
+      "warnings": []
     },
     {
       "genreId": "frenchcore",
@@ -1545,7 +1784,8 @@
       "recipeVersion": "1",
       "generatedAt": "2026-10-10",
       "recordedLanes": 3,
-      "builtInLanes": 5
+      "builtInLanes": 5,
+      "warnings": []
     },
     {
       "genreId": "jersey-club",
@@ -1558,7 +1798,8 @@
       "recipeVersion": "1",
       "generatedAt": "2026-10-10",
       "recordedLanes": 3,
-      "builtInLanes": 5
+      "builtInLanes": 5,
+      "warnings": []
     },
     {
       "genreId": "drift-phonk",
@@ -1571,7 +1812,13 @@
       "recipeVersion": "1",
       "generatedAt": "2026-10-10",
       "recordedLanes": 2,
-      "builtInLanes": 6
+      "builtInLanes": 6,
+      "warnings": [
+        {
+          "code": "health:empty-lane",
+          "detail": "chords (synth) has no notes at all, so this lane is silent in the clip"
+        }
+      ]
     },
     {
       "genreId": "big-beat",
@@ -1584,7 +1831,8 @@
       "recipeVersion": "1",
       "generatedAt": "2026-10-10",
       "recordedLanes": 4,
-      "builtInLanes": 4
+      "builtInLanes": 4,
+      "warnings": []
     },
     {
       "genreId": "hard-rock",
@@ -1597,7 +1845,8 @@
       "recipeVersion": "1",
       "generatedAt": "2026-10-10",
       "recordedLanes": 7,
-      "builtInLanes": 1
+      "builtInLanes": 1,
+      "warnings": []
     },
     {
       "genreId": "new-wave",
@@ -1610,7 +1859,8 @@
       "recipeVersion": "1",
       "generatedAt": "2026-10-10",
       "recordedLanes": 3,
-      "builtInLanes": 5
+      "builtInLanes": 5,
+      "warnings": []
     },
     {
       "genreId": "death-metal",
@@ -1629,6 +1879,14 @@
         {
           "code": "skipped-lanes",
           "detail": "1 lane(s) had nothing to resolve and are not in the clip"
+        },
+        {
+          "code": "health:empty-lane",
+          "detail": "percussion (drumkit) has no notes at all, so this lane is silent in the clip"
+        },
+        {
+          "code": "health:empty-lane",
+          "detail": "chords (synth) has no notes at all, so this lane is silent in the clip"
         }
       ]
     },
@@ -1649,6 +1907,10 @@
         {
           "code": "skipped-lanes",
           "detail": "1 lane(s) had nothing to resolve and are not in the clip"
+        },
+        {
+          "code": "health:empty-lane",
+          "detail": "lead (synth) has no notes at all, so this lane is silent in the clip"
         }
       ]
     },
@@ -1663,7 +1925,13 @@
       "recipeVersion": "1",
       "generatedAt": "2026-10-10",
       "recordedLanes": 3,
-      "builtInLanes": 5
+      "builtInLanes": 5,
+      "warnings": [
+        {
+          "code": "health:empty-lane",
+          "detail": "chords (synth) has no notes at all, so this lane is silent in the clip"
+        }
+      ]
     },
     {
       "genreId": "trap-rap",
@@ -1676,7 +1944,8 @@
       "recipeVersion": "1",
       "generatedAt": "2026-10-10",
       "recordedLanes": 3,
-      "builtInLanes": 5
+      "builtInLanes": 5,
+      "warnings": []
     },
     {
       "genreId": "lofi-hip-hop",
@@ -1689,7 +1958,8 @@
       "recipeVersion": "1",
       "generatedAt": "2026-10-10",
       "recordedLanes": 3,
-      "builtInLanes": 5
+      "builtInLanes": 5,
+      "warnings": []
     },
     {
       "genreId": "southern-hip-hop",
@@ -1702,7 +1972,8 @@
       "recipeVersion": "1",
       "generatedAt": "2026-10-10",
       "recordedLanes": 3,
-      "builtInLanes": 5
+      "builtInLanes": 5,
+      "warnings": []
     },
     {
       "genreId": "chicago-blues",
@@ -1715,7 +1986,8 @@
       "recipeVersion": "1",
       "generatedAt": "2026-10-10",
       "recordedLanes": 7,
-      "builtInLanes": 1
+      "builtInLanes": 1,
+      "warnings": []
     },
     {
       "genreId": "traditional-jazz",
@@ -1728,7 +2000,8 @@
       "recipeVersion": "1",
       "generatedAt": "2026-10-10",
       "recordedLanes": 7,
-      "builtInLanes": 1
+      "builtInLanes": 1,
+      "warnings": []
     },
     {
       "genreId": "cool-jazz",
@@ -1741,7 +2014,8 @@
       "recipeVersion": "1",
       "generatedAt": "2026-10-10",
       "recordedLanes": 6,
-      "builtInLanes": 2
+      "builtInLanes": 2,
+      "warnings": []
     },
     {
       "genreId": "jazz-fusion",
@@ -1754,7 +2028,8 @@
       "recipeVersion": "1",
       "generatedAt": "2026-10-10",
       "recordedLanes": 5,
-      "builtInLanes": 3
+      "builtInLanes": 3,
+      "warnings": []
     },
     {
       "genreId": "gypsy-jazz",
@@ -1767,7 +2042,17 @@
       "recipeVersion": "1",
       "generatedAt": "2026-10-10",
       "recordedLanes": 7,
-      "builtInLanes": 1
+      "builtInLanes": 1,
+      "warnings": [
+        {
+          "code": "health:empty-lane",
+          "detail": "snare (drumkit) has no notes at all, so this lane is silent in the clip"
+        },
+        {
+          "code": "health:empty-lane",
+          "detail": "hihat (drumkit) has no notes at all, so this lane is silent in the clip"
+        }
+      ]
     },
     {
       "genreId": "disco",
@@ -1780,7 +2065,8 @@
       "recipeVersion": "1",
       "generatedAt": "2026-10-10",
       "recordedLanes": 5,
-      "builtInLanes": 3
+      "builtInLanes": 3,
+      "warnings": []
     },
     {
       "genreId": "soul",
@@ -1793,7 +2079,8 @@
       "recipeVersion": "1",
       "generatedAt": "2026-10-10",
       "recordedLanes": 7,
-      "builtInLanes": 1
+      "builtInLanes": 1,
+      "warnings": []
     },
     {
       "genreId": "alternative-rnb",
@@ -1806,7 +2093,8 @@
       "recipeVersion": "1",
       "generatedAt": "2026-10-10",
       "recordedLanes": 2,
-      "builtInLanes": 6
+      "builtInLanes": 6,
+      "warnings": []
     },
     {
       "genreId": "k-pop",
@@ -1819,7 +2107,8 @@
       "recipeVersion": "1",
       "generatedAt": "2026-10-10",
       "recordedLanes": 3,
-      "builtInLanes": 5
+      "builtInLanes": 5,
+      "warnings": []
     },
     {
       "genreId": "bachata",
@@ -1832,7 +2121,8 @@
       "recipeVersion": "1",
       "generatedAt": "2026-10-10",
       "recordedLanes": 7,
-      "builtInLanes": 1
+      "builtInLanes": 1,
+      "warnings": []
     },
     {
       "genreId": "reggaeton",
@@ -1845,7 +2135,8 @@
       "recipeVersion": "1",
       "generatedAt": "2026-10-10",
       "recordedLanes": 4,
-      "builtInLanes": 4
+      "builtInLanes": 4,
+      "warnings": []
     },
     {
       "genreId": "bossa-nova",
@@ -1858,7 +2149,8 @@
       "recipeVersion": "1",
       "generatedAt": "2026-10-10",
       "recordedLanes": 6,
-      "builtInLanes": 2
+      "builtInLanes": 2,
+      "warnings": []
     },
     {
       "genreId": "kuduro",
@@ -1871,7 +2163,8 @@
       "recipeVersion": "1",
       "generatedAt": "2026-10-10",
       "recordedLanes": 3,
-      "builtInLanes": 5
+      "builtInLanes": 5,
+      "warnings": []
     }
   ]
 }
