@@ -92,6 +92,8 @@ const flag = (name, fallback) => {
   return at === -1 ? fallback : args[at + 1];
 };
 const OUT = flag("out", "dist-clips");
+const MERGE = args.includes("--merge");
+const PART = `${OUT}/manifest-${shardIndex}.json`;
 const ONLY = flag("only", undefined);
 const ALL = args.includes("--all");
 const RECIPE_VERSION = "1";
@@ -133,10 +135,35 @@ const listed = asObject(await callTool("list_genres", { limit: 200 }));
 const allGenres = (Array.isArray(listed.genres) ? listed.genres : Array.isArray(listed) ? listed : [])
   .map((entry) => (typeof entry === "string" ? entry : entry?.id))
   .filter((id) => typeof id === "string" && id.length > 0);
-const genreIds = ALL ? allGenres : [ONLY].filter(Boolean);
+/**
+ * ⭐ **Shards, because one clip costs minutes and the library holds 159 genres** (measured 2026-10-10: chicago-house took
+ * **353 s**; 159 × that is over fifteen hours serially). `--shard 3/8` takes every eighth genre, interleaved rather than
+ * sliced so the slow ones spread evenly, and each shard writes its **own** manifest part — two processes must never write
+ * the same file. `--merge` joins the parts into the committed manifest.
+ */
+const SHARD = flag("shard", undefined);
+const [shardIndex, shardCount] = SHARD ? SHARD.split("/").map((value) => Number(value)) : [0, 1];
+const genreIds = (ALL ? allGenres : [ONLY].filter(Boolean)).filter((_, index) =>
+  shardCount > 1 ? index % shardCount === shardIndex : true
+);
 console.log(`${ALL ? "all" : "only"}: ${genreIds.length} genre(s)`);
+if (MERGE) {
+  /**
+   * ⭐ **One writer for the committed manifest.** Each shard leaves its part in the (untracked) output directory; merging is a
+   * separate act so a half-finished batch can never replace the shipped list — the same rule the empty-run guard enforces.
+   */
+  const parts = readdirSync(OUT).filter((name) => /^manifest-\d+\.json$/.test(name));
+  const merged = parts.flatMap((name) => JSON.parse(readFileSync(`${OUT}/${name}`, "utf8")).clips ?? []);
+  if (merged.length === 0) {
+    console.error(`no shard manifests in ${OUT}/; nothing to merge`);
+    process.exit(1);
+  }
+  writeFileSync("public/genre-clips.json", JSON.stringify({ bars: 8, clips: merged }, null, 2) + "\n");
+  console.log(`merged ${merged.length} clip(s) from ${parts.length} shard manifest(s)`);
+  process.exit(0);
+}
 if (genreIds.length === 0) {
-  console.error("nothing to do: pass --only <genreId> or --all");
+  console.error("nothing to do: pass --only <genreId>, --all or --merge");
   process.exit(2);
 }
 
@@ -288,6 +315,6 @@ if (clips.length === 0) {
   console.error("no clips were produced; public/genre-clips.json was left as it was");
   process.exit(1);
 }
-writeFileSync("public/genre-clips.json", JSON.stringify({ bars: 8, clips }, null, 2) + "\n");
-console.log(`wrote public/genre-clips.json with ${clips.length} clip(s); MP3s are in ${OUT}/ (not in git)`);
+writeFileSync(PART, JSON.stringify({ bars: 8, clips }, null, 2) + "\n");
+console.log(`wrote ${PART} with ${clips.length} clip(s); MP3s are in ${OUT}/ (not in git). Merge with --merge`);
 process.exit(0);
