@@ -26,7 +26,7 @@
  * category chunks into the phone's first paint, which is exactly the regression this screen was
  * rewritten to remove.
  */
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { ChevronRight, Pause, Search } from "lucide-react";
 import { GENRE_INDEX, type GenreIndexItem } from "../mobileGenreData";
 import { useCoverWarmup } from "../../hooks/useCoverWarmup";
@@ -105,6 +105,20 @@ const whenIdle = (run: () => void): (() => void) => {
 };
 
 export function MobileHomeScreen({ playingGenreId, onSelectGenre }: MobileHomeScreenProps) {
+  /**
+   * ⭐ **The genre you were just listening to** (owner: *曲风对比*). A comparison needs two ids and the shell only hands this
+   * screen the current one, so the previous audition is remembered here: tap a card, then another, and the bar offers an A/B
+   * between them without a second picker. A ref holds the last *seen* value, because state would compare against itself.
+   */
+  const lastGenreRef = useRef<string | null>(null);
+  const [previousGenreId, setPreviousGenreId] = useState<string | null>(null);
+  useEffect(() => {
+    if (!playingGenreId) return;
+    const last = lastGenreRef.current;
+    if (last && last !== playingGenreId) setPreviousGenreId(last);
+    lastGenreRef.current = playingGenreId;
+  }, [playingGenreId]);
+
   const { t } = useLanguage();
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState<GenreCategory | "all">("all");
@@ -157,7 +171,12 @@ export function MobileHomeScreen({ playingGenreId, onSelectGenre }: MobileHomeSc
         * auditioning already has a 15–30 second clip, and this plays it immediately instead of making the phone wait for the
         * engine's ~10× realtime render. The engine stays for the full experience; this is the "what does it sound like" answer.
         */}
-      {playingGenreId && <MobileClipPlayer genreId={playingGenreId} />}
+      {playingGenreId && (
+        <MobileClipPlayer
+          genreId={playingGenreId}
+          {...(previousGenreId && previousGenreId !== playingGenreId ? { compareGenreId: previousGenreId } : {})}
+        />
+      )}
       <div className="flex items-end justify-between pt-1">
         <div>
           <h1 className="text-[22px] font-bold leading-none">{t("mobile_home_title")}</h1>
