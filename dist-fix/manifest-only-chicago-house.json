@@ -1,0 +1,18 @@
+{
+  "bars": 8,
+  "clips": [
+    {
+      "genreId": "chicago-house",
+      "url": "chicago-house.mp3",
+      "seconds": 16.600022675736962,
+      "bytes": 400030,
+      "lufs": -9.636630847003314,
+      "bars": 1,
+      "engineVersion": "2.35.11",
+      "recipeVersion": "1",
+      "generatedAt": "2026-10-10",
+      "recordedLanes": 4,
+      "builtInLanes": 4
+    }
+  ]
+}

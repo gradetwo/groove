@@ -108,7 +108,7 @@
       "warnings": [
         {
           "code": "length-out-of-range",
-          "detail": "48.6s is outside the owner's 15–30s window"
+          "detail": "48.6s is outside the owner's 15\u201330s window"
         }
       ]
     },
@@ -309,7 +309,7 @@
       "warnings": [
         {
           "code": "length-out-of-range",
-          "detail": "96.6s is outside the owner's 15–30s window"
+          "detail": "96.6s is outside the owner's 15\u201330s window"
         }
       ]
     },
@@ -856,7 +856,7 @@
       "warnings": [
         {
           "code": "length-out-of-range",
-          "detail": "48.6s is outside the owner's 15–30s window"
+          "detail": "48.6s is outside the owner's 15\u201330s window"
         }
       ]
     },
@@ -1297,7 +1297,7 @@
         },
         {
           "code": "length-out-of-range",
-          "detail": "48.6s is outside the owner's 15–30s window"
+          "detail": "48.6s is outside the owner's 15\u201330s window"
         }
       ]
     },
