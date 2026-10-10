@@ -236,13 +236,13 @@ for (const genreId of genreIds) {
   const remembered = Number(barsCache[genreId] ?? 0);
   const firstGuess = remembered > 0 ? remembered : Number(flag("bars", 6));
   if (remembered > 0) console.log(`   using the remembered ${remembered} repeat(s) for ${genreId}`);
-  let banner = asObject(await callTool("render_arrangement", { arrangementId, format: FORMAT, bitrateKbps: 192, bars: firstGuess }));
+  let banner = asObject(await callTool("render_arrangement", { arrangementId, format: FORMAT, bitrateKbps: 192, bars: firstGuess, ...(flag("sample-rate", undefined) ? { sampleRate: Number(flag("sample-rate")) } : {}), ...(flag("channels", undefined) ? { channels: Number(flag("channels")) } : {}) }));
   let passes = Number(banner.passes ?? flag("bars", 6)) || 1;
   if (!IN_RANGE(Number(banner.durationSec ?? 0))) {
     const one = Number(banner.durationSec ?? 0) / passes;
     const wanted = one > 0 ? Math.max(1, Math.round(TARGET_SECONDS / one)) : passes;
     console.log(`   ${String(banner.durationSec)}s is outside 15–30s; asking for ${wanted} repeat(s) instead`);
-    banner = asObject(await callTool("render_arrangement", { arrangementId, format: FORMAT, bitrateKbps: 192, bars: wanted }));
+    banner = asObject(await callTool("render_arrangement", { arrangementId, format: FORMAT, bitrateKbps: 192, bars: wanted, ...(flag("sample-rate", undefined) ? { sampleRate: Number(flag("sample-rate")) } : {}), ...(flag("channels", undefined) ? { channels: Number(flag("channels")) } : {}) }));
     passes = wanted;
   }
   /**
