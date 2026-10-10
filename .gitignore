@@ -92,3 +92,8 @@ public/covers/_*
 # Probe artefacts: a screenshot whose bytes change every run must not dirty the tree `push_dev.sh` refuses.
 tmp/
 dist-clips/
+dist-repair/
+dist-missing/
+dist-fix/
+dist-refix/
+dist-refix2/
