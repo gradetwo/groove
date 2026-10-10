@@ -253,6 +253,17 @@ export function useArrangementFileActions({
       setBusy(true);
       const myRun = (runIdRef.current += 1);
       setExportingKind(kind);
+      /**
+       * ⭐ **Give the browser one turn to paint "Exporting…" before the render takes the thread** (Web functional test of
+       * v2.35.9: *"導出 MP3/WAV 要等渲染：點擊後無進度提示"*).
+       *
+       * Measured with `scratch/probe-export-progress.mjs` at 1512 px: the progress row is real — `Exporting…` then
+       * `10 % · ~59s left`, `20 % · ~27s left` — but it first appears at **6.66 s**, and the probe's own 250 ms sampling
+       * loop was *also* blocked until then. A state that is set and cannot be painted is indistinguishable from no state at
+       * all, and the click was answered by a frozen interface for those seconds. Yielding here costs one frame and buys the
+       * sentence the user needs: the work started and it is this long.
+       */
+      await new Promise((resolve) => setTimeout(resolve, 0));
       try {
         const result = await work();
         // ⭐ A cancelled run produces nothing: the files are the only guarantee this can honestly make.
