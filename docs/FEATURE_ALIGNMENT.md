@@ -50,6 +50,8 @@
 | 29 | 工程文件（`.groove` 包） | ✓ | ✓ 导出／导入菜单 | ✓ `export_groove`、`import_groove` | 三方齐 |
 | 30 | 试听预热／封面（体验项） | 🔶 `src/hooks/useCoverWarmup.ts`（基础钩子已用于列表） | 🔶 部分 | n/a | **待接线**：`useCoverWarmupBothSizes` 无人调用（业主已批准补） |
 
+| ⭐ **15** | ⭐ 手机壳（`/m` 子路径）与**预生成主题片段** ✓ | ✓ `scripts/build_genre_clips.mjs` ✓（离线渲染 → ffmpeg 转 MP3 → `public/genre-clips.json` ✓；三道闸：有文件 ✓／有声音（`volumedetect`）✓／说得出时长（`ffprobe`）✓）＋ ✓ `src/data/genreClips.ts` ✓（严格读取器 ✓／`staleClips` 新鲜度 ✓／`clipForGenre` ✓） | ✓ **`/m` 路由**（`RouteState.mobileShell` ✓，`MainApp` 内挂 `MobileApp` ✓）＋ ✓ **片段播放器** `src/mobile/MobileClipPlayer.tsx` ✓（`<audio>` ✓、变速＝变调 ✓、A/B 对比 ✓、44 px ✓、没片段就说原因 ✓）＋ ✓ 手机皮肤独立样式域 ✓（`:root[data-skin] .mobile-root` ✓、7 张表 ✓、皮肤清单一致／44 px／对比度三组判据 ✓）⚠️ **音频本体放 Cloudflare Worker 静态资源**（不入 git ✓；清单用 `--merge --base <worker>` 指向 ✓），域名未定 ⇒ 本地只验到「片段条与状态」为止 ✓ | ✗ 无（MCP 不涉及 ✓） | 片段管线与 `/m` 接入**已完成并可复核** ✓；⚠️ 待办：Worker 域名与清单指向 ✓、`engineVersion` 随 v2.36.0 对齐 ✓、触控与性能复验 ✓ |
+
 ## 未暴露 / 待办项（原因 · 计划 · 状态）
 
 | 项 | 原因 | 计划 | 状态 |
