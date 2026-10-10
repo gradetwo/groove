@@ -22985,3 +22985,29 @@ describe("the grid's editing actions", () => {
     移植集**由编译器确认** ✓（35 ＋ 4 取回 ＋ 1 处登记 ＋ 2 处适配 ✓）。
   ⏭️ **下一步（P1）✓**：`/m` 子路径路由 ✓ ⇒ 把手机壳挂上去 ✓（`MobileApp` ✓ 的入口接法要**先读** ✓），
     随后是店主定的两条：**独立样式域**（＋皮肤清单一致判据 ✓）与 **44 px／对比度**判据 ✓。
+
+### 九百五十一、🧭 **P1（`/m` 路由）的设计读清楚了：当年的挂载方式是"能力检测 ＋ 路由标志"，店主现在选的是"`/m` 子路径"**（2026-10-10 ✓）
+
+  ⭐ **读到的原样 ✓**（`git show origin/mobile-preserved:src/App.tsx` ✓）✓：
+    ```ts
+    const MobileApp = React.lazy(() => import("./mobile/MobileApp").then((m) => ({ default: m.MobileApp })));
+    import { shouldEnterPhoneShell, type MobileModule } from "./mobile/mobileModules";
+    const { isMobile, isShortLandscape } = useDeviceCapabilities();
+    //  Phone shell. `isMobile` is capability-based (see `useDeviceCapabilities`), not a width test,
+    //  … the cutover asks — `shouldEnterPhoneShell` — is what makes this …
+    ```
+    ⇒ 当年是**能力检测（`isMobile` ＋ `shouldEnterPhoneShell`）＋ `route.mobile` 标志** ✓ ⇒
+      **不是** `/m` 路径 ✗ —— 所以"`/m` 子路径"是**店主新增的选择** ✓，不是恢复旧行为 ✓。
+  ⭐ **因此 P1 的设计（明确 ✓）** ✓：
+    1. **`/m` 是显式入口** ✓ ⇒ `pathname.startsWith("/m")` ⇒ 挂 `MobileApp` ✓（桌面浏览器打开 `/m` 也能用 ✓，
+       这对**测试与分享**都关键 ✓ —— 也是店主选它的理由之一 ✓）；
+    2. **能力检测仍有用 ✓**：手机访问 `/` 时是否**自动跳 `/m`** ✓ 由 `shouldEnterPhoneShell` 决定 ✓
+       （我的取舍 ✓：**先只做 `/m` 显式入口** ✓，自动跳转留到触控复验那一步再定 ✓ ——
+       自动跳转一旦出错，桌面用户会被扔进手机壳 ✗，风险不对称 ✓）；
+    3. **`mobileModules.ts` 已在移植集里** ✓（`src/mobile/mobileModules.ts` ✓，属那 35 个 ✓）
+       ⇒ `shouldEnterPhoneShell` 与 `MobileModule` 类型都可用 ✓，**不需要再找** ✓；
+    4. **dev 的 router 需要认识 `/m`** ✓：`src/app/router.ts` ✓（`useRouter` ✓）⇒ 要加一个"这是手机壳入口"的判定 ✓
+       （**先读** `router.ts` 的 `route` 形状 ✓ 再改 ✓ —— 今天已经因为"没读就改"回退两次 ✓）。
+  ⏭️ **下一步 ✓**：读 `src/app/router.ts`（`route` 的字段与 `/new` 的解析方式 ✓）⇒ 照**同一种写法**加 `/m` ✓
+    ⇒ 在 `App.tsx` 里挂 `MobileApp` ✓ ⇒ 用真浏览器打开 `/m` 看它是否渲染 ✓（这一步的判据是"能渲染出来" ✓，
+    再往后才是样式与触控 ✓）。
