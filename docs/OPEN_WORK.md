@@ -23987,3 +23987,19 @@ describe("the grid's editing actions", () => {
     （PID 见 `/tmp/miss-a.pids` / `/tmp/miss-b.pids` ✓，日志 `/tmp/miss-a.log` / `/tmp/miss-b.log` ✓；2 个渲染器 ✓ 在上限内 ✓）。
     ⇒ 它们落盘后 ✓：以**历史的 159 全集**为底装配 ✓（早先 139 条那批 ＋ 新 20 条 ✓）⇒ 体检 ✓ ⇒ merge ✓
       ⇒ 清单有望覆盖**全部 159 个曲风** ✓，且全部落在 15–30 秒 ✓。
+
+### 九百九十四、📈 **"并汇总"也落地了：清单现在带一份音乐性体检的**总表**，且判据要求它与逐条警告**逐码一致****（2026-10-10 ✓）
+
+  ⭐ **新增的三段流动 ✓** ✓：体检步骤写总表 ✓ → `--merge`（唯一写入者 ✓）把它带过去 ✓ → `genreClips.ts` 的读取器**采纳**它 ✓
+    （`GenreHealthSummary` ✓：`audited` ✓／`withFindings` ✓／`tally` ✓；**可选** ✓ —— 体检步骤出现之前合并的清单依然合法 ✓）。
+  ⭐ **读数 ✓（清单自己的总表 ✓）** ✓：
+    ```json
+    "health": { "audited": 139, "withFindings": 27, "tally": { "empty-lane": 35, "melody-poverty": 1 } }
+    ```
+    与**逐条警告**推出来的计数**完全一致** ✓（`health:empty-lane` 35 ✓、`health:melody-poverty` 1 ✓）。
+  ⭐ **判据 ✓（`genreClipWarnings` 现 3 例 ✓）** ✓：总表的 `tally` **必须等于**从各条 clip 的 `health:*` 警告推出来的计数 ✓，
+    且 `withFindings` **必须等于**携带体检发现的 clip 数 ✓ —— **总表飘了 ⇒ 立刻红** ✓
+    （这一条比"总表存在"强得多 ✓：一个飘了的总表比没有总表更糟 ✓，因为读者信的就是那个数字 ✓）。
+  ⭐ **顺带 ✓**：`length-out-of-range` 这条警告已**从清单里消失** ✓（139 条全部落在窗口内 ✓），
+    剩下的 `skipped-lanes` ×8 ✓ 是渲染期就报出来的"有轨没解析到采样" ✓ —— 与体检的空轨发现**互相印证** ✓。
+  ⏭️ **最后一批 ✓**：20 个尚无片段的曲风仍在两个循环里切 ✓（`dist-missing` ✓）⇒ 落盘后以 **159 全集**为底装配 + 体检 + merge ✓。

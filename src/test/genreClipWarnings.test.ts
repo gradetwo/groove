@@ -54,3 +54,32 @@ describe("the clip manifest's warnings", () => {
     expect(source, "and asks for the genre's own content, as the clips were rendered").toContain("withGenreNotes: true");
   });
 });
+
+/**
+ * ⭐ **And the summary has to agree with the clips it summarises.** The owner asked for the findings to be written into the
+ * manifest *and summarised*; a summary that drifts from its own rows is worse than none, because it is the number a reader
+ * trusts. Two-way: the tally must equal the counts derived from the clips, and `withFindings` must equal the number of clips
+ * that carry a health finding.
+ */
+describe("the manifest's musical summary", () => {
+  it("⭐ agrees with the clips, code by code", () => {
+    const manifest = JSON.parse(readFileSync(resolve(__dirname, "../../public/genre-clips.json"), "utf8")) as {
+      clips: Array<{ genreId: string; warnings?: Array<{ code: string }> }>;
+      health?: { audited: number; withFindings: number; tally: Record<string, number> };
+    };
+    const healthCodes = manifest.clips.flatMap((clip) =>
+      (clip.warnings ?? []).filter((warning) => warning.code.startsWith("health:")).map((warning) => warning.code.slice("health:".length))
+    );
+    if (!manifest.health) {
+      expect(healthCodes, "a manifest without a summary carries no health findings either").toEqual([]);
+      return;
+    }
+    const derived: Record<string, number> = {};
+    for (const code of healthCodes) derived[code] = (derived[code] ?? 0) + 1;
+    expect(manifest.health.tally, "the tally matches the clips").toEqual(derived);
+    const clipsWithFindings = new Set(
+      manifest.clips.filter((clip) => (clip.warnings ?? []).some((warning) => warning.code.startsWith("health:"))).map((clip) => clip.genreId)
+    );
+    expect(manifest.health.withFindings, "and the count of clips with findings matches").toBe(clipsWithFindings.size);
+  });
+});

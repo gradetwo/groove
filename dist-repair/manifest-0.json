@@ -2161,5 +2161,13 @@
       "builtInLanes": 5,
       "warnings": []
     }
-  ]
+  ],
+  "health": {
+    "audited": 139,
+    "withFindings": 27,
+    "tally": {
+      "empty-lane": 35,
+      "melody-poverty": 1
+    }
+  }
 }

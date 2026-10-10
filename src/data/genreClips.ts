@@ -43,9 +43,18 @@ export interface GenreClip {
   builtInLanes: number;
 }
 
+/** ⭐ The musical audit's summary: how many clips were checked, how many had something to say, and the tally by code. */
+export interface GenreHealthSummary {
+  audited: number;
+  withFindings: number;
+  tally: Record<string, number>;
+}
+
 export interface GenreClipManifest {
   /** The bar the clip starts at, and how many bars it covers — so a clip is reproducible rather than "some 20 seconds". */
   bars?: number;
+  /** The musical audit's summary, when the manifest was produced with the health step (`scripts/audit_clip_health.mts`). */
+  health?: GenreHealthSummary;
   /** Present only while the list is empty, and it must be a sentence a reviewer can check. */
   emptyReason?: string;
   clips: GenreClip[];
@@ -83,6 +92,14 @@ export function readClipManifest(raw: unknown): GenreClipManifest {
   });
   const manifestOut: GenreClipManifest = { clips };
   if (typeof manifest.bars === "number") manifestOut.bars = manifest.bars;
+  /**
+   * ⭐ Adopted so a surface can say "35 lanes are silent and one melody is thin" without walking every clip. Optional on
+   * purpose: a manifest merged before the health step existed is still valid, it simply has nothing to summarise.
+   */
+  const health = (manifest as { health?: GenreHealthSummary }).health;
+  if (health && typeof health.audited === "number" && typeof health.withFindings === "number") {
+    manifestOut.health = { audited: health.audited, withFindings: health.withFindings, tally: { ...(health.tally ?? {}) } };
+  }
   if (typeof manifest.emptyReason === "string") manifestOut.emptyReason = manifest.emptyReason;
   if (clips.length === 0 && !manifestOut.emptyReason) {
     throw new Error("an empty clip manifest must say why it is empty (`emptyReason`), so 'the phone has no audio' is a decision rather than an accident");

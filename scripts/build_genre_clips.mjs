@@ -233,7 +233,9 @@ if (MERGE) {
     console.error(`no shard manifests in ${OUT}/; nothing to merge`);
     process.exit(1);
   }
-  writeFileSync("public/genre-clips.json", JSON.stringify({ bars: 8, clips: merged.map((clip) => ({ ...clip, url: withBase(clip.url) })) }, null, 2) + "\n");
+    /** ⭐ The musical summary travels with the clips (it is written by the `vite-node` health step). */
+  const health = parts.map((name) => JSON.parse(readFileSync(`${OUT}/${name}`, "utf8")).health).find(Boolean);
+  writeFileSync("public/genre-clips.json", JSON.stringify({ bars: 8, ...(health ? { health } : {}), clips: merged.map((clip) => ({ ...clip, url: withBase(clip.url) })) }, null, 2) + "\n");
   console.log(`merged ${merged.length} clip(s) from ${parts.length} shard manifest(s)`);
   process.exit(0);
 }

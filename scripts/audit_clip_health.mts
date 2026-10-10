@@ -54,6 +54,11 @@ for (const name of readdirSync(dir).filter((entry) => /^manifest-.*\.json$/.test
     const kept = ((clip.warnings as Array<{ code: string; detail: string }>) ?? []).filter((existing) => !existing.code.startsWith("health:"));
     clip.warnings = [...kept, ...report.warnings.map((warning) => ({ code: `health:${warning.code}`, detail: warning.detail }))];
   }
+  /**
+   * ⭐ **And it is summarised, not only attached** (owner: *"把发现写进清单条目（warnings）并汇总"*). A reader should be able to
+   * see at a glance how much of the library is flat without walking 139 clips.
+   */
+  (part as { health?: unknown }).health = { audited, withFindings, tally: { ...tally } };
   writeFileSync(path, JSON.stringify(part, null, 2) + "\n");
 }
 console.log(JSON.stringify({ dir, audited, withFindings, tally }, null, 1));
