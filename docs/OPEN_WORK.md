@@ -22214,3 +22214,18 @@ describe("the grid's editing actions", () => {
     （159 条 ✓／时长都在 15–30 秒 ✓／`warnings` 分布 ✓）⇒ 音频目录交给 Worker ✓ ⇒ 再进 chooser 试听 ✓。
     ⚠️ 一个已知的浪费 ✓：现在**每个片段可能渲两次** ✗（先试 6 遍、不达标再算 ✓）⇒
     这正是 B 想省掉的那一半 ✓ —— 等我把 tempo 字段**用探针确认过**之后（而不是猜 ✓），再回来做 B ✓。
+
+### 九百零九、🚀 **6 个 shard 并行开跑（159 曲风，预计约 2.6 小时）**（2026-10-10 ✓）
+
+  ⭐ **启动读数 ✓** ✓：`shard 0..5` 各拿到 **27/27/27/26/26/26** 个曲风 ✓（合计 **159** ✓，与曲库一致 ✓）；
+    6 个进程全在 ✓；日志 `/tmp/clips-shard-<i>.log` ✓；各自的清单 part 落在
+    `dist-clips/manifest-<i>.json` ✓（**互不写同一个文件** ✓）；PID 记在 `/tmp/clips-shards.pids` ✓
+    （**为了以后能按 PID 精确停止** ✓ —— 不再用 `pkill/pgrep -f` 那种会连自己一起杀的写法 ✓）。
+  ⚠️ **启动时我自己造了一个错并已修 ✓**：`PART` 常量引用了**后面才 `const` 的** `shardIndex` ✓ ⇒
+    每个 shard **一启动就 TDZ 报错退出** ✗（日志里能看到 `const PART = …` 那一行 ✓）
+    ⇒ 把 `PART` 挪到 shard 解析**之后** ✓ 再启动即正常 ✓（6 个 shard 都打出 `all: N genre(s)` ✓）。
+    **教训 ✓**：`const` 的**声明顺序**在"先写文件头、后写参数解析"的脚本里最容易出事 ✓ ——
+    我这次是**先启动、再看日志**发现的 ✓（若只看"进程起来了"就会误判 ✓，因为死掉的进程不会在 `ps` 里 ✓）。
+  ⏭️ **跑完后（下一次或更晚 ✓）** ✓：`--merge` 合成 `public/genre-clips.json` ✓ ⇒ 核对
+    **159 条 ✓／时长全在 15–30 秒 ✓／`warnings` 分布（有没有 `no-recordings`／`skipped-lanes`／`length-out-of-range`）** ✓ ⇒
+    音频目录整理成交付 Cloudflare Worker 的形状（**不入 git** ✓）⇒ 进 **chooser 乐器试听** ✓。

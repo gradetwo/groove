@@ -93,7 +93,6 @@ const flag = (name, fallback) => {
 };
 const OUT = flag("out", "dist-clips");
 const MERGE = args.includes("--merge");
-const PART = `${OUT}/manifest-${shardIndex}.json`;
 const ONLY = flag("only", undefined);
 const ALL = args.includes("--all");
 const RECIPE_VERSION = "1";
@@ -146,6 +145,8 @@ const [shardIndex, shardCount] = SHARD ? SHARD.split("/").map((value) => Number(
 const genreIds = (ALL ? allGenres : [ONLY].filter(Boolean)).filter((_, index) =>
   shardCount > 1 ? index % shardCount === shardIndex : true
 );
+/** ⭐ Declared **after** the shard is parsed: an earlier version referenced `shardIndex` before its `const`, and every shard died on startup. */
+const PART = `${OUT}/manifest-${shardIndex}.json`;
 console.log(`${ALL ? "all" : "only"}: ${genreIds.length} genre(s)`);
 if (MERGE) {
   /**
