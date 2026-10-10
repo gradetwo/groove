@@ -32,6 +32,7 @@ import { GENRE_INDEX, type GenreIndexItem } from "../mobileGenreData";
 import { useCoverWarmup } from "../../hooks/useCoverWarmup";
 import { TIMELINE_STORIES, type TimelineStory } from "../../data/timeline_stories";
 import { useLanguage } from "../../i18n/LanguageContext";
+import { MobileClipPlayer } from "../MobileClipPlayer";
 import type { GenreCategory } from "../../types/genre";
 import { CATEGORY_SWATCH, genreArtBackground } from "../genreArt";
 import { GenreCover } from "../../components/GenreCover";
@@ -151,6 +152,12 @@ export function MobileHomeScreen({ playingGenreId, onSelectGenre }: MobileHomeSc
 
   return (
     <div className="m-rise px-4 pb-4" data-testid="mobile-home">
+      {/**
+        * ⭐ **The pre-generated clip sits at the top of the home screen** (owner's decisions ② and ③): the genre the shell is
+        * auditioning already has a 15–30 second clip, and this plays it immediately instead of making the phone wait for the
+        * engine's ~10× realtime render. The engine stays for the full experience; this is the "what does it sound like" answer.
+        */}
+      {playingGenreId && <MobileClipPlayer genreId={playingGenreId} />}
       <div className="flex items-end justify-between pt-1">
         <div>
           <h1 className="text-[22px] font-bold leading-none">{t("mobile_home_title")}</h1>
