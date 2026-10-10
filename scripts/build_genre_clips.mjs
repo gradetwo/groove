@@ -119,9 +119,17 @@ const asObject = (value) => {
   }
 };
 
-const genreIds = ALL
-  ? (await callTool("list_genres", {})).match(/"?id"?\s*[:=]\s*"([a-z0-9-]+)"/g)?.map((m) => m.split('"')[3] ?? m.replace(/.*"([a-z0-9-]+)"$/, "$1")) ?? []
-  : [ONLY].filter(Boolean);
+/**
+ * ⭐ **The genre ids come from the reply's own JSON** (the first version scraped them with a regex, which is how a list of
+ * fifty becomes eleven). `list_genres` answers `{ genres: [{ id, … }] }`, so unwrapping it is the whole job — the same
+ * `asObject` the tool calls use.
+ */
+const listed = asObject(await callTool("list_genres", {}));
+const allGenres = (Array.isArray(listed.genres) ? listed.genres : Array.isArray(listed) ? listed : [])
+  .map((entry) => (typeof entry === "string" ? entry : entry?.id))
+  .filter((id) => typeof id === "string" && id.length > 0);
+const genreIds = ALL ? allGenres : [ONLY].filter(Boolean);
+console.log(`${ALL ? "all" : "only"}: ${genreIds.length} genre(s)`);
 if (genreIds.length === 0) {
   console.error("nothing to do: pass --only <genreId> or --all");
   process.exit(2);

@@ -22144,3 +22144,18 @@ describe("the grid's editing actions", () => {
     但它**已经在 CI 里对全库生效** ✓ ⇒ 数据变糟会被发现 ✓，只是**暂不出现在清单条目里** ✓。
   ⏭️ **下一步 ✓**：按修后预算跑 `--all`（50 曲风 ×1–2 次渲染 ✓，约 1.5–2.5 小时 ✓）⇒ 产物目录交给 Worker ✓
     ⇒ 再进 chooser 试听 ✓。（清单里现在每条会**自带**它的 `warnings` ✓，跑完就能一眼看出哪些片段少东西 ✓。）
+
+### 九百零五、🚀 **全量批量已启动（50 曲风，后台跑）** ——并顺手修掉一个会静默吞掉 39 个曲风的小坑（2026-10-10 ✓）
+
+  ⭐ **启动前的两件事 ✓** ✓：
+    1. **`--all` 的曲风清单原来是**正则抓的** ✗** ⇒ 我自己在注释里写了它的下场 ✓：
+       "the first version scraped them with a regex, **which is how a list of fifty becomes eleven**" ✓
+       ⇒ 改成**解包 `list_genres` 的 JSON**（`asObject(...).genres[].id` ✓）✓ ⇒ 实测打印 **`all: 50 genre(s)`** ✓✓
+       （与探针给的 50 一致 ✓）；
+    2. 清单**只在全部跑完后才写** ✓ ⇒ 跑的过程中 `public/genre-clips.json` 保持不动 ✓（不会出现"写了一半的清单" ✓）。
+  ⭐ **现状 ✓**：进程在跑（`all: 50 genre(s)` ✓，`dist-clips/` 里目前只有先前那次 bossa-nova 的产物 ✓）；
+    第一个片段仍在渲染中 ✓（首渲要付引擎冷启动与采样加载的代价 ✓，与先前 43–165 秒的量级一致 ✓）。
+    **日志与产物都在 `/tmp/clips-all.log` 与 `dist-clips/`（后者不入 git ✓）** ✓；
+    跑完后我会核对：**50 条都在 ✓、时长都在 15–30 秒 ✓、`warnings` 里有没有 `no-recordings`／`skipped-lanes` ✓**。
+  ⚠️ **预算按修后数字 ✓**：50 曲风 ×（1–2 次渲染）× ~50–165 秒 ⇒ **1–2.5 小时** ✓；
+    跑完后把音频目录整理成交给 Cloudflare Worker 的形状 ✓，再进 **chooser 乐器试听** ✓。
