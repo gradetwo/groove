@@ -23090,3 +23090,28 @@ describe("the grid's editing actions", () => {
   ⭐ **P1 进度 ✓**：`RouteState.mobile` ✓、`parseUrlToRoute` 认 `/m` ✓、`formatRouteToUrl` 写 `/m` ✓、
     判据 ✓ —— **3.5/4** ✓；只剩 **`App.tsx` 里按该字段挂 `MobileApp`** ✓（当年就是 `React.lazy` 挂的 ✓，
     只换判定条件 ✓），以及用真浏览器打开 `/m` 看它是否渲染 ✓。
+
+### 九百五十五、⚠️ **发现一个命名冲突（必须在挂载前解决）：当年 `route.mobile` 是**模块名**，而我把它做成了**布尔****（2026-10-10 ✓）
+
+  ⭐ **读到的原样 ✓**（`git show origin/mobile-preserved:src/App.tsx` ✓）✓：
+    ```tsx
+    <MobileApp
+      module={route.mobile ?? "home"}      // ⭐ 当年的 route.mobile 是"哪个模块"（home/jam/…）
+      mobilePlayer={route.mobilePlayer}
+      genreId={route.genreId}
+      onSelectModule={(module) => …}
+    />
+    ```
+    ⇒ 当年 **`route.mobile` 的类型是 `MobileModule`**（`"home"`｜`"jam"`｜… ✓，来自 `mobileModules.ts` ✓），
+      用来表示"手机壳当前在哪个模块" ✓；而**我这一轮**加的 `RouteState.mobile?: boolean` ✓
+      用的是**同一个名字、不同的类型** ✗✗ —— 若照现在的代码去挂 `<MobileApp module={route.mobile}>` ✓
+      就会把一个 **boolean 当模块名**用 ✗（类型立刻会拦 ✓，但语义已经混乱 ✗）。
+  ⭐ **处置（明确 ✓）** ✓：**把我加的那个标记改名** ✓ —— `mobile?: boolean` ⇒ **`mobileShell?: boolean`** ✓
+    （含义清楚：**"这是手机壳入口"** ✓，与"哪个模块"无关 ✓），并同步更新那三条 `mobileRoute` 判据 ✓
+    与 `formatRouteToUrl` 的早返回 ✓；**`mobileModules.ts`／`MobileApp` 的既有 props 保持原样** ✓
+    （它们是**移植进来的既有 API** ✓，不该为了我的标记去改 ✓ —— "缺的取回、在的别覆盖"同一条纪律 ✓）。
+  ⭐ **挂载还要的东西（下一轮一起做 ✓）** ✓：`MobileApp` 需要 **`module`** 与 **`onSelectModule`** ✓
+    ⇒ 也就是 `App.tsx` 里要有一个 `module` **状态** ✓（初始 `"home"` ✓，正合当年那句注释
+      "A bare route on a phone: … until it does the shell still needs one" ✓）⇒ 再加 `mobilePlayer`／`genreId` ✓。
+  ⚠️ **又一次印证 ✓**：这正是"**先读原文再动手**"的价值 ✓ —— 如果我上一轮直接把 `<MobileApp module={route.mobile}>` 写上 ✓，
+    就会把一个 boolean 塞进 module ✓；而**读一眼当年的 JSX** 就发现了这个坑 ✓（成本 12 行 ✓）。
