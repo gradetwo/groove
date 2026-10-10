@@ -394,7 +394,7 @@ export function labelCacheKey(spec: LabelSpec): string {
 }
 
 /** The instrument colours as `r,g,b` strings, for the ring strokes and the label wash. */
-export const LAYER_RGB_STRINGS: Record<LayerKey, string> = {
+const LAYER_RGB_STRINGS: Record<LayerKey, string> = {
   kick: LAYER_COLORS.kick.str,
   snare: LAYER_COLORS.snare.str,
   hat: LAYER_COLORS.hat.str,

@@ -24248,3 +24248,23 @@ describe("the grid's editing actions", () => {
       （我当初**故意**只做 `/m` 显式入口 ✗、没做自动进入 ✓，所以它今天没人引用 ✓）⇒
       删它还是留它（并说明"等店主决定自动进入时再用" ✓），我倾向**留** ✓ 但**必须给它一个被判据接受的理由** ✓，
       而不是靠抬阈值蒙过去 ✗。
+
+### 一千零七、✅✅ **三道门禁清掉了两道（`deadExports` ＋ `fileSize`），全套只剩联网那一条**（2026-10-10 ✓）
+
+  ⭐ **`deadExportsBudget` ✅**：探针点出 **15 个**"移植面里的死导出" ✓（总死导出 39 / 上限 27 ✓），
+    逐个**只去掉 `export` 关键字** ✓（保留实现 ✓ —— 万一模块内部还在用 ✓）：
+    `buildStudioSheetGroups` ✓、`tempoReadoutBudgetPx`／`TRANSPORT_BAR_HEIGHT_PX` ✓、
+    `DEFAULT_VISIBLE_IDS`／`shortcutBindings`／`bindingKey` ✓、`normaliseMobileModule`／`shouldEnterPhoneShell` ✓、
+    `stepDotPosition`／`scrubBpmDelta`／`scrubAngleOffset`／`scrubFlickBpmDelta`／`IDLE_ARM_VELOCITY`／`tonearmStylusDistance` ✓、
+    `LAYER_RGB_STRINGS` ✓ ⇒ **`typecheck` 绿 ✓、门禁 2 例绿 ✓**（总数回到上限内 ✓）。
+  ⭐ **`fileSizeBudget` ✅（按仓库的规矩：**实测 + 写明原因**，不是无声抬阈值 ✓）** ✓：
+    实测三桶越界 ✓ —— `atLeast600` **46 → 48** ✓、`atLeast800` **29 → 31** ✓、`atLeast2000` **5 → 6** ✓；
+    另两桶（`atLeast1000` 25 ✓、`atLeast1500` 13 ✓）**没动** ✓，就照原值留着 ✓。
+    注释写清了原因 ✓：**移植带进来 40 个文件**（`mobile/screens/*` ✓、`MobileStudioSheet` ✓、黑胶引擎 ✓ 都相当大 ✓），
+    并说明"数字上涨只有在**写明为什么**时才可接受" ✓ —— 与死导出预算同一条规矩 ✓。
+  ⭐ **读数 ✓**：`fileSizeBudget` ＋ `deadExportsBudget` ＋ `i18nKeys` **共 9 例全绿** ✓、`typecheck` 0 ✓。
+  ⭐ **全套现在只剩 1 条红 ✓**：**`sfzTrigger`** ✗ —— "a declared text file did not fetch" ✓。
+    它查的是 **SFZ 语料库**（音频采样库的声明文件 ✓），要**联网**逐文件取 ✓ ⇒
+    **与手机壳移植无关** ✓（我改的是界面/清单/脚本 ✓，没碰语料与采样 ✓），
+    属于**环境相关**的失败 ✓。⇒ 我会在收尾报告里如实区分 ✓：「**我引起的 3 条已全部修好** ✓；剩下 1 条是联网语料** ✓」，
+    而不是笼统地说"门禁绿了" ✗。

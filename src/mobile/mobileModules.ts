@@ -44,7 +44,7 @@ export const MOBILE_MODULE_PLAN_KEYS: Record<MobileModule, string> = {
 };
 
 /** Normalises anything that came from a URL into a real module id. */
-export function normaliseMobileModule(value: string | null | undefined): MobileModule {
+function normaliseMobileModule(value: string | null | undefined): MobileModule {
   return MOBILE_MODULES.includes(value as MobileModule) ? (value as MobileModule) : "home";
 }
 
@@ -59,7 +59,7 @@ export function normaliseMobileModule(value: string | null | undefined): MobileM
  * Kept pure and exported because "which surface does this URL get" is exactly the kind of decision
  * that should not be discoverable only by rendering the whole application.
  */
-export function shouldEnterPhoneShell(input: {
+function shouldEnterPhoneShell(input: {
   /** Capability, not a width test: see `useDeviceCapabilities`. */
   isMobile: boolean;
   /** The route the router already resolved from the URL. */

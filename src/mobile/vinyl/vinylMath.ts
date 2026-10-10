@@ -118,7 +118,7 @@ export function needleRadius(geometry: VinylGeometry, position: number): number 
 export const LANE_RADII = [0.9, 0.79, 0.68, 0.57] as const;
 
 /** Where a step's dot sits, in canvas coordinates. */
-export function stepDotPosition(
+function stepDotPosition(
   geometry: VinylGeometry,
   lane: number,
   step: number
@@ -216,18 +216,18 @@ export const SCRUB_MAX_OFFSET_RADIANS = 1.6;
 export const SCRUB_FLICK_THRESHOLD = 0.25;
 export const SCRUB_FLICK_MAX_BPM = 10;
 
-export function scrubBpmDelta(dx: number): number {
+function scrubBpmDelta(dx: number): number {
   return dx * SCRUB_BPM_PER_PX;
 }
 
 /** The disc's temporary angle offset while dragging, clamped to the reference's ±1.6 rad. */
-export function scrubAngleOffset(current: number, dx: number): number {
+function scrubAngleOffset(current: number, dx: number): number {
   const next = current + dx * 0.007;
   return Math.min(SCRUB_MAX_OFFSET_RADIANS, Math.max(-SCRUB_MAX_OFFSET_RADIANS, next));
 }
 
 /** Extra BPM from releasing a flick: below the threshold the record just stops. */
-export function scrubFlickBpmDelta(velocity: number): number {
+function scrubFlickBpmDelta(velocity: number): number {
   if (Math.abs(velocity) <= SCRUB_FLICK_THRESHOLD) return 0;
   const delta = velocity * 6;
   return Math.min(SCRUB_FLICK_MAX_BPM, Math.max(-SCRUB_FLICK_MAX_BPM, delta));
@@ -461,7 +461,7 @@ export const IDLE_RIPPLE = 0.02;
 export const IDLE_GLOW_DELTA = 1.5;
 export const IDLE_BPM_DELTA = 0.05;
 /** The arm's velocity, in travel units per second, below which it has visibly stopped. */
-export const IDLE_ARM_VELOCITY = 0.004;
+const IDLE_ARM_VELOCITY = 0.004;
 
 export function vinylIsIdle(input: VinylIdleInput): boolean {
   return (
@@ -577,7 +577,7 @@ export function tonearmWorkingAngle(geometry: VinylGeometry): number {
  * rotates. This returns that distance for any drawn angle, which is what lets a test say "on the record"
  * (≤ `maxR`) or "off it" (> `maxR`) without eyeballing a canvas.
  */
-export function tonearmStylusDistance(geometry: VinylGeometry, angle: number): number {
+function tonearmStylusDistance(geometry: VinylGeometry, angle: number): number {
   const needleRadius = geometry.maxR * TONEARM_NEEDLE_RADIUS;
   const tipX = geometry.cx + Math.cos(NEEDLE_ANGLE) * needleRadius;
   const tipY = geometry.cy + Math.sin(NEEDLE_ANGLE) * needleRadius;

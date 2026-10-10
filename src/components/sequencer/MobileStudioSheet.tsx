@@ -187,7 +187,7 @@ export const MobileStudioSheet: React.FC<MobileStudioSheetProps> = ({ open, onCl
 };
 
 /** Builds the studio sheet's groups from the panel's own callbacks. */
-export function buildStudioSheetGroups(input: {
+function buildStudioSheetGroups(input: {
   isMetronome: boolean;
   isCountIn: boolean;
   isRecordArmed: boolean;

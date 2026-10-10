@@ -94,7 +94,7 @@ export const TRANSPORT_LAYOUT = {
 export const MIN_SUPPORTED_PHONE_WIDTH_PX = 360;
 
 /** Width the flex tempo readout can occupy on that viewport, or a negative number if it cannot fit. */
-export function tempoReadoutBudgetPx(
+function tempoReadoutBudgetPx(
   viewportWidth = MIN_SUPPORTED_PHONE_WIDTH_PX,
   isShortLandscape = false
 ): number {
@@ -121,7 +121,7 @@ export function tempoReadoutBudgetPx(
  * 49 rather than 47 because the 1 px bottom border and the toolbar's own rounding do not divide
  * evenly. The test asserts only the ordering, since the exact box is the browser's business.
  */
-export const TRANSPORT_BAR_HEIGHT_PX = { portrait: 59, landscape: 49 } as const;
+const TRANSPORT_BAR_HEIGHT_PX = { portrait: 59, landscape: 49 } as const;
 
 /**
  * Width the transport claims when it shares a bottom row with the phone's navigation bar.

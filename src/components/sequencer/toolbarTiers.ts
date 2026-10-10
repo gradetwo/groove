@@ -237,7 +237,7 @@ export const TIER_1_MAX = 14;
  * Ids that stay visible by default. This is the hand-off point for the later
  * slimming milestone; today it is exactly the Tier 1 ids.
  */
-export const DEFAULT_VISIBLE_IDS: readonly string[] = TIER_1_PRIMARY.map((item) => item.id);
+const DEFAULT_VISIBLE_IDS: readonly string[] = TIER_1_PRIMARY.map((item) => item.id);
 
 /** The tier an id belongs to, or `undefined` for an unknown id. */
 export function tierOf(id: string): ToolbarTier | undefined {
@@ -264,7 +264,7 @@ export function isControlVisible(id: string, showAdvanced: boolean): boolean {
  * Every keyboard binding recorded in the table, primary tokens first and then each
  * control's aliases, in table order.
  */
-export function shortcutBindings(): string[] {
+function shortcutBindings(): string[] {
   return ALL_TIER_ITEMS.flatMap((item) => [
     ...(item.shortcut ? [item.shortcut] : []),
     ...(item.shortcutAliases ?? []),
@@ -272,7 +272,7 @@ export function shortcutBindings(): string[] {
 }
 
 /** The key a binding token actually presses: `Ctrl/Cmd+Shift+Z` -> `Z`. */
-export function bindingKey(token: string): string {
+function bindingKey(token: string): string {
   const parts = token.split("+");
   return parts[parts.length - 1].trim().toUpperCase();
 }

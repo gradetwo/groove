@@ -24,12 +24,25 @@ type Sizes = {
   largest: Array<{ path: string; lines: number }>;
 };
 
+/**
+ * ⭐ **Re-measured on 2026-10-10, when the phone shell came back** (owner's decision: the shell returns on `/m`).
+ *
+ * The port added **40 files**, several of them substantial (`mobile/screens/*`, `MobileStudioSheet`, the vinyl engine), which
+ * moved three buckets and left the other two untouched — so these are the **measured** values, and the two that did not move
+ * are deliberately left where they were:
+ *
+ *   `atLeast600` 46 → **48**, `atLeast800` 29 → **31**, `atLeast2000` 5 → **6**;
+ *   `atLeast1000` and `atLeast1500` unchanged.
+ *
+ * Written out rather than raised wholesale, because "the numbers went up" is only acceptable when it says **why** — the same
+ * rule the dead-export budget follows.
+ */
 const CAPS: Record<string, number> = {
-  atLeast600: 46,
-  atLeast800: 29,
+  atLeast600: 48,
+  atLeast800: 31,
   atLeast1000: 25,
   atLeast1500: 13,
-  atLeast2000: 5,
+  atLeast2000: 6,
 };
 
 // The twelve largest files, pinned at their measured length.
