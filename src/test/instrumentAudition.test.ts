@@ -35,3 +35,21 @@ describe("the chooser's audition", () => {
     expect(browser, "the browser passes it through only when given").toMatch(/\{\.\.\.\(onAudition \? \{ onAudition \} : \{\}\)\}/);
   });
 });
+
+/**
+ * ⭐ **And it says that it sounded.** Every silent control this project has found failed the same way — the hint's duplicate
+ * Listen, the export's first six seconds, the button that looked like it did nothing — so the round that gives the chooser a
+ * voice also gives it a sentence.
+ */
+describe("the audition's words", () => {
+  it("⭐ exist in both languages, with a slot for the instrument's name", () => {
+    const locale = readFileSync(resolve(__dirname, "../i18n/locales/common.ts"), "utf8");
+    for (const key of ["instrument_auditioning:", "instrument_audition_hint:"]) {
+      const at = locale.indexOf(key);
+      expect(at, `${key} exists`).toBeGreaterThan(-1);
+      const block = locale.slice(at, at + 260);
+      expect(block, `${key} is English and Chinese`).toMatch(/en: ".*[\u4e00-\u9fff]|zh: "[\u4e00-\u9fff]/);
+    }
+    expect(locale.slice(locale.indexOf("instrument_auditioning:"), locale.indexOf("instrument_auditioning:") + 160)).toContain("{name}");
+  });
+});

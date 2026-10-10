@@ -289,6 +289,19 @@ export const commonMessages = {
    * note" — and a drum track's sound is its **role** against **one built-in kit**. So there is no instrument to choose, and
    * saying so is the honest answer; offering a chooser would be the empty control this project refuses.
    */
+  /**
+   * ⭐ **Say that something is sounding** (owner's instruction 2026-10-10: the chooser must be able to audition; and every
+   * silent control this project has found — the hint's duplicate Listen, the export's first six seconds, the button that
+   * looked like it did nothing — failed the same way: it acted without saying so).
+   */
+  instrument_auditioning: {
+    en: "Auditioning {name}",
+    zh: "正在试听 {name}",
+  },
+  instrument_audition_hint: {
+    en: "Tap ▷ to hear an instrument before you choose it",
+    zh: "点 ▷ 可以先试听，再决定要不要选它",
+  },
   keyboard_needs_drumkit: {
     en: "This drum track plays the built-in kit: pick its roles (kick, snare, hat) rather than a sample",
     zh: "这条鼓轨用的是内置套鼓：选的是它的角色（底鼓、军鼓、踩镲），而不是采样乐器",
