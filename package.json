@@ -1,7 +1,7 @@
 {
   "name": "groove-music-genre-learning",
   "private": true,
-  "version": "2.35.11",
+  "version": "2.36.0",
   "type": "module",
   "scripts": {
     "dev": "vite",

@@ -5,10 +5,10 @@
   "latest": {
     "version": "2.36.0",
     "date": "2026-10-10",
-    "category": "fix",
+    "category": "feature",
     "title": {
-      "zh": "导出不再沉默六秒",
-      "en": "The export stops being silent for six seconds"
+      "zh": "手机版回来了：/m 子路径、155 个主题片段、手机壳判据与数据体检",
+      "en": "The phone version returns: /m, 155 theme clips, phone-shell criteria and a data audit"
     },
     "highlights": [
       {
@@ -16,10 +16,14 @@
         "en": "An audio export now says \"Preparing instruments…\" first: the first feedback moved from 6.4 s to 0.1 s, and the percentage with its estimate still follows."
       },
       {
-        "zh": "那六秒花在取目录与录音上（渲染开始之前），此前这一阶段一声不响；无头渲染早就报同一件事。",
-        "en": "Those six seconds were the catalogue and recordings being fetched before the render began, a stage that reported nothing — while the headless path had always narrated it."
+        "zh": "手机版以 /m 子路径回来：手机壳 40 个文件接回，编译与全部门禁通过；退役的 /m/<module> 保持退役。",
+        "en": "The phone shell is back at /m: forty ported files, the compiler and every gate green, and the retired /m/<module> route stays retired."
+      },
+      {
+        "zh": "155 个 15–30 秒主题片段，每个都用该曲风自己的音色/采样器（无一是全合成），音频放在 Cloudflare（不入 git），清单带版本与生成时间。",
+        "en": "155 clips of 15–30 seconds, each sounding through its genre's own instruments — none all-synth — served from Cloudflare rather than git, with the list carrying its version and date."
       }
     ],
-    "truncated": false
+    "truncated": true
   }
 }
