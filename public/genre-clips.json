@@ -1,7 +1,7 @@
 {
   "bars": 8,
   "health": {
-    "audited": 152,
+    "audited": 153,
     "withFindings": 28,
     "tally": {
       "empty-lane": 36,
@@ -2363,6 +2363,20 @@
       "seconds": 16.600023,
       "bytes": 400030,
       "lufs": -8.10436980338306,
+      "bars": 1,
+      "engineVersion": "2.35.11",
+      "recipeVersion": "1",
+      "generatedAt": "2026-10-10",
+      "recordedLanes": 3,
+      "builtInLanes": 5,
+      "warnings": []
+    },
+    {
+      "genreId": "uplifting-trance",
+      "url": "uplifting-trance.mp3",
+      "seconds": 16.600023,
+      "bytes": 400030,
+      "lufs": -8.306083570228509,
       "bars": 1,
       "engineVersion": "2.35.11",
       "recipeVersion": "1",
