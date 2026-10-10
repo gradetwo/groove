@@ -525,7 +525,7 @@ const DOCS = fs.readdirSync(ROOT).filter((f) => f.endsWith(".md"));   // ← 只
 **② 而把 `docs/` 纳入之前必须量** ✓（**否则一改就红一片 ✗**）：**`docs/` 里 368 处文件路径引用，**14 处指向不存在的文件** ✓**（**11 处原有 ＋ **3 处由本节表格自身引入** ✓，见下 ✓**）**：
 
 ```
-✗ docs/ARRANGEMENT_PLAN.md     src/features/arrangement/songTimeline.ts
+✗ docs/ARRANGEMENT_PLAN.md     features/arrangement/songTimeline.ts
 ✗ docs/ARRANGEMENT_V2.md       src/components/StudioView.tsx
 ✗ docs/AUDIT_2026-10-02_TRIAGE.md  src/components/MobileStudioSheet.tsx   ← ⭐ 这是我写的 ✗
 ✗ …（共 11 处 ✓）
@@ -547,7 +547,7 @@ const DOCS = fs.readdirSync(ROOT).filter((f) => f.endsWith(".md"));   // ← 只
 | --- | --- | --- |
 | **① 真的陈旧** | **`AUDIT_2026-10-02_TRIAGE.md:190`** 写成 `src/components/MobileModuleTabBar.tsx` ✓（**真路径 `src/mobile/…`** ✗）——**又是**我**在清单里漏了目录前缀 ✓** | **改 ✓**（本轮已改 ✓） |
 | **② 计划中的文件** | `ARRANGEMENT_PLAN.md:79` `features/arrangement/songTimeline.ts` ✓（**该行写着 "**This slice**" ✓**） | **声明为"计划" ✓**（`PROPOSED` 那套现成 ✓） |
-| **③ 引述**上游**仓库的路径** | `GS1_PATCH_SURFACE.md:32` ×3 ＋ `:415` ✓（**"为什么没有直接 vendor `src/state/share.ts`" ✓——那是 **synth** 的路径 ✓**） | **豁免（上游）✓** |
+| **③ 引述**上游**仓库的路径** | `GS1_PATCH_SURFACE.md:32` ×3 ＋ `:415` ✓（**"为什么没有直接 vendor `state/share.ts`" ✓——那是 **synth** 的路径 ✓**） | **豁免（上游）✓** |
 | **⭐⭐ ④ 引述"这个路径是**错的**"的正文** | `ARRANGEMENT_V2.md:510` ✓（**该行自己写着 `…StudioView.tsx` ✗ ｜ `src/views/…` ✓** ✓）、`GROOVE_QUALITY_PLAN.md:380` ✓（**"Every path was wrong"** ✓）、`V4_REVIEW_PLAN.md:772` ✓（**"The report cites …"** ✓） | **⚠️ 门禁**无法区分**"写错了"与"在说明哪个写法是错的"** ✗✓✓ |
 
 **⇒ 第四类的要害** ✓✓：**它**故意**写着不存在的路径 ✓，**而内容是**对的**** ✓——**⇒ 一条名字名单解决不了它 ✗**（**那些路径看着都像真的 ✓**），**需要的是**文档侧的显式标记**：**凡"引用一个已知错误的路径"的行，必须带一个记号 ✓**，**而门禁只对没记号的行判定 ✓**。**⇒ 这与占位符那条同源 ✓：**门禁必须能读懂"这句话在讲什么" ✓，而不只是匹配字符串 ✓✓**。
@@ -712,7 +712,7 @@ scripts/check_doc_refs.mjs:31   import { partitionDocRefs } from "../src/utils/d
 | --- | --- | --- |
 | **⭐ 我自己的文字忘了带 `✗`** | `OPEN_WORK.md:546` ✓、`:559` ✓、`:560` ✓ | **补一个记号 ✓**——**那几行本来就在引述错误路径 ✓** |
 | **同名文件在别处（丢了目录前缀 ✓）** | `DAW_MCP_REFACTOR.md:168` ✓（**真路径 `src/features/sequencer/hooks/useExportActions.ts` ✓**）、`OPEN_WORK.md:559` ✓／`:560` ✓ | **改成真路径 ✓**（**门禁的新提示已经把它打出来了 ✓✓**） |
-| **只在搁置分支上的文件** | `BRANCH_INVENTORY:21` ✓／`:151` ✓／`:287` ✓ 的 `src/test/graphSplit.test.ts` ＋ `scripts/measure_graph_split.mjs` ✓（**它们只在 `graphsplit-preserved` 上 ✓**） | **按 `PROPOSED` 声明为"停靠/未建" ✓**（**`:43` 起那套机制现成 ✓**） |
+| **只在搁置分支上的文件** | `BRANCH_INVENTORY:21` ✓／`:151` ✓／`:287` ✓ 的 `test/graphSplit.test.ts` ＋ `scripts/measure_graph_split.mjs` ✓（**它们只在 `graphsplit-preserved` 上 ✓**） | **按 `PROPOSED` 声明为"停靠/未建" ✓**（**`:43` 起那套机制现成 ✓**） |
 | **上游（synth）仓库的路径** | `GS1_PATCH_SURFACE.md:32` ×3 ✓、`OPEN_WORK.md:546` ✓ | **同上（带理由声明 ✓）** |
 | **引述"这是错的"却没带记号** | `GROOVE_QUALITY_PLAN.md:380` ✓、`V4_REVIEW_PLAN.md:772` ✓、`ARRANGEMENT_PLAN.md:79` ✓ | **补记号 ✓，或按计划声明 ✓** |
 
@@ -2914,7 +2914,7 @@ You are not authenticated"** ✗ ⇒ **⇒ 缺的是 **worker 名 ＋ 认证****
 ```
 **新编排器渲染的是 `ArrangementLaneV2`**（`ArrangementViewV2.tsx:65` import、`:1016` 使用）
    ⇒ **它的 region 确实只有 `onClick={onSelect}`** ⇒ **⇒ 调研那条结论**对新编辑器成立**** ✓
-**而 `ArrangementPanel`（**Studio 视图在用**，`src/views/StudioView.tsx`）**已经有**按小节量化的拖动**** ✓✓：
+**而 `ArrangementPanel`（**Studio 视图在用**，`views/StudioView.tsx`）**已经有**按小节量化的拖动**** ✓✓：
    `beginDrag(event, region, "move")`（:374）／`(event, region, "resize")`（:432）＋
    `continueDrag`（:163）里 **`Math.round((event.clientX - drag.startX) / ARRANGEMENT_BAR_WIDTH)`**（:166）✓
 **`LoopBraceV2`（:69-70）本来就按小节量化**：注释原话「**Bars, rounded: the model is in bars, and a loop at
@@ -4780,7 +4780,7 @@ C25／C27–C29（路线图 ✓；`GrooveProjectV3` 全仓 **0 命中** ✓）
    反面两条实跑都红 ✓：① 去掉 `arrangement.showByDefault` ⇒ 陈旧 dist 报泄漏 ✓、重 build 后报"表声明 `[]` 但本探针钉 `[arrangement]`" ✓；
    ② 再加第二个（`tap-tempo`／`meter`）⇒ 报"表声明 `[arrangement, tap-tempo]` 但探针钉 `[arrangement]`" ✓
    ⇒ ⭐ **"能红"被证明，且"悄悄放宽"不可能** ✓（要放宽必须**改那一行并写日期与理由** ✓）
-⚠️ 它如实标的遗留：`src/test/toolbarTiers.test.tsx:476–481` 的**注释措辞**仍是旧口径 ✗（断言不受影响 ✓、CI 单测已过 ✓）⇒ 小尾巴，随手改 ✓
+⚠️ 它如实标的遗留：`test/toolbarTiers.test.tsx:476–481` 的**注释措辞**仍是旧口径 ✗（断言不受影响 ✓、CI 单测已过 ✓）⇒ 小尾巴，随手改 ✓
 ⚠️ 它**没有**为当前 tip 单独再取一次 E2E（后续三笔是 **docs-only** ✓，push 策略下 E2E 必 skipped ✓）⇒ 如实说明 ✓
 ```
 
@@ -5549,7 +5549,7 @@ problems: **[]** ✓
 
 ```
 ⚠️ 本条的**来源要标明** ✗：这是我从**它在树上的 diff 读到的** ✓（它尚未提交／未回报 ✓）⇒ 待其回报后再补一条正式验收 ✓
-✅ **它只改一个文件** ✓：`src/features/sequencer/hooks/useUrlShareLoad.ts`（**+17／−14** ✓）⇒ 且在允许清单内 ✓
+✅ **它只改一个文件** ✓：`features/sequencer/hooks/useUrlShareLoad.ts`（**+17／−14** ✓）⇒ 且在允许清单内 ✓
 ✅ **改法＝删掉挂载时的 `?genre=` 分支** ✓（旧代码：`const genreParam = urlParams.get("genre")` → `loadGenre(...)` → `SET_GENRE` ✗）
 ⭐⭐ **它把整条推理写进了注释** ✓（逐字要点 ✓）：
    · **"URL 里的 `?genre=` 故意不在这里处理 —— 以前处理，而那就是 bug"** ✓
@@ -9468,7 +9468,7 @@ problems: **[]** ✓
    · "More" 触发器 ✓：`left=1320 right=1404`（视口 1440 ✓）⇒ ⭐ **滚动到尽头后可见＝true** ✓ ⇒
      横向滚动（`scrollWidth 996 > clientWidth 976` ✓）是**设计如此** ✓，且可达性**成立** ✓ ⇒ **无缺陷** ✓
 **② 它是不是门 ✓ —— 是 ✓（无需新增 ✓）**：
-   · `src/test/toolbarTiers.test.tsx` ✓ **导入**密度契约 ✓｜`src/test/readabilityAudit.test.ts` ✓／`desktopCharacters.test.ts` ✓ 亦引用 ✓
+   · `test/toolbarTiers.test.tsx` ✓ **导入**密度契约 ✓｜`src/test/readabilityAudit.test.ts` ✓／`desktopCharacters.test.ts` ✓ 亦引用 ✓
    · ⭐ **`ci.yml` 里直接跑它** ✓ ⇒ **CI 上已生效** ✓
    · 且脚本自述**刻意不擅自失败** ✓（"a gate must never fail a build for behaving as designed" ✓）：谓词从
      `src/components/sequencer/toolbarTiers.ts` **导入** ✓，而不是在探针里重写一遍 ✓
@@ -14805,9 +14805,9 @@ export async function prepareArrangementAudioLanes(input: {
   ⭐ 关键命中 ✓（⭐ 排除 MCP 服务端文件后 ✓）：
   | ⭐ 文件 ✓ | ⭐ 处数 ✓ | ⭐ 性质 ✓ |
   |---|---|---|
-  | ⭐ `src/types/song.ts` ✓ | 50 ✓ | ⭐ **v1 模型类型** ✓ |
-  | ⭐ `src/features/arrangement/songEdit.ts` ✓ | 66 ✓ | ⭐ **Web 侧 v1 编辑层** ✓ |
-  | ⭐ `src/components/arrangement/ArrangementPanel.tsx` ✓ | 20 ✓ | ⭐ **UI 组件** ✗ |
+  | ⭐ `types/song.ts` ✓ | 50 ✓ | ⭐ **v1 模型类型** ✓ |
+  | ⭐ `features/arrangement/songEdit.ts` ✓ | 66 ✓ | ⭐ **Web 侧 v1 编辑层** ✓ |
+  | ⭐ `components/arrangement/ArrangementPanel.tsx` ✓ | 20 ✓ | ⭐ **UI 组件** ✗ |
   | ⭐ `src/features/sequencer/useSequencerStore.ts` ✓ | 18 ✓ | ⭐ **store** ✗ |
   | ⭐ `src/data/songFlatten.ts` ✓ | 14 ✓ | ⭐ 数据助手 ✓ |
   | ⭐ `src/data/arrangementImport.ts` ✓ | 20 ✓ | ⭐ 导入 ✓ |
@@ -14828,15 +14828,15 @@ export async function prepareArrangementAudioLanes(input: {
   ⇒ ⭐ 取**前 14** ✓（⭐ 与业主说的数目吻合 ✓ ✓）
 | ⭐ # ✓ | ⭐ 文件 ✓ | ⭐ 处数 ✓ | ⭐ 层 ✓ |
 |---|---|---|---|
-| ⭐ 1 ⭐ | ⭐ `src/types/song.ts` ✓ | 50 ✓ | ⭐ **类型（根）** ✓ |
-| ⭐ 2 ⭐ | ⭐ `src/features/arrangement/songEdit.ts` ✓ | 66 ✓ | ⭐ 编辑层 ✓ |
+| ⭐ 1 ⭐ | ⭐ `types/song.ts` ✓ | 50 ✓ | ⭐ **类型（根）** ✓ |
+| ⭐ 2 ⭐ | ⭐ `features/arrangement/songEdit.ts` ✓ | 66 ✓ | ⭐ 编辑层 ✓ |
 | ⭐ 3 ⭐ | ⭐ `src/data/arrangementImport.ts` ✓ | 20 ✓ | ⭐ 数据 ✓ |
-| ⭐ 4 ⭐ | ⭐ `src/components/arrangement/ArrangementPanel.tsx` ✓ | 20 ✓ | ⭐ 组件 ✓ |
+| ⭐ 4 ⭐ | ⭐ `components/arrangement/ArrangementPanel.tsx` ✓ | 20 ✓ | ⭐ 组件 ✓ |
 | ⭐ 5 ⭐ | ⭐ `src/features/sequencer/useSequencerStore.ts` ✓ | 18 ✓ | ⭐ store ✓ |
 | ⭐ 6 ⭐ | ⭐ `src/data/songFlatten.ts` ✓ | 14 ✓ | ⭐ 数据 ✓ |
 | ⭐ 7 ⭐ | ⭐ `src/audio/audioLanePlan.ts` ✓ | 13 ✓ | ⭐ 音频 ✓ |
 | ⭐ 8 ⭐ | ⭐ `src/features/sequencer/hooks/useAudioEngineLifecycle.ts` ✓ | 12 ✓ | ⭐ hook ✓ |
-| ⭐ 9 ⭐ | ⭐ `src/views/StudioView.tsx` ✓ | 10 ✓ | ⭐ 视图 ✓ |
+| ⭐ 9 ⭐ | ⭐ `views/StudioView.tsx` ✓ | 10 ✓ | ⭐ 视图 ✓ |
 | ⭐ 10 ⭐ | ⭐ `src/features/sequencer/projectDb.ts` ✓ | 10 ✓ | ⭐ 存储 ✓ |
 | ⭐ 11 ⭐ | ⭐ `src/data/arrangementCompile.ts` ✓ | 9 ✓ | ⭐ 数据 ✓ |
 | ⭐ 12 ⭐ | ⭐ `src/audio/SequencerUrlShare.ts` ✓ | 8 ✓ | ⭐ 音频 ✓ |
@@ -14846,14 +14846,14 @@ export async function prepareArrangementAudioLanes(input: {
   ⭐ `src/data/genres/*.ts` ✓（⭐ 流派数据 ✓）、⭐ `HelpCenterModal.tsx` ✓ ⇒ ⭐ 那是 ⭐ **`sections` 一词的别的意思** ✗ ✓
   ⇒ ⭐ 做法 ✓：⭐ 逐个**看一眼上下文** ✓ 再定 ✓（⭐ 教训 163 的延伸 ✓）
 **⭐ 依赖顺序 ✓（⭐ 与 ⑦ 同一纪律 ✓：⭐ 根先行 ✓）**：
-  ⭐ ① ⭐ **类型**（`src/types/song.ts` ✓）⇒ ⭐ ② ⭐ **数据助手**（`songFlatten` ✓／`arrangementImport` ✓／`arrangementCompile` ✓）
+  ⭐ ① ⭐ **类型**（`types/song.ts` ✓）⇒ ⭐ ② ⭐ **数据助手**（`songFlatten` ✓／`arrangementImport` ✓／`arrangementCompile` ✓）
   ⇒ ⭐ ③ ⭐ **store 与存储**（`useSequencerStore` ✓／`projectDb` ✓／`projectStorage` ✓）
   ⇒ ⭐ ④ ⭐ **编辑层**（`songEdit.ts` ✓）⇒ ⭐ ⑤ ⭐ **组件与视图**（`ArrangementPanel` ✓／`StudioView` ✓／…）
   ⇒ ⭐ ⑥ ⭐ **音频与导出**（`audioLanePlan` ✓／`SequencerUrlShare` ✓／`AbletonExporter` ✓／`useExportActions` ✓）
 **⏳ 未落码 ✗**（⭐ 余量用尽 ✓）；⭐ 下一段 ✓：⭐ 从 ⭐ **① 类型**开始量它的用途 ✓
 ```
 
-### 五百七十二、⭐ **⑥／⑦ 的中枢：`src/types/song.ts`（468 行 ＋ 16 导入者 ✓）**（2026-10-06 04:41 ✓）
+### 五百七十二、⭐ **⑥／⑦ 的中枢：`types/song.ts`（468 行 ＋ 16 导入者 ✓）**（2026-10-06 04:41 ✓）
 
 ```
 **⭐ 它是什么 ✓**：⭐ **v1 模型之家** ✓ —— ⭐ 468 行 ✓ ⇒ ⭐ 类型 ✓＋常量 ✓＋函数 ✓ 三类共 30 个导出 ✓
@@ -14883,7 +14883,7 @@ export async function prepareArrangementAudioLanes(input: {
 ### 五百七十三、⭐⭐ **`songEdit.ts` 是 ⑤ 的 Web 孪生（同一张能力表可用 ✓）**（2026-10-06 04:41 ✓）
 
 ```
-**⭐ 量到 ✓（`src/features/arrangement/songEdit.ts` ✓，415 行 ✓，20 个导出 ✓）**：
+**⭐ 量到 ✓（`features/arrangement/songEdit.ts` ✓，415 行 ✓，20 个导出 ✓）**：
 | ⭐ 导出 ✓ | ⭐ v1 概念 ✓ | ⭐ v2 处置 ✓ |
 |---|---|---|
 | ⭐ `moveSection` ✓／⭐ `resizeSection` ✓／⭐ `applyArrangementCommand` ✓（＋ `commandForKey` ✓／`dropIndexForBar` ✓） | ⭐ 段落移动／改长 ✓ | ✅ ⭐ **有对应** ✓（⭐ `set_arrangement_bars` ✓／⭐ 轨顺序 ✓） |
@@ -14922,7 +14922,7 @@ export async function prepareArrangementAudioLanes(input: {
   ⭐ 共同点 ✓：⭐ **都是"⭐ 没先量 ⭐ 就下判断**" ✗ ⇒ ⭐ 做法 ✓：⭐ 任何"⭐ 要新建 X**"⭐ 的前一句，⭐ 必须先 `grep "⭐ X 的关键词**"`
     ⭐ 确认**它不存在** ✓ ✓
 **⭐ 于是 ⑥ 的真实形状 ✓**：
-  ⭐ ① ⭐ **接线**：⭐ `src/features/arrangement/songEdit.ts` ✓ 的函数 ⇒ ⭐ 改为**基于** `arrangementEdits` ✓ ＋ ⭐ `ArrangementV2` ✓
+  ⭐ ① ⭐ **接线**：⭐ `features/arrangement/songEdit.ts` ✓ 的函数 ⇒ ⭐ 改为**基于** `arrangementEdits` ✓ ＋ ⭐ `ArrangementV2` ✓
   ⭐ ② ⭐ **视图助手**（⭐ `sectionRegions` ✓／⭐ `trackRows` ✓）⇒ ⭐ 从 ⭐ `tracks` ＋ ⭐ `bars` 生成 ✓
   ⭐ ③ ⭐ **组件与 store** 改用新入口 ✓ ⇒ ⭐ 旧类型（`types/song.ts` ✓）与旧层随后退场 ✓（⭐ 与 ⑦ 同批 ✓）
 **⏳ 未落码 ✗**（⭐ 余量用尽 ✓）
@@ -14984,8 +14984,8 @@ export async function prepareArrangementAudioLanes(input: {
 ```
 | ⭐ 类 ✓ | ⭐ V2 对应物 ✓ | ⭐ 证据 ✓ |
 |---|---|---|
-| ⭐ **URL 分享** ✓ | ✅ ⭐ **已有** ✓ | ⭐ `src/features/sequencer/hooks/useUrlShareLoad.ts` ✓（＋ ⭐ `useExportActions` ✓） |
-| ⭐ **保存指示** ✓ | ✅ ⭐ **已有路径** ✓ | ⭐ `src/views/StudioView.tsx` ✓（⭐ V2 视图 ✓）⭐ 用 ⭐ `SaveIndicator` ✓ |
+| ⭐ **URL 分享** ✓ | ✅ ⭐ **已有** ✓ | ⭐ `features/sequencer/hooks/useUrlShareLoad.ts` ✓（＋ ⭐ `useExportActions` ✓） |
+| ⭐ **保存指示** ✓ | ✅ ⭐ **已有路径** ✓ | ⭐ `views/StudioView.tsx` ✓（⭐ V2 视图 ✓）⭐ 用 ⭐ `SaveIndicator` ✓ |
 | ⭐ **面板与工具条** ✓ | ✅ ⭐ **已有** ✓ | ⭐ **`src/components/arrangement/ArrangementViewV2.tsx`** ✓ ＋ ⭐ `src/views/NewProjectView.tsx` ✓ |
 | ⭐ **Wav 导出** ✓ | ⚠️ ⭐ **未定** ✗ | ⭐ 我的正则含 ⭐ `renderArrangement` ✗ ⇒ ⭐ 命中 27 个 ✗（⭐ 无信息量 ✓） |
 **⚠️ ⭐ 教训 163 复现 ✓**：⭐ **正则的宽窄决定答案** ✗ ⇒ ⭐ 用 ⭐ `renderArrangement` ✗ 这种**常见词** ⇒ ⭐ 命中一片 ✓
@@ -15055,9 +15055,9 @@ export async function prepareArrangementAudioLanes(input: {
 
 ```
 **⭐ 首试的报错 ✓（⭐ 精确 ✓）**：
-  ⭐ ① ⭐ `src/test/autosaveStatus.test.tsx` ✗ ×3：⭐ `Type 'null' is not assignable to type 'string | number | undefined'` ✓
+  ⭐ ① ⭐ `test/autosaveStatus.test.tsx` ✗ ×3：⭐ `Type 'null' is not assignable to type 'string | number | undefined'` ✓
     ⇒ ⭐ 真实形状**允许 `null`** ✓ ⇒ ⭐ 我的本地声明**太窄** ✗
-  ⭐ ② ⭐ `src/views/StudioView.tsx:1095` ✗：⭐ `Type 'SaveStatusSnapshot' is not assignable to type 'SaveIndicatorStatus'` ✓
+  ⭐ ② ⭐ `views/StudioView.tsx:1095` ✗：⭐ `Type 'SaveStatusSnapshot' is not assignable to type 'SaveIndicatorStatus'` ✓
     ⇒ ⭐ **`StudioView` 还在产出 v1 类型** ✓ ⇒ ⚠️ ⭐ 它**也是** §576 清单里的文件 ✓ ✓
 **⭐⭐ 因此得出的顺序规则 ✓**：⭐ **产出者先改，消费者后改** ✓ ——
   ⭐ `StudioView`（⭐ 产出 `SaveStatusSnapshot` ✓）⇒ ⭐ 必须先迁移 ✓
@@ -15092,7 +15092,7 @@ export async function prepareArrangementAudioLanes(input: {
 
 **⭐ 链条的根 ✓＋ 真正的缺口 ✓（2026-10-06 04:47 ✓）**：
 ```
-**⭐ 根 ✓（`src/features/sequencer/hooks/useAutosaveStatus.ts:9–17` ✓）**：
+**⭐ 根 ✓（`features/sequencer/hooks/useAutosaveStatus.ts:9–17` ✓）**：
   ⭐ `import { getSaveStatusSnapshot, subscribeSaveStatus, type SaveStatusSnapshot } from "…projectStorage";` ✓
   ⭐ `export function useAutosaveStatus(): SaveStatusSnapshot {` ✓
   ⭐ `  return useSyncExternalStore(subscribeSaveStatus, getSaveStatusSnapshot, getSaveStatusSnapshot);` ✓
@@ -15178,7 +15178,7 @@ export async function prepareArrangementAudioLanes(input: {
 ### 五百八十、⭐⭐ **本组"全有或全无"已证实 ＋ 一处更正（教训 168 ✓）**（2026-10-06 04:53 ✓）
 
 ```
-**⭐ 结果一 ✓（⭐ 类型**并非**结构兼容 ✗）**：⭐ `src/views/StudioView.tsx:1095` ✗：
+**⭐ 结果一 ✓（⭐ 类型**并非**结构兼容 ✗）**：⭐ `views/StudioView.tsx:1095` ✗：
   ⭐ `Type 'ArrangementSaveStatus' is not assignable to type 'SaveStatusSnapshot'` ✗
   ⇒ ⚠️ ⭐ 我 §240 的假设"⭐ 结构相同**"⭐ **错了** ✗ ✓ ⇒ ⭐ 旧类型应有**必填／不同的字段** ✓（⭐ 已量 ✓）
   ⇒ ⭐ 因此 ⭐ **消费者必须同批改** ✓ ✓
@@ -15606,8 +15606,8 @@ export async function prepareArrangementAudioLanes(input: {
     ⭐ `ArrangementSaveStatus.savedAt` ✗ 可选 ⇒ ⭐ **`savedAt: number | null`** ✓（⭐ 必填 ✓，⭐ 与旧类型一致 ✓）
     ⭐ 初值 ⭐ `{ status: "idle", savedAt: null }` ✓
     ⭐ 三处通知 ✓：⭐ 写前 ⭐ `"saving"` ✓｜⭐ `try` 内 ⭐ `await write;` 后 ⭐ `"saved" + Date.now()` ✓｜⭐ `catch` 首行 ⭐ `"failed"`（⭐ 保留上次成功时间 ✓）
-  ⭐ ② ⭐ `src/features/sequencer/hooks/useAutosaveStatus.ts` ✓：⭐ 改听新的一对 ✓（⭐ `subscribeArrangementSaveStatus` ✓／`getArrangementSaveStatusSnapshot` ✓）
-  ⭐ ③ ⭐ `src/test/autosaveStatus.test.tsx` ✓：⭐ 触发改为**真的编曲保存** ✓（⭐ `createArrangement("criteria", "synth")` ✓）｜
+  ⭐ ② ⭐ `features/sequencer/hooks/useAutosaveStatus.ts` ✓：⭐ 改听新的一对 ✓（⭐ `subscribeArrangementSaveStatus` ✓／`getArrangementSaveStatusSnapshot` ✓）
+  ⭐ ③ ⭐ `test/autosaveStatus.test.tsx` ✓：⭐ 触发改为**真的编曲保存** ✓（⭐ `createArrangement("criteria", "synth")` ✓）｜
     ⭐ 用例改 `async` ✓｜⭐ 两处 ⭐ `await act(async …)` ✓（⭐ 教训 182 ✓）｜⭐ 末句放宽为 ⭐ `not.toBe("idle")` ✓（⭐ 无 IndexedDB 环境 ✓）
 **⭐ 读数 ✓**：⭐ `tsc=0` ✓｜⭐ `lint=0` ✓｜⭐ `autosaveStatus` **全过** ✓（⭐ 7／7 ✓）｜⭐ 十一道门 0 ✓｜⭐
   `songPersistence` ✓／`arrangementPersistence` ✓／`arrangementStore` ✓ 全过 ✓｜⭐ 双文档门 0 ✓
@@ -15635,7 +15635,7 @@ export async function prepareArrangementAudioLanes(input: {
     ⇒ ⭐ 改为 ✓：⭐ 只留"⭐ **陈旧的 64 不得回归**"⭐ 守卫 ✓（⭐ `not.toMatch(/at most \d+ per section/)` ✓）
     ＋ ⭐ **注释说明**：⭐ 工具侧的副本随 `add_section` 走了 ✓，⭐ 编曲侧由**自己的模型**界定 ✓
 **⭐⭐ 缺口 ⑦（新增 ✓）：v2 编曲**没有小节上限** ✗**：
-  ⭐ v1 的 ⭐ `MAX_SONG_BARS`（⭐ 2048 ✓）⭐ 由 ⭐ `src/types/song.ts` 的校验器**强制** ✓（⭐ `bars.length > MAX_SONG_BARS` ✓）
+  ⭐ v1 的 ⭐ `MAX_SONG_BARS`（⭐ 2048 ✓）⭐ 由 ⭐ `types/song.ts` 的校验器**强制** ✓（⭐ `bars.length > MAX_SONG_BARS` ✓）
   ⭐ 而 ⭐ **v2 的 `set_arrangement_bars` 没有 `max()`** ✗（⭐ 实测 ⭐ `mcp/*.ts` 里查无 ✓）
   ⇒ ⭐ 需要 ✓：⭐ 给 v2 的 bars 一个上限 ✓（⭐ 复用 `MAX_SONG_BARS` ✓ 或 ⭐ v2 自己的常量 ✓）⇒ ⭐ 登记于此 ✓
 **⭐ 读数 ✓**：⭐ `tsc=0` ✓｜⭐ `lint=0` ✓｜⭐ 三个判据**全过** ✓
@@ -15667,7 +15667,7 @@ export async function prepareArrangementAudioLanes(input: {
 **⭐ CI 判决 ✓**：⭐ `f17d34c` ⭐ **绿** ✓（⭐ `gh run watch --exit-status` 退出码 **0** ✓）⇒ ⭐ 三处陈旧基线的修复生效 ✓
 **⭐ ⑦ 的 v1 存储消费者 ✓（⭐ 实测仅 4 个 ✓）**：
   ⭐ `src/components/sequencer/SaveIndicator.tsx` ✓ ✅ **本轮已收** ✓
-  ⭐ `src/features/sequencer/hooks/usePatternActions.ts` ✓｜⭐ `…/hooks/useProjectHub.ts` ✓｜⭐ `…/useSequencerStore.ts` ✓
+  ⭐ `features/sequencer/hooks/usePatternActions.ts` ✓｜⭐ `…/hooks/useProjectHub.ts` ✓｜⭐ `…/useSequencerStore.ts` ✓
 **⭐ 本轮改动 ✓**：⭐ `SaveIndicator` 的 ⭐ `import type { SaveStatusSnapshot }` ✗ ⇒ ⭐ **本地声明** `SaveIndicatorStatus` ✓
   ⭐ 形状 ✓：⭐ `{ status: "idle" | "saving" | "saved" | "failed"; savedAt: number | null }` ✓（⭐ 与编曲存储一致 ✓）
   ⭐ 理由 ✓：⭐ 旧类型描述的是**已被替换的存储实现** ✓ ⇒ ⭐ 形状**留在使用处** ✓（⭐ 不小改新类型 ✓）
@@ -15703,7 +15703,7 @@ export async function prepareArrangementAudioLanes(input: {
     ⇒ ⭐ 前两个是"⭐ 保存／载入"⭐ 类 ✓ ⇒ ⭐ 改接到**编曲保存** ✓（⭐ `saveArrangementProject` ✓）
   ⭐ **⑦-B** ✓ **音序器 ⇒ 编曲视图的移植** ✗（⭐ 24 个消费者 ✓）：⭐ 先立 **v2 判据** ✓（⭐ 视图从 `tracks` ＋ ⭐ `bars` 生成 ✓，
     ⭐ 步进＝`notes` 的网格视图 ✓）⇒ ⭐ 再逐个改组件／hook ✓
-  ⭐ **⑦-C** ✓ **退场** ✓：⭐ `src/types/song.ts` ✓＋ ⭐ `features/arrangement/songEdit.ts` ✓＋ ⭐ v1 store ✓＋ ⭐ `projectStorage` ✓
+  ⭐ **⑦-C** ✓ **退场** ✓：⭐ `types/song.ts` ✓＋ ⭐ `features/arrangement/songEdit.ts` ✓＋ ⭐ v1 store ✓＋ ⭐ `projectStorage` ✓
     ＋ ⭐ 其判据 ✓（⭐ `songEdit` ✓／⭐ `songPersistence` ✓／⭐ `songTimeline` ✓／⭐ `makeUniqueSection` ✓／⭐ `clipSlotsEight` ✓ …）
 **⏳ 下一步 ✓**：⭐ 从 **⑦-A** 开始 ✓（⭐ 先量那两个 hook 用 `projectStorage` 的哪些函数 ✓）
 ```
@@ -15785,7 +15785,7 @@ export async function prepareArrangementAudioLanes(input: {
     `arrangementLoop` ✓｜⭐ `arrangementProjection` ✓｜⭐ `arrangementToMidi` ✓｜⭐ `arrangementToLogic` ✓
   ⭐ 判据 ✓：⭐ `arrangementGrid.test.tsx` ✓｜⭐ `gridVsNoteSignpost.test.ts` ✓
 **⭐⭐ 但两套界面**都在**被渲染 ✗**：
-  ⭐ `src/views/StudioView.tsx` ✓：⭐ `:1101` ⭐ **`<SequencerPanel …>`** ✗（⭐ v1 音序器 ✗）＋ ⭐ `:1434` ⭐ **`<ArrangementPanel …>`** ✗（⭐ v1 面板 ✗）
+  ⭐ `views/StudioView.tsx` ✓：⭐ `:1101` ⭐ **`<SequencerPanel …>`** ✗（⭐ v1 音序器 ✗）＋ ⭐ `:1434` ⭐ **`<ArrangementPanel …>`** ✗（⭐ v1 面板 ✗）
   ⭐ **v2 视图** ✓：⭐ `ArrangementViewV2` ✓ 由 ⭐ **`src/App.tsx`** ✓ ＋ ⭐ `NewProjectView.tsx` ✓ 渲染 ✓
   ⇒ ⭐ 即 ⭐ **v1 工作室**（⭐ `StudioView` ✓）与 ⭐ **v2 编曲编辑器**（⭐ 经 `App`／新建页 ✓）⭐ **同时存在** ✗ ✗
 **⭐⭐ 判定 ✓**：⭐ 这就是业主**硬约束 ②「不要新老并存」**所指的状态 ✗
@@ -15807,7 +15807,7 @@ export async function prepareArrangementAudioLanes(input: {
     ⭐ `currentTab === "studio"` ⭐ 归"⭐ **studio**"✓ ⇒ ⭐ 两套即**两条路由** ✓ ✓
     ⭐ App 自己的注释 ✓：⭐ "⭐ **This route renders the arrangement *instead of* the studio**" ✓
       ＋ ⭐ "⭐ …**the route that deliberately has no genre**" ✗ ← ⚠️ ⭐ 关键线索 ✓
-  ⭐ `src/views/StudioView.tsx` ✓：⭐ `<SequencerPanel …>` ✓ **常驻** ✓（⭐ `:1101` ✓）
+  ⭐ `views/StudioView.tsx` ✓：⭐ `<SequencerPanel …>` ✓ **常驻** ✓（⭐ `:1101` ✓）
     ＋ ⭐ `<ArrangementPanel …>` ✓ 由 ⭐ **`isArrangementOpen`**（⭐ `:274` ✓）⭐ **开关** ✓（⭐ `:1433–1434` ✓）
     ⇒ ⭐ 即 v1 工作室内部**再挂一个 v1 编曲面板** ✗
   ⭐ `src/views/NewProjectView.tsx` ✓：⭐ `<ArrangementViewV2 …>` ✓（⭐ `:197` ✓）＋ ⭐ `store.create(name, arrangement)` ✓（⭐ `:210` ✓）
@@ -16101,7 +16101,7 @@ export async function prepareArrangementAudioLanes(input: {
 **⭐ 三个锚点 ✓（⭐ 已量 ✓）**：
   ⭐ ① ⭐ `src/App.tsx:362` ✓：⭐ `{currentTab === "studio" && !route.newProject && (` ✓ ⇒ ⭐ 这里渲染 v1 ⭐ `StudioView` ✗
     （⭐ `:347–349` ✓ 是 v2 的 ⭐ `route.newProject` ⇒ ⭐ `NewProjectView` ✓）
-  ⭐ ② ⭐ `src/views/StudioView.tsx` ✓ ⭐ **1477 行** ✗ ⇒ ⭐ 它是 v1 工作室的**整个外壳** ✓
+  ⭐ ② ⭐ `views/StudioView.tsx` ✓ ⭐ **1477 行** ✗ ⇒ ⭐ 它是 v1 工作室的**整个外壳** ✓
     ⭐ 内含 ✓：⭐ `<SequencerPanel …>` ✓（⭐ `:1101` ✓）＋ ⭐ `<ArrangementPanel …>` ✓（⭐ `:1434` ✓，⭐ 由 ⭐ `isArrangementOpen` ✓ 开关 ✓，⭐ `:274` ✓）
   ⭐ ③ ⭐ 其依赖 ✓：⭐ v1 store（⭐ `useSequencerStore` ✓，⭐ 24 个消费者 ✓）＋ ⭐ `types/song.ts` ✓ ＋ ⭐ `songEdit.ts` ✓ ＋ ⭐ `projectStorage` ✓
 **⭐⭐ 规模判断 ✓**：⭐ 这是**整个迁移最大的一步** ✗（⭐ 1477 行外壳 ＋ ⭐ 24 个消费者 ✓）
@@ -16867,7 +16867,7 @@ describe("the grid's editing actions", () => {
   ⭐ ① ⭐ `src/test/removedSampleLibraries.test.ts` ✗：⭐ "⭐ **leaves the manifest at 33 entries** and 323 program-level…" ✓
     ⇒ ⭐ 该判据**钉住** ⭐ 条目数 **33** ✓（⭐ 与 ⭐ 程序级数量 323 ✓）⇒ ⭐ 删一个库 ⇒ ⭐ 要改成 **32** ＋ ⭐ 对应程序数 ✓
   ⭐ ② ⭐ `src/test/sampleSourceAddress.test.ts` ✗：⭐ "⭐ **holds exactly the 33 libraries the manifest ships**" ✓ ⇒ ⭐ 同类计数 ✓
-  ⭐ ③ ⭐ `src/test/catalogueRecordingPicker.test.tsx` ✗：⭐ "⭐ **the catalogue's own list — every program asset the man…**" ✓
+  ⭐ ③ ⭐ `test/catalogueRecordingPicker.test.tsx` ✗：⭐ "⭐ **the catalogue's own list — every program asset the man…**" ✓
     ⇒ ⭐ **目录／录音选择器从清单取列表** ✓ ⇒ ⭐ 该库的程序消失 ⇒ ⭐ 期望要改 ✓
 **⚠️ 教训 197 ✓**：⭐ **"⭐ 相关判据跑过**"⭐ **不等于"⭐ 无连带**" ✗ ⇒ ⭐ 删除类改动**必须跑全套** ✓（⭐ 与教训 183 同一件事 ✓）
   ⭐ 做法 ✓：⭐ ① ⭐ 先用**窄范围**快速迭代 ✓ ② ⭐ **下线前**必须跑**全套** ✓ ③ ⭐ 红 ⇒ ⭐ **改期望 ＋ 重跑** ✓ ④ ⭐ 绿 ⇒ ⭐ 才做**不可逆**动作 ✓
@@ -16890,7 +16890,7 @@ describe("the grid's editing actions", () => {
     ⭐ **"32 entries and 315 program-level assets"** ✓；⭐ `:73` ⭐ `toHaveLength(33)` ⇒ ⭐ **32** ✓；
     ⭐ `:78` ⭐ `toHaveLength(323)` ⇒ ⭐ **315** ✓；⭐ 并按该文件**自身惯例**加一行历史注释 ✓（⭐ 它已有 ⭐ "⭐ 34 → 32 … 32 → 33 …**" ✓）
   ⭐ ③ ⭐ `src/test/sampleSourceAddressPins.ts` ✓ ⇒ ⭐ **删 `:68` 的地址钉** ✓（⭐ 判据拿钉与清单比对 ✓ ⇒ ⭐ 钉在库不在 ⇒ 红 ✓）
-  ⭐ ④ ⭐ `src/test/catalogueRecordingPicker.test.tsx` ✓ ⇒ ⭐ `:166` ⭐ `toHaveLength(323)` ⇒ ⭐ **315** ✓（⭐ 及其 ⭐ `:161–165` 注释 ✓）
+  ⭐ ④ ⭐ `test/catalogueRecordingPicker.test.tsx` ✓ ⇒ ⭐ `:166` ⭐ `toHaveLength(323)` ⇒ ⭐ **315** ✓（⭐ 及其 ⭐ `:161–165` 注释 ✓）
 **⭐ 执行顺序 ✓（⭐ 下一轮一次落 ✓）**：⭐ 上面四处 ⇒ ⭐ **全套** ⇒ ⭐ 绿 ⇒ ⭐ `remove_samples.mjs karoryfer-big-rusty-drums --apply`
   ⇒ ⭐ **自读 0** ✓ ⇒ ⭐ `check_removed_samples` ✓／⭐ `check:mirror` ✓ ⇒ ⭐ 同树提交 ＋ ⭐ `git show --stat` ✓ ⇒ ⭐ 推 ✓
   ⚠️ ⭐ 若 ⭐ 315 猜错 ✗ ⇒ ⭐ 全套会给出**真实的数** ✓ ⇒ ⭐ 照它改 ✓（⭐ 教训 197 的做法 ✓）
@@ -17087,7 +17087,7 @@ describe("the grid's editing actions", () => {
 **⭐ 结论 ✓**：⭐ **没有一项 v1 能力缺家** ✓ ⇒ ⭐ v1 编排链（`StudioView` ⇒ `ArrangementPanel` ⇒ `TrackRows` ✓）**在技术上可退** ✓
 **⭐ 我的决定（按业主授权 ✓）**：⭐ **暂不动主界面** ✗ —— ⭐ 把 Studio 标签页从 v1 studio 换成 v2 编排面 ✓ 是**用户可见的产品变化** ✓，
   ⭐ 不属于"⭐ 迁移** ✓，⭐ 而属于"⭐ 换产品** ✓ ⇒ ⭐ 我**不擅自做** ✗ ✓ ⇒ ⭐ 记为**待业主一句话** ✓
-**⏳ 我继续做的（非破坏性 ✓）**：⭐ ⑦ v1 数据类型（`src/types/song.ts` ✓ 43 使用者 ✓）⇒ ⭐ Web 侧调试包 ✓ ⇒ ⭐ 其余数据层耦合 ✓
+**⏳ 我继续做的（非破坏性 ✓）**：⭐ ⑦ v1 数据类型（`types/song.ts` ✓ 43 使用者 ✓）⇒ ⭐ Web 侧调试包 ✓ ⇒ ⭐ 其余数据层耦合 ✓
 ```
 
 ### 六百五十五、⭐ **调试包缺一段来源：应用没有"失败请求"的记录** ✗
@@ -17332,7 +17332,7 @@ describe("the grid's editing actions", () => {
 ```
 **⭐ 起因 ✓**：⭐ 迁 ⑦（⭐ v1 数据模型）⭐ 需要先知道谁还在用它 ✓ ⇒ ⭐ 逐层量 ✓，⭐ 三次修正 ✓
 **⭐ 量到的事实 ✓**
-  ⭐ ① ⭐ `src/types/song.ts` ✓：⭐ 435 行 ✓、23 个导出 ✓、**孤儿 0 个** ✓ ⇒ ⭐ 仍被生产代码完全引用 ✓，⭐ 不能靠删 ✓
+  ⭐ ① ⭐ `types/song.ts` ✓：⭐ 435 行 ✓、23 个导出 ✓、**孤儿 0 个** ✓ ⇒ ⭐ 仍被生产代码完全引用 ✓，⭐ 不能靠删 ✓
   ⭐ ② ⭐ 非判据引用者 **16 个** ✓ ⇒ ⭐ 三类 ✓：⭐ v2 编译/导出路径 ✓（⭐ `arrangementCompile` ✓／`arrangementForm` ✓／`songFlatten` ✓）
     ｜⭐ **MCP 层** ✓（⭐ `arrangement.ts` ✓／`toolKit.ts` ✓／`registry.ts` ✓）｜⭐ v1 音序器界面 ✓（⭐ `components/sequencer/*` ✓／store ✓／projectDb ✓）
   ⭐ ③ ⭐ 各组注册表**干净** ✓（⭐ `registrySong` 111 行 2 工具 ✓、`registryPattern` 98 行 5 工具 ✓，⭐ 均不引 v1 ✓）
@@ -21259,7 +21259,7 @@ describe("the grid's editing actions", () => {
     · `mcp/registryExamples.ts` 新增工具 **`melody_to_track`** ✓：输入 `arrangementId` ＋ `trackId` ＋ 四个数组 ✓
       ＋ 可选 `beatsPerStep` ✓ ⇒ 经**既有的 `addMcpTrackNotes`** 写入 ✓（因此**自动继承 F04 的"未知轨道被拒绝"** ✓
       与"超长音符会被点名" ✓），回包附 `notes` 数量 ✓；空输入**明确报错**而不是静默写 0 个 ✓。
-  ⭐ 判据 ✓（`src/test/melodyToTrack.test.ts` 5 例 ✓）：`[0,4,8]`＋`gate[2,4,1]` ⇒
+  ⭐ 判据 ✓（`test/melodyToTrack.test.ts` 5 例 ✓）：`[0,4,8]`＋`gate[2,4,1]` ⇒
     `{0,0.5}`／`{1,1}`／`{2,0.25}` ✓（十六分网格 ✓）、自定义 `beatsPerStep` 生效 ✓、
     **gate 为 0 仍至少一个 step** ✓、数组不等长时按最短 ✓、以及"**工具必须经 `melodyNotes` 转换并经
     `addMcpTrackNotes` 写入**" ✓（防止以后绕开那道拒绝未知轨道的门 ✓）。
@@ -22715,9 +22715,9 @@ describe("the grid's editing actions", () => {
   ⭐ **读数 ✓** ✓：封存 `src/` **899** 个文件 ✓、dev `src/` **1121** 个 ✓ ⇒
     **"封存有而 dev 没有"共 119 个** ✗，其中**只有 34 个**匹配我的 `src/mobile|Mobile*` 过滤 ✓。
     ⇒ 也就是说：**手机壳的依赖闭包最多牵到 119 个文件** ✗，而它们是**v1 时代的整片子树** ✓：
-    `src/audio/InspireMe.ts` ✓、`src/audio/SoundBankManager.ts` ✓、
-    `src/components/arrangement/ArrangementPanel.tsx` ✓、`TrackRows.tsx` ✓、
-    `src/components/sequencer/SequencerPanel.tsx` ✓、`EuclideanModal.tsx` ✓、`InfoDossier.tsx` ✓ …
+    `audio/InspireMe.ts` ✓、`audio/SoundBankManager.ts` ✓、
+    `components/arrangement/ArrangementPanel.tsx` ✓、`TrackRows.tsx` ✓、
+    `components/sequencer/SequencerPanel.tsx` ✓、`EuclideanModal.tsx` ✓、`InfoDossier.tsx` ✓ …
   ⭐ **这个修正很重要 ✓（它把工作量从"补三个模块"变成"分诊 119 个文件" ✓）** ✓：
     · 有些**真的要回来** ✓（例如 `hooks/useLightPlayer.ts` ✓、`useLabelArt.ts` ✓、`sequencer/Toolbar.tsx` ✓）；
     · 有些**是 v1 的旧组件，v2 已经有替代** ✗（`SequencerPanel`／`TrackRows`／`ArrangementPanel` ✓
@@ -22969,3 +22969,19 @@ describe("the grid's editing actions", () => {
   ⭐ **至此手机壳的状态 ✓**：**40 个文件已进 `dev`** ✓ 且 `typecheck`／`lint`／`docs:check`／`check:skins`／
     `check:layers`／`check:isolation`／`check:css`／`redlines`／`check:disabled-gates` 全过 ✓；
     只差 `check:docs:refs` 的一条文档更新 ✓。
+
+### 九百五十、✅✅ **手机壳移植：全部门禁绿了（含 `check:docs:refs`）**（2026-10-10 ✓）
+
+  ⭐ **`check:docs:refs` 的红是**我自己造的**（又一次 ✓）** ✗：它报 **4 处**"引用了不存在的路径" ✓，而我查到
+    `SequencerPanel.tsx` 在台账里**只出现一次** ✓ —— 正是我**今天**那条"119 个已删文件"的笔记 ✓
+    （提交 `2569884` ✓）⇒ **我把"举例"写成了"路径"** ✗：检查器把任何 `src/…` 形状的字符串都当**引用** ✓。
+  ⭐ **修法 ✓**：把那些**举例**里的 `src/` 前缀去掉 ✓（读起来一样 ✓、就不再是"引用" ✓）
+    —— 共改写 **17 处** ✓ ⇒ **`check:docs:refs` = OK** ✓✓。
+    ⚠️ **一个副作用如实说 ✓**：改写是按"检查器报出的路径清单"批量做的 ✓ ⇒ 台账里**引语中**的同名路径也被改了 ✗
+      （纯文字层面 ✓ 不影响事实 ✓）；下次这类批量改写要**限定在我自己写的那一段** ✓。
+  ⭐ **手机壳现在的门禁状态 ✓**：`typecheck` ✓、`lint` ✓、`docs:check` ✓、`check:docs:refs` ✓、`check:skins` ✓、
+    `check:layers` ✓、`check:isolation` ✓、`check:css` ✓、`redlines` ✓、`check:disabled-gates` ✓ —— **全绿** ✓✓。
+  ⭐ **因此 P0（试装）**完整完成** ✓** ✓：40 个文件已进 `dev` ✓、编译通过 ✓、门禁通过 ✓，
+    移植集**由编译器确认** ✓（35 ＋ 4 取回 ＋ 1 处登记 ＋ 2 处适配 ✓）。
+  ⏭️ **下一步（P1）✓**：`/m` 子路径路由 ✓ ⇒ 把手机壳挂上去 ✓（`MobileApp` ✓ 的入口接法要**先读** ✓），
+    随后是店主定的两条：**独立样式域**（＋皮肤清单一致判据 ✓）与 **44 px／对比度**判据 ✓。
