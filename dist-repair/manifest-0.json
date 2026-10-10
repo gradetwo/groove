@@ -979,8 +979,8 @@
     {
       "genreId": "jersey-drill",
       "url": "jersey-drill.mp3",
-      "seconds": 48.6,
-      "bytes": 1168030,
+      "seconds": 16.600023,
+      "bytes": 400030,
       "lufs": -9.090299327390904,
       "bars": 6,
       "engineVersion": "2.35.11",
@@ -988,12 +988,7 @@
       "generatedAt": "2026-10-10",
       "recordedLanes": 2,
       "builtInLanes": 6,
-      "warnings": [
-        {
-          "code": "length-out-of-range",
-          "detail": "48.6s is outside the owner's 15–30s window"
-        }
-      ]
+      "warnings": []
     },
     {
       "genreId": "synthwave",
