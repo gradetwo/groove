@@ -23192,3 +23192,25 @@ describe("the grid's editing actions", () => {
     （例如出现 `mobile-tab-bar`／`mobile-transport-bar` 之类的元素 ✓ —— 那两个 id 正是当年 `check:docs:refs` 说""
     已随手机壳删除"的那两个 ✓✓ ⇒ **它们的存在本身就是"壳回来了"的证据** ✓）。
     之后才进入店主定的两条：**独立样式域**（＋皮肤清单一致判据 ✓）与 **44 px／对比度**判据 ✓。
+
+### 九百六十、🎉🎉 **浏览器验收通过：`/m` 真的渲染出手机壳了（P1 完成）**（2026-10-10 ✓）
+
+  ⭐ **做法 ✓**（`scratch/probe-m-route.mjs` ✓，390×844 手机视口 ✓）：`npm run build` ✓ ⇒ `vite preview` ✓ ⇒
+    打开 **`/m`** ✓ ⇒ 6 秒后读 DOM ✓。
+  ⭐ **读数 ✓（决定性 ✓）** ✓：
+    · **311 个 `data-testid`** ✓，其中手机专属的一串 ✓：**`mobile-shell`** ✓、**`mobile-home`** ✓、
+      `mobile-home-count` ✓、`mobile-home-search` ✓、`mobile-home-timeline-section` ✓、
+      `mobile-home-timeline` ✓、`mobile-home-timeline-node-0` ✓、`mobile-home-timeline-genre-0-delta-blues` ✓ …
+    · 页面文字 ✓：**"Groove · Genres · GENRES · 159 · Tap a card to audition · open for details"** ✓
+      ＋ 分类片（All／Electronic／Rock-Metal／Hip Hop／Jazz-Blues／Pop-R&B／Latin-World ✓）
+      ＋ **"A century of groove · 1900s · 2 genres"** ✓ ⇒ **那是手机首页的曲风时间线** ✓（不是桌面界面 ✓）；
+    · **`pageErrors: []`** ✓✓（**零运行时错误** ✓）。
+  ⚠️ **一处与我预期不同的读数（如实记 ✓）** ✓：我原以为会有 `mobile-tab-bar`／`mobile-transport-bar` ✗ ⇒
+    探针报 `false` ✗ —— 说明那两个 **id 是**文档里的旧名字** ✓，这个壳里实际用的是 `mobile-shell`／`mobile-home` ✓
+    ⇒ **真正的证据是后者** ✓；同时也再次说明：**`check:docs:refs` 里那句"随手机壳删除"的记录必须更新** ✓
+      （旧名字已不存在 ✓，而壳本身回来了 ✓）——这正是我前面列的登记项之一 ✓。
+  ⭐ **于是 P1 完成 ✓**：`/m` 解析 ✓ → 挂载 ✓ → **真浏览器渲染出手机壳 ✓、零错误 ✓**。
+    这是"接回手机版"从**编译通过**走到**跑起来**的一步 ✓ —— 而它只用了：一条路由 ✓、一个挂载分支 ✓、
+    40 个移植文件 ✓，以及**五次自动回退换来的"先读后改"纪律** ✓。
+  ⏭️ **接下来（店主定的两条 ✓）** ✓：①**独立样式域**（路 B ✓）＋**皮肤清单两边一致**判据 ✓；
+    ②**44 px 触控与对比度**判据 ✓；之后是手机播放器（`<audio>` ＋变速 ＋曲风对比 ✓）与触控/性能复验 ✓。
