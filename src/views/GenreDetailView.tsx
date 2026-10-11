@@ -43,6 +43,9 @@ import {
 import { sharedSamplerLoader } from "../audio/sharedSamplerLoader";
 import { reportSampledLaneProblems, sampledInstrumentProblems } from "../audio/sampledLanes";
 import type { SampleAsset } from "../data/sampleCatalogue";
+import { usesClipAudition } from "../utils/clipAudition";
+import { useGenreClip } from "../hooks/useGenreClip";
+import { ClipAuditionAudio } from "../components/ClipAuditionAudio";
 
 /**
  * ⭐ **The session's shared loader, as `useRecordedLanes` wants it.** One factory at module scope rather than an inline arrow, so the option
@@ -127,6 +130,21 @@ export const GenreDetailView: React.FC<GenreDetailViewProps> = ({
   // Groove player state
   const [isPlaying, setIsPlaying] = useState(false);
   const [auditionMode, setAuditionMode] = useState<"drums" | "full">("full");
+  /**
+   * ⭐ **Which transport owns the sound: the pre-cut clip or the engine.**
+   *
+   * `clipGenreId` is the genre whose MP3 is mounted, or `null` while the engine owns it — one value, so the two can
+   * never both be believed to be playing.
+   */
+  const [clipGenreId, setClipGenreId] = useState<string | null>(null);
+  /**
+   * ⭐ **"This full audition has no clip, so the engine is playing" — set at the press, not when the engine happens
+   * to finish starting.** The first version gated the sentence on `isPlaying`, which the engine path only sets after
+   * its sampler preparation resolves — so a genre with no clip (or an unreadable manifest) showed **nothing at all**,
+   * the exact silent nothing the rule forbids. Measured in a browser before the fix.
+   */
+  const [clipFallback, setClipFallback] = useState(false);
+  const { clip, loading: clipLoading, unavailable: clipUnavailable } = useGenreClip(genre.id);
   const [currentStep, setCurrentStep] = useState(0);
   const [bpm, setBpm] = useState(genre.default_bpm || 124);
   const [bpmInput, setBpmInput] = useState<string>(String(genre.default_bpm || 124));
@@ -176,6 +194,9 @@ export const GenreDetailView: React.FC<GenreDetailViewProps> = ({
     const defaultBpm = genre.default_bpm || 124;
     setBpm(defaultBpm);
     setBpmInput(String(defaultBpm));
+    // ⭐ A different genre is a different sound: a clip left mounted here would keep the old genre playing over the new page.
+    setClipGenreId(null);
+    setClipFallback(false);
 
     const engine = engineRef.current;
     if (!engine) return;
@@ -198,6 +219,26 @@ export const GenreDetailView: React.FC<GenreDetailViewProps> = ({
   }, [catalogue, genre]);
 
   const handlePlayMode = async (mode: "drums" | "full") => {
+    /**
+     * ⭐ **The full audition plays the pre-cut clip when the manifest has one** (owner's decision, 2026-10-11), and the
+     * engine is not started at all. Setting `clipGenreId` here, in the click, is what mounts the `<audio>` inside the
+     * user's gesture; pressing the same button again unmounts it (which pauses it) and stops the transport's UI.
+     */
+    if (usesClipAudition(mode) && clip) {
+      const stopping = clipGenreId === genre.id;
+      engineRef.current?.stop();
+      stopRecordedLanes();
+      setAuditionMode(mode);
+      setIsPlaying(!stopping);
+      setClipGenreId(stopping ? null : genre.id);
+      setClipFallback(false);
+      setCurrentStep(0);
+      return;
+    }
+    // ⭐ No clip for this genre, or the drums mode: the engine owns the sound, and the clip (if any) must stop first.
+    setClipGenreId(null);
+    // ⭐ Say it now, at the press: a full audition whose clip is missing must not look like it did nothing.
+    setClipFallback(usesClipAudition(mode) && !clipLoading);
     if (!engineRef.current) return;
 
     // If clicking same mode while playing, stop
@@ -208,8 +249,10 @@ export const GenreDetailView: React.FC<GenreDetailViewProps> = ({
       return;
     }
 
-    // If currently playing in the other mode, switch mutes in realtime without interruption
-    if (isPlaying && auditionMode !== mode) {
+    // If currently playing in the other mode, switch mutes in realtime without interruption.
+    // ⭐ Not when the clip was the transport: the engine is stopped under it, so there is nothing to switch — this press
+    // has to start the engine below, which is why the branch requires `clipGenreId === null`.
+    if (isPlaying && auditionMode !== mode && clipGenreId === null) {
       setAuditionMode(mode);
       applyAudioMutes(engineRef.current, mode, genre);
       /**
@@ -312,6 +355,9 @@ export const GenreDetailView: React.FC<GenreDetailViewProps> = ({
     if (!engineRef.current) return;
     engineRef.current.stop();
     stopRecordedLanes();
+    // ⭐ Stopping is stopping, whichever transport owned the sound: unmounting the clip pauses its element.
+    setClipGenreId(null);
+    setClipFallback(false);
     setIsPlaying(false);
     setCurrentStep(0);
     setPreparing(null);
@@ -618,7 +664,7 @@ export const GenreDetailView: React.FC<GenreDetailViewProps> = ({
             ) : (
               <>
                 <Play className="w-4 h-4 fill-current text-accent" />
-                <span>{t("detail_audition_full")}</span>
+                <span>{clip ? t("detail_audition_full_clip") : t("detail_audition_full")}</span>
               </>
             )}
           </button>
@@ -650,6 +696,30 @@ export const GenreDetailView: React.FC<GenreDetailViewProps> = ({
             )}
           </button>
         </div>
+
+        {/**
+         * ⭐ **The clip's own transport, mounted only while it owns the sound.** Unmounting pauses it, so stopping or
+         * switching to drums cannot leave the MP3 playing under the engine.
+         */}
+        {clipGenreId !== null && clip && (
+          <ClipAuditionAudio
+            url={clip.url}
+            onEnded={() => {
+              setClipGenreId(null);
+              setIsPlaying(false);
+            }}
+          />
+        )}
+
+        {/**
+         * ⭐ **A full audition with no clip still plays, on the engine — and says so at the press.** Never a silent
+         * nothing: the sentence is raised by the handler, so it does not wait on the sampler path to succeed.
+         */}
+        {clipFallback && (
+          <p data-testid="clip-audition-fallback" className="text-[11px] text-text-dim">
+            {clipUnavailable ? t("clip_audition_unavailable", { reason: clipUnavailable }) : t("clip_audition_fallback")}
+          </p>
+        )}
 
         {/**
          * ⭐ **"正在获取音源" — the wait, said out loud, with a determinate count.**
@@ -710,7 +780,9 @@ export const GenreDetailView: React.FC<GenreDetailViewProps> = ({
                 {isPlaying
                   ? (auditionMode === "drums"
                       ? t("detail_status_drums")
-                      : t("detail_status_full"))
+                      : clipGenreId !== null
+                        ? t("detail_status_full_clip")
+                        : t("detail_status_full"))
                   : preparing
                     ? t("detail_sampling_loading")
                     : t("detail_status_ready")}

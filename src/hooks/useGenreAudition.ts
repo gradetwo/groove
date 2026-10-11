@@ -12,6 +12,7 @@ import { createSamplerLanePlayback, type SamplerLanePlayback } from "../audio/sa
 import { prepareSamplerLanes, standDownSamplerLanes, type SamplerLaneProgress } from "../audio/samplerLanePrepare";
 import { sharedSamplerLoader } from "../audio/sharedSamplerLoader";
 import { reportSampledLaneProblems } from "../audio/sampledLanes";
+import { playClipAudition, useClipManifest } from "./useGenreClip";
 import type { SampleAsset } from "../data/sampleCatalogue";
 import { arrangementSections, type ArrangementFormId } from "../data/arrangementForm";
 import { flattenSong, sessionSong } from "../data/songFlatten";
@@ -88,9 +89,9 @@ export interface UseGenreAuditionReturn {
 }
 
 /**
- * Shared hook to manage AudioEngine lifecycle for 1-click genre auditions.
- * Eliminates duplicated AudioEngine instantiation across Galaxy, HorizontalTimeline,
- * VerticalTimeline, Compare, and Challenge views.
+ * Shared hook for 1-click genre auditions. Measured callers (2026-10-11): `HorizontalTimelineView`, `VerticalTimelineView`,
+ * and the phone shell's jam / explore path. (An earlier note named Galaxy and Challenge too; Galaxy has no audition and
+ * Challenge builds its own engine — measured, not assumed.)
  */
 /**
  * `onPatternEnd` fires once per completed pass of the pattern.
@@ -122,12 +123,22 @@ export interface UseGenreAuditionOptions {
    * genre like" should not make a visitor wait a minute and a half to hear the next one.
    */
   arrangement?: ArrangementFormId | false;
+  /** ⭐ May this audition play the pre-cut clip? Default true; the phone shell passes false because it owns its own clip transport and uses this hook for the jam / explore engine path. */
+  clips?: boolean;
 }
 
 export function useGenreAudition(options: UseGenreAuditionOptions = {}): UseGenreAuditionReturn {
   const arrangementForm = options.arrangement ?? false;
   const arrangementFormRef = useRef<ArrangementFormId | false>(arrangementForm);
   arrangementFormRef.current = arrangementForm;
+  /** ⭐ Read through a ref like the form, so a caller may change the module without recreating `toggleAudition`. */
+  const clipsEnabledRef = useRef(options.clips ?? true);
+  clipsEnabledRef.current = options.clips ?? true;
+  /** ⭐ The clip is imperative (the hook has no JSX), held in a ref so stop, a genre switch and unmount can pause it. */
+  const clipManifest = useClipManifest();
+  const clipManifestRef = useRef(clipManifest);
+  clipManifestRef.current = clipManifest;
+  const clipRef = useRef<HTMLAudioElement | null>(null);
   const [playingGenreId, setPlayingGenreId] = useState<string | null>(null);
   /**
    * The metronome is engine state, so it survives a pattern swap; the flag is mirrored here too so a surface
@@ -207,6 +218,8 @@ export function useGenreAudition(options: UseGenreAuditionOptions = {}): UseGenr
       // The sampler voices are placed on the audio clock, so they are stopped by name before the engine goes.
       samplerLanesRef.current?.stop();
       samplerLanesRef.current = null;
+      clipRef.current?.pause();
+      clipRef.current = null;
       if (engineRef.current) {
         engineRef.current.stop();
         setActiveAudioEngine(null);
@@ -220,6 +233,8 @@ export function useGenreAudition(options: UseGenreAuditionOptions = {}): UseGenr
   const stopAudition = useCallback(() => {
     samplerLanesRef.current?.stop();
     samplerLanesRef.current = null;
+    clipRef.current?.pause();
+    clipRef.current = null;
     if (engineRef.current) {
       engineRef.current.stop();
     }
@@ -238,6 +253,29 @@ export function useGenreAudition(options: UseGenreAuditionOptions = {}): UseGenr
         return;
       }
 
+      /** ⭐ A single-genre audition plays the pre-cut clip when the manifest has one (owner, 2026-10-11); it loops because
+       *  the engine it replaces loops, and `clips: false` keeps the engine for the phone's jam / explore path. */
+      clipRef.current?.pause();
+      clipRef.current = null;
+      const clip = clipsEnabledRef.current ? clipManifestRef.current.clipFor(genre.id) : undefined;
+      if (clip) {
+        engineRef.current?.stop();
+        samplerLanesRef.current?.stop();
+        samplerLanesRef.current = null;
+        clipRef.current = playClipAudition(clip.url, () => {
+          clipRef.current = null;
+          setPlayingGenreId(null);
+          announcer.announce("预制片段无法播放 / The pre-cut clip could not be played");
+        });
+        setPlayingGenreId(genre.id);
+        announcer.announce(`正在试听预制片段：${genre.name} / Auditioning the pre-cut clip: ${genre.name}`);
+        return;
+      }
+      announcer.announce(
+        clipManifestRef.current.loading
+          ? "片段清单仍在载入，先用实时引擎 / The clip list is still loading; using the live engine"
+          : `这个曲风没有预制片段，改用实时引擎：${genre.name} / No pre-cut clip for this genre; using the live engine`
+      );
       if (!engineRef.current) {
         engineRef.current = new AudioEngine({
           onStop: () => setPlayingGenreId(null),

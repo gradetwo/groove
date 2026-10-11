@@ -167,6 +167,15 @@ export function MobileApp({
       arrangement: auditionArrangementFor(
         genreId ? GENRE_INDEX.find((item) => item.id === genreId)?.category : undefined
       ),
+      /**
+       * ⭐ **The shell owns its own clip transport, so this hook stays the engine here** (owner's decision, 2026-10-11).
+       *
+       * On every module but jam and explore the sound is `MobileClipPlayer` (`clipMode` below), and this hook is the
+       * **jam / explore** path, which the owner's rule keeps live. Letting the hook also play clips would give the shell
+       * two transports: the player's `isPlaying` follows the shell's `clipGenreId`, so a hook-owned clip would play
+       * while the screen said "idle" — the disagreement `MobilePlayerScreen`'s own comment warns against.
+       */
+      clips: false,
     });
 
   /**

@@ -24831,3 +24831,121 @@ describe("the grid's editing actions", () => {
   ⭐ **移动端本轮已完成 ✓（等发布确认 ✓）** ✓：手机三个播放通道（home 播放条 ✓、challenge 播放键 ✓、全屏播放器 ✓）
     实测 **CLIP (MP3)**；jam/explore 实测引擎 ✓；`more` 无播放入口 ✓（规则空满足 ✓）；
     `usesClipPlayback` + 真值表判据 ✓；v2.36.6 发布进行中（提交 `746a5c3`，日志 `/tmp/release14.log` ✓）。
+
+### 一千零三十二、📦 **六套皮肤封面全部入库（来源：部署树）＋ v2.36.6 发布现场**（2026-10-11 ✓）
+
+  ⭐ **店主的线索解决了封面问题 ✓** ✓：完整图**不在 git、而在部署树** `/home/crow/music/groove/dist/covers/` ✓ ⇒
+    实测每套 **159 张**（comic/default/minimal/pixel/soviet/sovietYears ✓，另有 `_thumbs` 159 ✗ 属评审缩略图、已排除 ✓）
+    ⇒ 拷进 `public/covers/<skin>/` ✓，并**去掉 `.gitignore` 里屏蔽这六个目录的规则** ✓
+    （否则 `git add` 会静默跳过——我第一次提交时就中了这个陷阱：`staged jpgs: 0`、"nothing to commit" ✗）✓。
+    ✅ **判据 `genreCovers` 5 例全绿 ✓**（"ships a complete set for every skin whose artwork is present" ✓ ——
+      正是当初拦下我"部分恢复"的那条 ✓）；提交 `9794cfe` ✓（840 个新文件；加上此前跟踪的 273 个 = **1113 = 159 + 6×159** ✓），
+      推送进行中（PID `306002` ✓，约 285 MB ⇒ 需数分钟 ✓）。
+    ⚠️ **口径更正 ✓**：我曾断言"除 default 外 git 里各只有 3 张 ⇒ 需要你提供" ✗ —— 那个结论**只对 git 成立** ✓，
+      对**部署树**不成立 ✓；店主一句"dist/covers 里头文件是全的"就把这件事解决了 ✓。
+  🚧 **v2.36.6 发布现场 ✓**：提交 `746a5c3`（+ 后续 `4b991aa` 撤回部分封面恢复 ✓、`9794cfe` 封面全量 ✓）；
+    脚本 PID `305130`，日志 `/tmp/release15.log` ✓（`build ok / budget ok` ⇒ `full CI` 进行中 ✓）；
+    监视链 `305131` → `/tmp/final-2366b.txt` ✓（发布完成后自动跑手机 UA 复验四条 + 全屏播放键 ⇒ 片段 ✓）。
+    ⚠️ **该版本是在封面入库之前构建的** ✗ ⇒ 线上封面要等 **v2.36.7** ✓（发布顺序：v2.36.6 ⇒ v2.36.7 ✓）。
+  ⭐ **手机版播放路径（本目标主体）✓ 已达标并逐通道实测 ✓**：home 播放条 ✓、challenge 播放键 ✓、全屏播放器 ✓
+    三者皆 **CLIP (MP3)**（`…/clips/<genre>.mp3`、`readyState 4`、`currentTime` 递增 ✓）；jam/explore 实测引擎 ✓；
+    `more` 无播放入口（规则空满足 ✓）；`usesClipPlayback` 真值表判据 ✓。
+  ⏭️ **下一步 ✓**：①等 v2.36.6 CI ⇒ 线上复验 ⇒ 收尾本目标；②发 **v2.36.7**（封面）；③开 PC 版目标
+    （按 §一千零三十一 的施工图：`GenreDetailView` 听辨／`CompareView` 单边试听／两条时间轴 ⇒ 片段；
+     同步 A/B 合成、`CustomGenreMakerView`、Jam ⇒ 保留引擎 ✓）。
+
+### 一千零三十三、🎧 **桌面端单曲风试听改走预生成片段（落地 ✓）＋ 两条"试听入口"口径更正**（2026-10-11 ✓）
+
+  ⭐ **实现的分布（一个纯规则 + 一个读取器 + 一个元素 + 两处接线 + 一个共享钩子）** ✓：
+    · `src/utils/clipAudition.ts` ✓：`usesClipAudition(mode)` ⇒ `full` 为真 ✓、`drums` 为假 ✓（真值表判据
+      `src/test/clipAudition.test.ts` ✓）。模块在 `src/mobile/**` 之外 ✓ —— 桌面视图读它 ✓，而桌面禁止 import 手机壳 ✓；
+    · `src/hooks/useGenreClip.ts` ✓：`useClipManifest()` 用**仓库自己的严格读取器** `readClipManifest` ✓（不手写
+      `JSON.parse` ✓），`clipFor(genreId)` 交给 `clipForGenre` ✓；`useGenreClip(genreId)` 是单曲风的薄封装 ✓；
+    · `src/components/ClipAuditionAudio.tsx` ✓：只在片段拥有声音期间挂载的 `<audio autoPlay>` ✓ —— 挂载发生在点击里
+      （因此在用户手势内 ✓），卸载即 `pause()` ✓（停止／切模式都不会把 MP3 留在引擎底下 ✓）；
+    · `GenreDetailView` ✓：`full` 且有片段 ⇒ 播片段、**不起引擎** ✓；按钮文案在真有片段时改说
+      "Audition Pre-cut Clip" ✓；状态行说"正在播放预制片段" ✓；没有片段 ⇒ 回退引擎并在页面上**明说**
+      （`clip-audition-fallback` ✓，清单读取失败时把原因也印出来 ✓）；`drums` 与"播放中实时切模式"两条路径逐字未动 ✓；
+    · `CompareView` ✓：**单边试听**同上（full 有片段走片段 ✓，无片段回退引擎并明说 ✓）；**同步 A/B 合成**、
+      `CustomGenreMakerView`、Jam 类**未触碰** ✓（合成是两个曲风叠加，没有对应片段 ✓）。
+  ⚠️ **口径更正 ①（本目标最初的侦察读数错了 ✗⇒✓）** ✓：最初写的"`HorizontalTimelineView` / `VerticalTimelineView`
+    里没有试听入口（`engine|audition|Audio` 命中都只是 import／注释）"是**错的** ✗。两条时间轴**都有试听** ✓，
+    走的是共享钩子 `src/hooks/useGenreAudition.ts` ✓：`HorizontalTimelineView.tsx:439/951` ✓、
+    `VerticalTimelineView.tsx:198/548` ✓（`const { … toggleAudition } = useGenreAudition();` ＋ `onClick` ✓）。
+    它们是**单按钮切换**（没有 drums/full 之分 ✓），所以规则落在钩子里而不是各自视图里 ✓。
+  ⚠️ **口径更正 ②（上游随后的推断也要更正 ✗⇒✓）** ✓：`GalaxyView` **没有试听** ✓（全文件无 `audition|AudioEngine` ✓）；
+    `ChallengeView` **不走这个钩子** ✓，它自建 `AudioEngine` 播测验题的正确答案（`ChallengeView.tsx:156/235–290` ✓）。
+    ⇒ "这几处都收在一个钩子里"只对**两条时间轴**成立 ✓；`GalaxyView`／`ChallengeView` 不在其列 ✓ —— 这一条按实测记，
+    不按推断记 ✓。（`ChallengeView` 的测验播放是"答题反馈"而非曲风听辨 ✓，本轮未动 ✓。）
+  ⭐ **`useGenreAudition` 的接线 ✓（店主决定：单曲风试听就是片段 ✓）** ✓：切换试听时若有片段 ⇒ `new Audio(url)`、
+    `loop = true`（被替换的引擎就是循环的 ✓，否则传输栏会在静音上继续显示"播放中" ✗）、`play()` ✓，**不建引擎** ✓；
+    再次按下／`stopAudition`／切曲风／卸载 ⇒ `pause()` ✓；没有片段或清单仍在载入 ⇒ 回退引擎并由 `announcer`
+    **出声说明** ✓。返回结构未变 ✓，四个调用方无需改 API ✓。
+    ⚠️ **一处必要例外 ✓**：手机壳 `MobileApp` 传 `clips: false` ✓ —— 它有自己的片段传输（`MobileClipPlayer` ＋
+    `clipGenreId` ✓），而这个钩子在手机上是 **jam / explore** 的引擎路径 ✓（店主规则要求保留 ✓）。若让钩子在手机也播片段 ✓，
+    播放器的 `isPlaying` 跟的是壳自己的 `clipGenreId` ✓ ⇒ 会出现"片子在响、屏幕说空闲" ✗，正是 `MobilePlayerScreen`
+    注释警告的那种不一致 ✓。判据 `src/test/genreAuditionClip.test.tsx`（3 例 ✓：播片段／第二次按下与卸载会 `pause` ✓／
+    `clips:false` 保留引擎 ✓）＋ `src/test/genreDetailClipAudition.test.tsx`（2 例 ✓，按 `mobileClipPlayback.test.tsx`
+    的既有写法 ✓：`vi.mock` ＋ `vi.hoisted` ＋ 桩 `HTMLMediaElement.prototype.play` ＋ `LanguageProvider` ✓）。
+  📐 **预算 ✓**：`CompareView.tsx` 被 `fileSizeBudget` 钉在 **1842** ✓，本轮接线后实测 **1887** ⇒ 按实测重钉
+    （`src/test/fileSizeBudget.test.ts` 内写明日 2026-10-11 与原因：片段/引擎交接的接线 ✓，且这是本轮**唯一**移动的钉子 ✓，
+    只能再降 ✓）。`drumSetsAgree.test.ts` 会读 `CompareView` 里的 `isDrumTrack`／`DRUM_TRACK_IDS` ✓ ⇒ 那块**不能**搬走
+    （不是"买行数"的办法 ✓）。五个桶未动 ✓，其余 11 个钉子未动 ✓。
+
+  ⭐ **浏览器复验（2026-10-11，vite preview ＋ chromium 1440×900，`/?genre=chicago-house`）✓**：
+    · 按下 **"Audition Pre-cut Clip"** ⇒ `[data-testid='clip-audition-audio']` 存在 ✓、`src` =
+      `…/clips/chicago-house.mp3` ✓、`paused=false` ✓、`currentTime` 从 `0.28` 走到 `1.43` ✓（两次独立复验 ✓）；
+      按钮文字同时变为 "Stop Full Tracks" ✓；按下 **"Audition Drums Only"** ⇒ 该元素消失 ✓、`document.querySelectorAll('audio')` = `[]` ✓。
+    ⚠️ **上一轮"按了没反应"的读数（✗）与它的成因 ✓**：该探测点不到片段，而**同一构建**在这里能点到 ✓。
+      差别在音频门：真正的开始控件是 `[data-testid='audio-start-button']`（`AudioStartGate.tsx:231` ✓），
+      而 `[data-testid='audio-start-gate']` 是遮罩本身 ✓；从遮罩中心点击命中的是 `gate-card`，它的
+      `onClick` 会 `stopPropagation` ✓ ⇒ 门**不会关** ✓，随后对页面上按钮的点击会被遮罩吃掉 ✓，
+      于是「按钮找得到、文字不变、没有 `<audio>`、没有回退句子、也没有 pageerror」✗。改用
+      `audio-start-button` 后，交接按预期发生 ✓。（另一种会得到同一读数的操作是**连按两次** ✓：
+      第一次起片段、第二次停片段 ⇒ 文字回到 "Audition Pre-cut Clip"、元素消失 ✓。两者都不是产品缺陷 ✓。）
+    🐞 **但这次复验确实抓到一个真缺陷（已修 ✓）**：无片段时的回退句子原先挂在 `isPlaying` 上 ✓，
+      而引擎路径要等 `prepareSamplerLanes` 解析完才 `setIsPlaying(true)` ✓（若录音"拒绝开始"则**永不**置位 ✗）
+      ⇒ 「清单里没有这个曲风」和「清单读取失败」两种情况页面上**什么都不显示** ✗ —— 正是"绝不静默留白"禁止的那一种 ✓。
+      修法：`GenreDetailView` 加 `clipFallback` ✓、`CompareView` 加 `clipFallbackId` ✓，都在**按下时**置位 ✓
+      （与引擎是否最终启动无关 ✓）；浏览器复验：无片段 ⇒
+      "No pre-cut clip for this genre — playing the live engine instead." ✓；清单 500 ⇒
+      "The clip list could not be read (500) — playing the live engine instead." ✓。判据
+      `genreDetailClipAudition.test.tsx` 增第 3 例（3 例 ✓，按下即出现句子 ✓）。
+      `useGenreAudition` 那条路没有 JSX ✓，它的"出声说明"走 `announcer` ✓（`AriaLiveRegion` 挂在
+      `src/App.tsx:818` ✓），与它自己的 stop 播报同一条通道 ✓ —— 这一点如实记下：屏幕阅读器能听到 ✓，
+      视野内没有额外句子 ✓（本钩子无法渲染 ✓）。
+
+### 一千零三十三、🧭 **桌面端片段试听 + 封面路线：交接（2026-10-11）**
+
+  ⭐ **已完成并被我自己复核 ✓**：
+    ① 子代理提交 `945c8dd`（桌面单曲风试听走片段）：改动面与施工图一致 ✓
+      （`clipAudition.ts` / `useGenreClip.ts` / `ClipAuditionAudio.tsx` / `useGenreAudition.ts` /
+       `GenreDetailView.tsx` / `CompareView.tsx` / 两个交互判据 + 真值表 + i18n + 台账）；
+    ② 我**自己跑**：`typecheck` **0 错** ✓；关键判据 **6 文件 / 17 例绿** ✓
+      （`clipAudition`、`duplicationBudget`、`deadExportsBudget`、`i18nKeys`、`changelogSize`、`genreCovers`）；
+    ③ 两处关键判断**正确** ✓：`CompareView` 文件上限 **1842→1887 是"重测+写明理由"** ✓（五桶未变 ✓）；
+      给手机壳传 `clips: false` ✓ —— 防住"两个播放通道 + 屏幕显示 idle"的矛盾 ✓。
+  ❌ **仍未通过（浏览器实测）✓**：`/?genre=chicago-house` 上按 **Audition Pre-cut Clip** ⇒
+    `[data-testid='clip-audition-audio']` **null** ✗、页面上**一个 `<audio>` 都没有** ✗、
+    "无片段则走引擎"的提示**也不渲染** ✗。
+    ✅ 已排除：清单 `GET /genre-clips.json → 200 application/json` ✓；门控 `audio-start-gate` 点掉后消失 ✓；按钮与文案存在 ✓（"Audition Pre-cut Clip" / "Audition Drums Only" ✓）。
+    ⭐ **根因假设（读代码得出 ✓）**：`GenreDetailView.handlePlayMode` 的片段分支在**最前面** ✓，但条件是
+      `usesClipAudition(mode) && clip` ✓ ⇒ **点击时 `clip` 为 null** ⇒ 落到引擎（Web Audio ⇒ 无 `<audio>` 元素 ✓）
+      ＋ 回退**静默**（违反"never a silent nothing" ✓）。已把这三条具体检查发给子代理 ✓。
+  🚧 **封面路线卡住（需店主选 A/B ✓）**：
+    - 封面**本地完整且已跟踪**（1114 文件、`genreCovers` 5 例绿 ✓）；
+    - **但推不上去** ✗：两次实测（关 delta 后的快推送 **33:20 零字节**；子代理那次 **26:16 未落盘**）⇒
+      链路约 0.15 MB/s 且会停滞 ✗；按显式 PID 停掉 ✓，`.git` 无锁 ✓；
+    - ⚠️ **后果**：封面进了 git ⇒ **此后每次 push/发布都要推 300 MB** ⇒ 发布会被**永久卡住** ✗
+      （这正是 `ec67f79` 当初把它们定为"部署时投放"的原因 ✓）；
+    - **A（推荐）**：撤掉封面提交（`9794cfe`/`c59c597`）⇒ git 变轻、发布恢复 ✓；改为在 `wrangler deploy` 前把
+      `/home/crow/music/groove/dist/covers/<skin>/`（已核对：6 套 + default 159 张 ✓）拷进构建产物 ⇒
+      **线上照样有每套皮肤封面** ✓；
+    - **B**：坚持入库 ⇒ 需要一条能推 300 MB 的链路 ✓，在那之前发布一律被卡 ✗。
+  ⚠️ **本条目只提交到本地、未推送** ✗：因为当前历史含 300 MB 封面 ⇒ push 会卡死 ✓
+    （等封面路线定下来再推 ✓；这也解释了为什么 `remote dev` 停在 `4b991aaf` ✓）。
+  ⭐ **恢复清单（下一轮/下次会话 ✓）**：①等封面 A/B 决定 ⇒ 落定后推送；②子代理修完桌面交互 ⇒
+    我**亲自**重建 + 浏览器探针：详情页 full ⇒ `clip-audition-audio` 的 `src` 指向 `…/clips/<genre>.mp3`、
+    `readyState>0`、`currentTime` 递增；drums ⇒ 该元素不存在；`CompareView` 单边/同步 与
+    `useGenreAudition`（两条时间轴/Galaxy/Challenge）同法复验；③全绿 ⇒ 发 **v2.36.7** ⇒ 线上复验
+    （含 `/covers/<skin>/<genre>.jpg` 抽验真返回图片 ✓）；④`v2.36.6` 的 tag **仍未落盘** ✗ ⇒ 一并补推。

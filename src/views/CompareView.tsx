@@ -14,6 +14,9 @@ import { toast } from "../ui/Toast";
 import { announcer } from "../ui/AriaLiveRegion";
 import { ErrorState } from "../ui/ErrorState";
 import { Skeleton } from "../ui/Skeleton";
+import { usesClipAudition } from "../utils/clipAudition";
+import { useClipManifest } from "../hooks/useGenreClip";
+import { ClipAuditionAudio } from "../components/ClipAuditionAudio";
 
 interface CompareViewProps {
   initialGenres?: Genre[];
@@ -95,6 +98,11 @@ export const CompareView: React.FC<CompareViewProps> = ({
   const [addDropdownOpen, setAddDropdownOpen] = useState(false);
   const [playingId, setPlayingId] = useState<string | null>(null);
   const [playingMode, setPlayingMode] = useState<"drums" | "full">("full");
+  /** ⭐ The genre whose pre-cut clip owns the transport, or null while an engine does. */
+  const [clipGenreId, setClipGenreId] = useState<string | null>(null);
+  /** ⭐ "No clip for this genre, so the engine is playing" — raised at the press, so it cannot wait on the engine. */
+  const [clipFallbackId, setClipFallbackId] = useState<string | null>(null);
+  const clipManifest = useClipManifest();
   const engineRef = useRef<AudioEngine | null>(null);
 
   // Initial genre-catalog resolution drives the loading / empty / error states (U-08)
@@ -184,6 +192,8 @@ export const CompareView: React.FC<CompareViewProps> = ({
      * own Stop button had, at a second surface.
      */
     stopRecordedLanes();
+    setClipGenreId(null);
+    setClipFallbackId(null);
     setPlayingId(null);
     setIsSyncPlaying(false);
   };
@@ -375,6 +385,24 @@ export const CompareView: React.FC<CompareViewProps> = ({
       handleStopAudio();
     }
 
+    /** ⭐ A full audition plays the pre-cut clip when one exists (owner, 2026-10-11); the clip mounts in this click and
+     *  no engine starts. `handleStopAudio` is the one stop for both transports, so the composite path is unchanged. */
+    const clip = clipManifest.clipFor(genre.id);
+    if (usesClipAudition(mode) && clip) {
+      const stopping = clipGenreId === genre.id;
+      handleStopAudio();
+      setClipGenreId(stopping ? null : genre.id);
+      if (!stopping) {
+        setPlayingId(genre.id);
+        setPlayingMode(mode);
+      }
+      return;
+    }
+    // ⭐ No clip for this genre, or the drums mode: the engine owns the sound, and any clip must stop first.
+    setClipGenreId(null);
+    // ⭐ Say it at the press: a full audition whose clip is missing must not look like it did nothing.
+    setClipFallbackId(usesClipAudition(mode) && !clipManifest.loading ? genre.id : null);
+
     // If clicking same genre and same mode, stop it
     if (playingId === genre.id && playingMode === mode) {
       if (engineRef.current) {
@@ -386,8 +414,9 @@ export const CompareView: React.FC<CompareViewProps> = ({
       return;
     }
 
-    // If already playing this genre but switching mode
-    if (playingId === genre.id && engineRef.current) {
+    // If already playing this genre but switching mode. ⭐ Not when the clip was the transport (the engine is stopped
+    // under it), so this press has to start the engine below rather than only re-plan its mutes.
+    if (playingId === genre.id && engineRef.current && clipGenreId === null) {
       setPlayingMode(mode);
       applyAudioMutes(engineRef.current, mode, genre);
       /**
@@ -440,6 +469,8 @@ export const CompareView: React.FC<CompareViewProps> = ({
       // The recorded lanes of the removed genre are on the audio clock, outside that stop.
       stopRecordedLanes();
       setPlayingId(null);
+      setClipGenreId(null);
+      setClipFallbackId(null);
     }
     setGenres((prev) => prev.filter((g) => g.id !== id));
   };
@@ -474,6 +505,9 @@ export const CompareView: React.FC<CompareViewProps> = ({
     if (engineRef.current) {
       engineRef.current.stop();
       setPlayingId(null);
+      // ⭐ A new pair means the old sound goes too, clip included.
+      setClipGenreId(null);
+      setClipFallbackId(null);
     }
     setGenres(selected);
   };
@@ -1346,6 +1380,7 @@ export const CompareView: React.FC<CompareViewProps> = ({
           {genres.map((genre, idx) => {
             const color = COMPARE_COLORS[idx % COMPARE_COLORS.length];
             const isCurrentPlaying = playingId === genre.id;
+            const clip = clipManifest.clipFor(genre.id);
 
             return (
               <div
@@ -1540,11 +1575,21 @@ export const CompareView: React.FC<CompareViewProps> = ({
                         ) : (
                           <>
                             <Play className="w-3.5 h-3.5 fill-current text-accent" />
-                            <span>{t("full_band")}</span>
+                            <span>{clip ? t("compare_audition_full_clip") : t("full_band")}</span>
                           </>
                         )}
                       </button>
                     </div>
+
+                    {/* ⭐ The clip's own transport, mounted only while it owns the sound; unmounting pauses it. */}
+                    {clipGenreId === genre.id && clip && <ClipAuditionAudio url={clip.url} onEnded={handleStopAudio} />}
+
+                    {/* ⭐ A full audition with no clip still plays, on the engine — said at the press, in this column. */}
+                    {clipFallbackId === genre.id && (
+                      <p data-testid="clip-audition-fallback" className="text-[11px] text-text-dim">
+                        {clipManifest.unavailable ? t("clip_audition_unavailable", { reason: clipManifest.unavailable }) : t("clip_audition_fallback")}
+                      </p>
+                    )}
 
                     {/* Quick navigation actions */}
                     <div className="grid grid-cols-2 gap-2">

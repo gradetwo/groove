@@ -53,7 +53,18 @@ const FILE_CAPS: Record<string, number> = {
   "src/views/GalaxyView.tsx": 2356,
   "src/audio/PolySynth.ts": 1949,
   "src/audio/DrumKitModels.ts": 1925,
-  "src/views/CompareView.tsx": 1842,
+  /**
+   * ⭐ **Re-measured on 2026-10-11, when the desktop auditions started playing the pre-cut clips** (owner's decision:
+   * `full` plays the manifest's MP3, `drums` keeps the live engine). `CompareView` grew from 1842 lines to 1887 with
+   * the handover it needs — the `clipGenreId` state, the manifest lookup, the clip branch in `handlePlayMode`, the
+   * mounted `<audio>`, the "no clip, so the engine" sentence, and clearing the clip in the two paths that replace the
+   * compared pair. That wiring is the whole of the growth.
+   *
+   * This is the only pin this step moved and the buckets are untouched. The `isDrumTrack` / `DRUM_TRACK_IDS` block
+   * stays in this view on purpose: `drumSetsAgree.test.ts` reads it here, so "move it to `trackUtils`" is a refactor
+   * with its own criterion and not a way to buy lines back. **This number may only go down from here.**
+   */
+  "src/views/CompareView.tsx": 1887,
   "src/components/help/HelpCenterModal.tsx": 1687,
   "mcp/render/worker.ts": 1653,
   "src/views/ChordProgressionsView.tsx": 1559,
