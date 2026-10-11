@@ -14,10 +14,6 @@
       {
         "zh": "手机壳的播放条、挑战屏播放键与全屏播放器一律播放该曲风的预生成 MP3；即兴与探索仍用实时引擎（要听/改参数）。",
         "en": "The phone shell's bar, the challenge transport and the full-screen player all play the genre's pre-cut MP3, while jam and explore keep the live engine they exist to hear."
-      },
-      {
-        "zh": "每套皮肤各自的封面恢复进仓库（此前被当作部署时投放的资源而从不入库）。",
-        "en": "Each skin's own cover art is back in the repository, after being treated as a deploy-time drop that was never committed."
       }
     ],
     "truncated": false
