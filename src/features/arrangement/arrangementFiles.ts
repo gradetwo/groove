@@ -337,7 +337,13 @@ export async function mp3FileFor(
 ): Promise<ProducedAudio> {
   const pattern = compiledPatternFor(arrangement);
   const lanes = await audioLaneOptions(pattern);
-  const codec = options?.preferCodec ?? "aac";
+  /**
+   * ⭐ **The default is MP3, because the function is `mp3FileFor` and the button says "Export MP3".** It used to default
+   * to `"aac"`, so on any browser that can encode AAC the MP3 action wrote `…_master_120bpm.aac` — the release E2E matrix
+   * fails on Desktop WebKit with exactly that (`MP3 export produced arrangement_master_120bpm.aac`). `aacFileFor` and
+   * `opusFileFor` name their codec explicitly, so they are unaffected.
+   */
+  const codec = options?.preferCodec ?? "mp3";
   try {
     const { isWebCodecsAudioSupported, exportMasterWebCodecs } = await import("../../audio/WebCodecsExporter");
     if (codec !== "mp3" && (await isWebCodecsAudioSupported(codec))) {
