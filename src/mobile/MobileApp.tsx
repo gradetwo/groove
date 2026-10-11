@@ -438,7 +438,11 @@ export function MobileApp({
           ) : module === "challenge" ? (
             <MobileChallengeScreen
               isPlaying={Boolean(playingGenreId)}
-              onTogglePlay={handleToggleAudition}
+              /**
+               * ⭐ The distinction the owner asked for (2026-10-11): on the modules that play the rendered clip, the
+               * challenge screen's own transport is the clip too — its play button is a module transport, not the bar.
+               */
+              onTogglePlay={(id: string) => (clipMode ? setClipGenreId((current) => (current ? null : id)) : handleToggleAudition(id))}
               onOpenGenre={(id) => onOpenGenre?.(id)}
             />
           ) : module === "explore" ? (
