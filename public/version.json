@@ -1,23 +1,23 @@
 {
-  "version": "2.36.3",
+  "version": "2.36.4",
   "releaseDate": "2026-10-11",
   "changelogCount": 10,
   "latest": {
-    "version": "2.36.3",
+    "version": "2.36.4",
     "date": "2026-10-11",
     "category": "fix",
     "title": {
-      "zh": "手机打开任何桌面地址都会进入 /m",
-      "en": "A phone opening any desktop address lands in /m"
+      "zh": "手机壳里点不动的入口全修好了",
+      "en": "The phone shell's dead entries all work now"
     },
     "highlights": [
       {
-        "zh": "以前只有 / 会被接管，手机从分享链接、书签或后退键进来仍停在桌面版；现在除 /m 外一律进入手机外壳。",
-        "en": "Only the root used to be taken over, so a phone arriving from a share link, a bookmark or the back button stayed in the desktop layout; now every address except /m enters the phone shell."
+        "zh": "手机壳此前只收到三个属性：播放条打不开全屏播放器，更多里的设置/更新/手册/搜索四个入口点了没反应。现已接通整组属性。",
+        "en": "The shell had been given only three props, so the bar could not open the full player and four entries under More did nothing; the whole contract is wired now."
       },
       {
-        "zh": "并在跳转前一帧不渲染桌面界面，避免手机先看到用不了的布局；?desktop=1 可显式留在桌面版。",
-        "en": "The desktop surface is not painted for the frame before the redirect, and ?desktop=1 keeps a phone on the desktop page on purpose."
+        "zh": "首页搜索以前只管列表与计数、时间轴不动；现在时间轴也随搜索变短（159→17 时节点 11→4）。",
+        "en": "Search used to narrow the list and its count while the timeline ignored it; the timeline shrinks too now (11 nodes to 4 when 159 genres become 17)."
       }
     ],
     "truncated": false
