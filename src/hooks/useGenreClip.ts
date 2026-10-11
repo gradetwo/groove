@@ -70,11 +70,27 @@ export function useGenreClip(genreId: string): GenreClipResult {
  * The element is imperative because `useGenreAudition`'s consumers must not have to grow a slot for it, and looping is
  * deliberate: the engine the clip replaces loops, so a one-shot clip would end under a transport that still said
  * "playing". On failure `onFailure` runs — the caller drops its playing state and says why, rather than a button that
- * lies. The caller owns the returned element and must pause it on stop, genre change and unmount.
+ * lies. The caller owns the returned element and must release it with {@link stopClipAudition} on stop, genre change and
+ * unmount.
+ *
+ * ⭐ **It is attached to the document, hidden, and carries the same `data-testid` the React clip element uses.** A
+ * detached `new Audio()` is invisible to `document.querySelectorAll("audio")` and to a probe, which cost a whole round of
+ * "the timeline does not play a clip" readings that were an instrument problem rather than a defect. A hidden element
+ * costs nothing functionally and makes the path observable from the network *and* the DOM.
  */
 export function playClipAudition(url: string, onFailure: () => void): HTMLAudioElement {
   const audio = new Audio(url);
   audio.loop = true;
+  audio.setAttribute("data-testid", "clip-audition-audio");
+  audio.hidden = true;
+  if (typeof document !== "undefined") document.body.appendChild(audio);
   void audio.play().catch(onFailure);
   return audio;
+}
+
+/** ⭐ Pause a clip and take it out of the document, so a probe sees it appear and disappear with the transport. */
+export function stopClipAudition(audio: HTMLAudioElement | null): void {
+  if (!audio) return;
+  audio.pause();
+  audio.remove();
 }

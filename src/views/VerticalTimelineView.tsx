@@ -545,6 +545,7 @@ export const VerticalTimelineView: React.FC<VerticalTimelineViewProps> = ({
                               {/* Audio preview audition button */}
                               <button
                                 type="button"
+                                data-testid={`timeline-audition-${genre.id}`}
                                 onClick={(e) => toggleAudition(genre, e)}
                                 className={`flex-1 flex items-center justify-center gap-1.5 py-1 rounded-xl text-xs font-bold transition-all ${
                                   isPlayingThis

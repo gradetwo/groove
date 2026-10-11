@@ -614,6 +614,7 @@ export const ChallengeView: React.FC<ChallengeViewProps> = ({
 
           <div>
             <button
+              data-testid="challenge-toggle-play"
               onClick={handleTogglePlay}
               className={`inline-flex items-center space-x-2 px-6 py-2.5 rounded-2xl font-bold text-sm transition-all shadow-xl ${isMobile ? "min-h-11" : ""} ${
                 !hasStarted

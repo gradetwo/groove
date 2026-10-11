@@ -948,6 +948,7 @@ export const HorizontalTimelineView: React.FC<HorizontalTimelineViewProps> = ({
                                         <div className="flex items-center gap-1">
                                           <button
                                             type="button"
+                                            data-testid={`timeline-audition-${genre.id}`}
                                             onClick={(e) => toggleAudition(genre, e)}
                                             className={`p-1 rounded-lg transition-all ${
                                               isPlayingThis

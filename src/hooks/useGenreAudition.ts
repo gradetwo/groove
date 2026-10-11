@@ -12,7 +12,7 @@ import { createSamplerLanePlayback, type SamplerLanePlayback } from "../audio/sa
 import { prepareSamplerLanes, standDownSamplerLanes, type SamplerLaneProgress } from "../audio/samplerLanePrepare";
 import { sharedSamplerLoader } from "../audio/sharedSamplerLoader";
 import { reportSampledLaneProblems } from "../audio/sampledLanes";
-import { playClipAudition, useClipManifest } from "./useGenreClip";
+import { playClipAudition, stopClipAudition, useClipManifest } from "./useGenreClip";
 import type { SampleAsset } from "../data/sampleCatalogue";
 import { arrangementSections, type ArrangementFormId } from "../data/arrangementForm";
 import { flattenSong, sessionSong } from "../data/songFlatten";
@@ -218,7 +218,7 @@ export function useGenreAudition(options: UseGenreAuditionOptions = {}): UseGenr
       // The sampler voices are placed on the audio clock, so they are stopped by name before the engine goes.
       samplerLanesRef.current?.stop();
       samplerLanesRef.current = null;
-      clipRef.current?.pause();
+      stopClipAudition(clipRef.current);
       clipRef.current = null;
       if (engineRef.current) {
         engineRef.current.stop();
@@ -233,7 +233,7 @@ export function useGenreAudition(options: UseGenreAuditionOptions = {}): UseGenr
   const stopAudition = useCallback(() => {
     samplerLanesRef.current?.stop();
     samplerLanesRef.current = null;
-    clipRef.current?.pause();
+    stopClipAudition(clipRef.current);
     clipRef.current = null;
     if (engineRef.current) {
       engineRef.current.stop();
@@ -255,7 +255,7 @@ export function useGenreAudition(options: UseGenreAuditionOptions = {}): UseGenr
 
       /** ⭐ A single-genre audition plays the pre-cut clip when the manifest has one (owner, 2026-10-11); it loops because
        *  the engine it replaces loops, and `clips: false` keeps the engine for the phone's jam / explore path. */
-      clipRef.current?.pause();
+      stopClipAudition(clipRef.current);
       clipRef.current = null;
       const clip = clipsEnabledRef.current ? clipManifestRef.current.clipFor(genre.id) : undefined;
       if (clip) {

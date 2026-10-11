@@ -24997,3 +24997,31 @@ describe("the grid's editing actions", () => {
   ⚠️ **`useGenreAudition` 的 `clips:false`（手机壳）** ✓：由 jsdom 判据 `genreAuditionClip.test.tsx` 第 3 例钉住 ✓
     （引擎构造被调用 ✓、片段元素为 0 ✓）；**本轮没有**做手机 `/m` 的浏览器读数 ✓ —— 如实记下 ✓。
   🧹 **探针已全部移除 ✓**：`grep -rn "clip-probe\|TEMP-PROBE" src/` ⇒ 无 ✓；临时脚本 `scripts/tmp_*` 均已删除 ✓。
+
+  🧭 **时间轴试听控件现在有稳定 testid（2026-10-11 ✓，给独立复验用 ✓）**：`HorizontalTimelineView.tsx`
+    （原 ~949 行 ✓）与 `VerticalTimelineView.tsx`（原 ~547 行 ✓）的 `toggleAudition` 按钮各加
+    `data-testid={\`timeline-audition-${genre.id}\`}` ✓（与 `mobile-*` 的写法一致 ✓）；`ChallengeView` 的测验播放键加
+    `data-testid="challenge-toggle-play"` ✓。`GalaxyView` **没有**试听控件 ✓ ⇒ 无 testid 可加（实测页面 0 个 ✓）。
+  🔎 **`playClipAudition` 的元素现在可观测 ✓**：`new Audio(url)` 之后 `setAttribute("data-testid",
+    "clip-audition-audio")` ✓、`hidden = true` ✓、`document.body.appendChild(...)` ✓；`stopClipAudition(audio)` ✓
+    负责 `pause()` ＋ `remove()` ✓（stop ✓／切曲风 ✓／卸载 ✓ 三处都换成它 ✓，`useGenreAudition.ts` 行数仍 597 ✓、桶仍 48 ✓）。
+    这样 DOM 探针与网络探针**都能**看到这条路径 ✓ —— 之前"分离元素不可见"确实害得两边多绕了好几轮 ✓。
+  🖱️ **最终逐面读数（2026-10-11 ✓，`vite preview` ＋ chromium 1440×900 ✓，门用 `audio-start-button` 关掉 ✓，
+    全部用**真鼠标** `page.mouse.click`（不是 focus＋Enter ✓））**：
+    ```
+    [1] /genre/chicago-house   "Audition Pre-cut Clip" 中心 elementFromPoint=SPAN（按钮自己的子节点 ✓）
+        clip-audition-audio: src=…/clips/chicago-house.mp3  paused=false  mp3 请求 1 ✓
+        再按 "Audition Drums Only" ⇒ 元素不存在 ✓  pageerror 无 ✓
+    [2] /explore/timeline  [data-testid='timeline-audition-chicago-house']
+        clip-audition-audio: src=…/clips/chicago-house.mp3  readyState=4  currentTime=0.94 递增 ✓  mp3 请求 ✓
+    [3] /explore/stories   [data-testid='timeline-audition-delta-blues']
+        clip-audition-audio: src=…/clips/delta-blues.mp3  readyState=4  currentTime=1.07 递增 ✓  mp3 请求 ✓
+    [4] /explore/galaxy     试听 testid 数 = 0 ✓  clip 元素 = 0 ✓  mp3 = 0 ✓（该视图无试听 ✓）
+    [5] /challenge          [data-testid='challenge-toggle-play'] ⇒ clip 元素无 ✓  mp3 = 0 ✓（测验自建引擎 ✓）
+    [6] /compare?ids=chicago-house,punk-rock  单边 full ⇒ clip 元素 ✓；再按同步合成（Phase-locked）⇒ 元素消失 ✓
+    ```
+  ⚠️ **"focus＋Enter"在这两条时间轴上根本不触发 `toggleAudition`（量到了 ✓）**：把日志放在 `toggleAudition`
+    **最顶上**（任何 early return 之前 ✓）后，真鼠标点击 ⇒ 日志出现 ✓、`hasClip: true` ✓、`clip branch` ✓、网络请求 ✓；
+    同一按钮 `focus()` ＋ Enter ⇒ **顶上的日志都不出现** ✓、`activeElement` 的 aria 仍是 "Audition" ✓
+    ⇒ 那条"按遍 99 个按钮、0 个 `/clips/` 请求"的读数 ✓ **测的是没被激活的按钮** ✓，不是钩子 ✓。
+    这也解释了它与详情页"鼠标不行、Enter 行"为何互相矛盾 ✓：两者都是**激活方式**的问题 ✓，不是产品路径 ✓。

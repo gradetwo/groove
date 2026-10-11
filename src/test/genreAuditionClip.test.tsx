@@ -90,19 +90,18 @@ beforeEach(() => {
   clipState.clip = undefined;
   audioSources.length = 0;
   vi.stubGlobal("fetch", vi.fn(async () => ({ ok: true, json: async () => ({ bars: 8, clips: [] }) })));
-  vi.stubGlobal(
-    "Audio",
-    class {
-      src: string;
-      loop = false;
-      constructor(url?: string) {
-        this.src = url ?? "";
-        audioSources.push(this.src);
-      }
-      play = audioPlayMock;
-      pause = audioPauseMock;
-    }
-  );
+  /**
+   * ⭐ A real jsdom `<audio>` with the two methods doubled. The production helper now **attaches** the element (hidden,
+   * with the clip testid) so a probe can see it, so a plain object stub would fail at `appendChild`/`setAttribute`.
+   */
+  vi.stubGlobal("Audio", function AudioStub(url?: string) {
+    const el = document.createElement("audio");
+    el.setAttribute("src", url ?? "");
+    el.play = audioPlayMock as unknown as HTMLMediaElement["play"];
+    el.pause = audioPauseMock as unknown as HTMLMediaElement["pause"];
+    audioSources.push(url ?? "");
+    return el;
+  });
 });
 afterEach(() => vi.unstubAllGlobals());
 
