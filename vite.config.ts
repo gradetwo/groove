@@ -15,6 +15,13 @@ const DEV_PORT = resolvePort(process.env.PORT ?? process.env.VITE_PORT, 3000);
 const PREVIEW_PORT = resolvePort(process.env.PREVIEW_PORT, 4173);
 
 export default defineConfig({
+  /**
+   * ⭐ **The MP3 encoder is a module worker that imports the encoder, so Vite must emit it as an ES module.**
+   * Vite's default worker format is `iife`, which Rollup refuses for a code-splitting worker:
+   * `[vite:worker-import-meta-url] Invalid value "iife" … not supported for code-splitting builds` on
+   * `src/audio/Mp3Exporter.ts` — the build step of the v2.37.0 release stopped on exactly that.
+   */
+  worker: { format: "es" },
   plugins: [react()],
   resolve: {
     alias: {
