@@ -316,6 +316,20 @@ const MainApp: React.FC = () => {
    */
   if (enteringPhoneShell) return null;
 
+  /**
+   * ⭐ **One definition of the four panels, rendered by both surfaces.** They are opened from the desktop header, from the
+   * phone shell's More module and from the player bar, so they have to exist on both branches; writing them twice is what
+   * the duplication budget counted (and failed on), and this is the honest fix rather than a wider budget.
+   */
+  const modals = (
+    <>
+      {/* Global Search Dialog */}
+      <GlobalSearch isOpen={searchOpen} onClose={() => setSearchOpen(false)} onSelectGenre={handleSelectGenre} />
+      {/* In-App Check Updates & Changelog Modal */}
+      <UpdatesModal isOpen={updatesOpen} onClose={() => setUpdatesOpen(false)} />
+    </>
+  );
+
   if (route.mobileShell) {
     return (
       <React.Suspense fallback={null}>
@@ -333,44 +347,7 @@ const MainApp: React.FC = () => {
           onOpenHelp={() => setHelpOpen(true)}
           onOpenSearch={() => setSearchOpen(true)}
         />
-        {/*
-          ⭐ **The panels the More module opens have to exist on this branch too.** They are declared after the desktop
-          return below, so while the shell was mounted the five entries set state that nothing drew — the exact "I tap it
-          and nothing happens" the owner reported. They are desktop-shaped dialogs shown over the phone surface: usable
-          first, phone-styled later (recorded rather than pretended).
-        */}
-        <GlobalSearch isOpen={searchOpen} onClose={() => setSearchOpen(false)} onSelectGenre={handleSelectGenre} />
-        <UpdatesModal isOpen={updatesOpen} onClose={() => setUpdatesOpen(false)} />
-<SettingsModal
-          isOpen={settingsOpen}
-          engine={engineInstance}
-          gs1Enabled={gs1Enabled}
-          onToggleGs1={() => setGs1Enabled(!gs1Enabled)}
-          /** U2: a guide dismissed without being finished must be recoverable. */
-          onReplayOnboarding={() => {
-          try {
-          localStorage.removeItem(ONBOARDING_COMPLETED_KEY);
-          } catch {
-          // A storage that refuses to forget is not a reason to refuse the replay.
-          }
-          setSettingsOpen(false);
-          setOnboardingOpen(true);
-          }}
-          onOpenUpdates={() => {
-          setSettingsOpen(false);
-          setUpdatesOpen(true);
-          }}
-          onClose={() => setSettingsOpen(false)}
-        />
-        {helpOpen && (
-          <HelpCenterModal
-            isOpen={helpOpen}
-            onClose={() => {
-              setHelpOpen(false);
-              setHelpCategory(undefined);
-            }}
-          />
-        )}
+        {modals}
       </React.Suspense>
     );
   }
@@ -412,12 +389,7 @@ const MainApp: React.FC = () => {
         {...(projectName === undefined ? {} : { projectName })}
       />
 
-      {/* Global Search Dialog */}
-      <GlobalSearch
-        isOpen={searchOpen}
-        onClose={() => setSearchOpen(false)}
-        onSelectGenre={handleSelectGenre}
-      />
+      {modals}
 
       {/* Main Viewport with Suspense fallback for async chunks */}
       <main
@@ -742,11 +714,6 @@ const MainApp: React.FC = () => {
         </div>
       </footer>
 
-      {/* In-App Check Updates & Changelog Modal */}
-      <UpdatesModal
-        isOpen={updatesOpen}
-        onClose={() => setUpdatesOpen(false)}
-      />
 
       {/* Keyboard Shortcuts Guide Modal (P2-20) */}
       <ShortcutsModal
