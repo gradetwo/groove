@@ -1,23 +1,23 @@
 {
-  "version": "2.36.4",
+  "version": "2.36.5",
   "releaseDate": "2026-10-11",
   "changelogCount": 10,
   "latest": {
-    "version": "2.36.4",
+    "version": "2.36.5",
     "date": "2026-10-11",
     "category": "fix",
     "title": {
-      "zh": "手机壳里点不动的入口全修好了",
-      "en": "The phone shell's dead entries all work now"
+      "zh": "手机壳里的设置与手册面板又在了",
+      "en": "The phone shell's settings and manual panels are back"
     },
     "highlights": [
       {
-        "zh": "手机壳此前只收到三个属性：播放条打不开全屏播放器，更多里的设置/更新/手册/搜索四个入口点了没反应。现已接通整组属性。",
-        "en": "The shell had been given only three props, so the bar could not open the full player and four entries under More did nothing; the whole contract is wired now."
+        "zh": "手机壳的四个面板此前被放在两个分支各写一份；去重时误删了设置与手册两个，现已恢复为两个分支共用一个定义。",
+        "en": "The shell's four panels used to be written once per branch; the dedup deleted the settings and manual ones, and both now render from one shared definition."
       },
       {
-        "zh": "首页搜索以前只管列表与计数、时间轴不动；现在时间轴也随搜索变短（159→17 时节点 11→4）。",
-        "en": "Search used to narrow the list and its count while the timeline ignored it; the timeline shrinks too now (11 nodes to 4 when 159 genres become 17)."
+        "zh": "同时修正了验证口径：判断面板是否打开要看 [role=dialog]，而不是整页节点数（换了屏会让节点数持平）。",
+        "en": "The verification metric was fixed too: a panel is open when [role=dialog] appears, not when the page's node count grows — a screen swap can keep it flat."
       }
     ],
     "truncated": false
