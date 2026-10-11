@@ -327,6 +327,41 @@ const MainApp: React.FC = () => {
       <GlobalSearch isOpen={searchOpen} onClose={() => setSearchOpen(false)} onSelectGenre={handleSelectGenre} />
       {/* In-App Check Updates & Changelog Modal */}
       <UpdatesModal isOpen={updatesOpen} onClose={() => setUpdatesOpen(false)} />
+      {/**
+        * ⚠️ **These two were deleted by my own dedup edit.** The repeat-code criterion was right that I had copied the
+        * panels, but my regex cleanup removed `SettingsModal` and `HelpCenterModal` from the render tree entirely — which
+        * is why the More module's Settings and Manual entries flipped state that nothing drew, on the live site and
+        * locally alike. Restored here, inside the one definition both branches use.
+        */}
+      {helpOpen && (
+        <HelpCenterModal
+          isOpen={helpOpen}
+          onClose={() => {
+            setHelpOpen(false);
+            setHelpCategory(undefined);
+          }}
+        />
+      )}
+      <SettingsModal
+        isOpen={settingsOpen}
+        engine={engineInstance}
+        gs1Enabled={gs1Enabled}
+        onToggleGs1={() => setGs1Enabled(!gs1Enabled)}
+        onClose={() => setSettingsOpen(false)}
+        onReplayOnboarding={() => {
+          try {
+            localStorage.removeItem(ONBOARDING_COMPLETED_KEY);
+          } catch {
+            // A storage that refuses to forget is not a reason to refuse the replay.
+          }
+          setSettingsOpen(false);
+          setOnboardingOpen(true);
+        }}
+        onOpenUpdates={() => {
+          setSettingsOpen(false);
+          setUpdatesOpen(true);
+        }}
+      />
     </>
   );
 
@@ -347,7 +382,7 @@ const MainApp: React.FC = () => {
           onOpenHelp={() => setHelpOpen(true)}
           onOpenSearch={() => setSearchOpen(true)}
         />
-        {modals}
+        <React.Suspense fallback={null}>{modals}</React.Suspense>
       </React.Suspense>
     );
   }
@@ -389,7 +424,7 @@ const MainApp: React.FC = () => {
         {...(projectName === undefined ? {} : { projectName })}
       />
 
-      {modals}
+      <React.Suspense fallback={null}>{modals}</React.Suspense>
 
       {/* Main Viewport with Suspense fallback for async chunks */}
       <main
