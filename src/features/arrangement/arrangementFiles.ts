@@ -63,7 +63,7 @@ export interface ProducedAls extends ProducedFile {
 
 /** A rendered audio file, with the two degradation flags every audio export in this app reports. */
 export interface ProducedAudio extends ProducedFile {
-  kind: "wav" | "mp3" | "stems";
+  kind: "wav" | "mp3" | "aac" | "opus" | "stems";
   workletsUnavailable: boolean;
   gs1HostFailures: number;
   limiterKind: string;
@@ -330,22 +330,28 @@ export async function wavFileFor(
   };
 }
 
-/** The same master, encoded to MP3. The encoder is fetched on this click, exactly as the workbench does it. */
-export async function mp3FileFor(arrangement: ArrangementV2): Promise<ProducedAudio> {
-  const { exportMasterMp3 } = await import("../../audio/Mp3Exporter");
+/** Compressed lossy export: prefers WebCodecs AAC/Opus, falls back to LAME MP3. */
+export async function mp3FileFor(
+  arrangement: ArrangementV2,
+  options?: { preferCodec?: "aac" | "opus" | "mp3" }
+): Promise<ProducedAudio> {
   const pattern = compiledPatternFor(arrangement);
   const lanes = await audioLaneOptions(pattern);
+  const codec = options?.preferCodec ?? "aac";
+  try {
+    const { isWebCodecsAudioSupported, exportMasterWebCodecs } = await import("../../audio/WebCodecsExporter");
+    if (codec !== "mp3" && (await isWebCodecsAudioSupported(codec))) {
+      const res = await exportMasterWebCodecs(pattern, ARRANGEMENT_FILE_STEM, { codec, ...renderOptionsFor(arrangement), ...lanes.options });
+      return { kind: res.codec, filename: res.filename, blob: res.blob, workletsUnavailable: res.workletsUnavailable, gs1HostFailures: res.gs1HostFailures, limiterKind: res.limiterKind, bitrateKbps: res.bitrateKbps };
+    }
+  } catch {}
+  const { exportMasterMp3 } = await import("../../audio/Mp3Exporter");
   const result = await exportMasterMp3(pattern, ARRANGEMENT_FILE_STEM, { ...renderOptionsFor(arrangement), ...lanes.options });
-  return {
-    kind: "mp3",
-    filename: result.filename,
-    blob: result.blob,
-    workletsUnavailable: result.workletsUnavailable,
-    gs1HostFailures: result.gs1HostFailures,
-    limiterKind: result.limiterKind,
-    bitrateKbps: result.bitrateKbps,
-  };
+  return { kind: "mp3", filename: result.filename, blob: result.blob, workletsUnavailable: result.workletsUnavailable, gs1HostFailures: result.gs1HostFailures, limiterKind: result.limiterKind, bitrateKbps: result.bitrateKbps };
 }
+
+export const aacFileFor = (a: ArrangementV2): Promise<ProducedAudio> => mp3FileFor(a, { preferCodec: "aac" });
+export const opusFileFor = (a: ArrangementV2): Promise<ProducedAudio> => mp3FileFor(a, { preferCodec: "opus" });
 
 /** One WAV per track, packed into a zip. */
 export async function stemsFileFor(arrangement: ArrangementV2): Promise<ProducedAudio> {

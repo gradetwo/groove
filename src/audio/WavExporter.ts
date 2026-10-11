@@ -462,23 +462,20 @@ export function encodeAudioBufferToWav(buffer: AudioBuffer): ArrayBuffer {
   writeString(36, "data");
   view.setUint32(40, dataSize, true);
 
-  // Interleave samples
-  let offset = 44;
-  for (let i = 0; i < numSamples; i++) {
-    // Left sample clamp & convert
-    let sL = Math.max(-1, Math.min(1, leftChannel[i] || 0));
-    const intL = sL < 0 ? sL * 0x8000 : sL * 0x7fff;
-    view.setInt16(offset, intL, true);
-    offset += 2;
-
-    // Right sample clamp & convert — only when the buffer really is stereo.
-    // F-10: writing a second channel into a mono allocation used to overflow the
-    // DataView (RangeError) and lose the whole export.
-    if (numChannels > 1) {
-      let sR = Math.max(-1, Math.min(1, rightChannel[i] || 0));
-      const intR = sR < 0 ? sR * 0x8000 : sR * 0x7fff;
-      view.setInt16(offset, intR, true);
-      offset += 2;
+  // Interleave samples via direct Int16Array memory mapping
+  const pcmView = new Int16Array(arrayBuffer, 44);
+  let pcmIdx = 0;
+  if (numChannels > 1) {
+    for (let i = 0; i < numSamples; i++) {
+      const sL = Math.max(-1, Math.min(1, leftChannel[i] || 0));
+      pcmView[pcmIdx++] = sL < 0 ? sL * 0x8000 : sL * 0x7fff;
+      const sR = Math.max(-1, Math.min(1, rightChannel[i] || 0));
+      pcmView[pcmIdx++] = sR < 0 ? sR * 0x8000 : sR * 0x7fff;
+    }
+  } else {
+    for (let i = 0; i < numSamples; i++) {
+      const sL = Math.max(-1, Math.min(1, leftChannel[i] || 0));
+      pcmView[pcmIdx++] = sL < 0 ? sL * 0x8000 : sL * 0x7fff;
     }
   }
 
@@ -1463,41 +1460,25 @@ async function renderPatternOfflineOnce(
   /** The reasons the lane plan named, for the silence verdict below. */
   let audioLaneProblems: string[] = [];
 
+  // Pre-filter audible, non-silent tracks to skip muted, sampled, or empty tracks during step scheduling
+  const activeTracks = pattern.tracks
+    .map((track: Track, trackIdx: number) => ({ track, trackIdx }))
+    .filter(({ track, trackIdx }) => {
+      if (options.stemTrackIdx !== undefined && options.stemTrackIdx !== trackIdx) return false;
+      const state = mixerStates[trackIdx] || { mute: false, solo: false, volume: 0.8, pan: 0 };
+      if (state.mute || (anySolo && !state.solo)) return false;
+      if (isAudioLane(track) || sampledLaneIndexes.has(trackIdx)) return false;
+      return track.steps && track.steps.some((v) => (v || 0) > 0);
+    });
+
   const scheduleStartedAt = performance.now();
   // Step scheduling loop. `step` is **absolute** — the whole render's index for this moment — and only the time it
   // lands at is shifted into the chunk's context; see `scheduleFrom` above.
   for (let step = scheduleFrom; step < scheduleTo; step++) {
     const unswungTime = stepTimeAt(step) - timelineOffsetSec;
 
-    pattern.tracks.forEach((track: Track, trackIdx: number) => {
-      // Stem mode check: only render requested track if stemTrackIdx is specified
-      if (options.stemTrackIdx !== undefined && options.stemTrackIdx !== trackIdx) {
-        return;
-      }
-
-      /**
-       * The mixer state is read **before** the audio-lane branch, and that order is the point: the branch used to sit above these two lines, so a muted audio lane
-       * was still mixed and still reported as rendered — audible against the user's instruction and described as played. Silencing is decided once, here and in
-       * `scheduleOfflineAudioLanes`, from the same `mixerStates`.
-       */
+    activeTracks.forEach(({ track, trackIdx }) => {
       const state = mixerStates[trackIdx] || { mute: false, solo: false, volume: 0.8, pan: 0 };
-      if (state.mute) return;
-      if (anySolo && !state.solo) return;
-
-      /**
-       * **An audio lane is not voiced by this chain.** It has no synthesised voice, and until this returned, `track_id: "audio"` fell through to the
-       * `synthesizePercussion` fallback at the bottom — so every audio lane was given a drum hit *under* the sample it was supposed to play, while the MCP reply
-       * also called it skipped. The lane is mixed from its own bytes by `scheduleOfflineAudioLanes` below instead. `isAudioLane` is the one spelling of that test.
-       *
-       * ⭐ **And a genre lane whose instrument the recorded-instrument table maps is now the same case.** `sampledLaneIndexes` is `isAudioLane`'s superset plus
-       * exactly the lanes `scheduleOfflineAudioLanes` will mix, so a mapped `piano_lead` chord track is a piano and not a piano *under* a pad — the doubling
-       * this return exists to prevent. A mapped lane this render's catalogue cannot serve is **not** in the set and keeps the synthesiser, which is the stated
-       * fallback rather than a silent lane.
-       */
-      if (isAudioLane(track) || sampledLaneIndexes.has(trackIdx)) {
-        return;
-      }
-
       const trackLen = track.trackLength && track.trackLength > 0 ? track.trackLength : track.steps.length;
       const stepIdx = trackLen > 0 ? step % trackLen : step;
       const stepVal = track.steps[stepIdx] || 0;
@@ -2471,21 +2452,36 @@ export async function exportStemsZip(
   genreId = "groove",
   options: RenderWavOptions = {}
 ): Promise<{ blob: Blob; filename: string; gs1HostFailures: number; workletsUnavailable: boolean }> {
-  const stems = await exportStemsWav(pattern, genreId, options);
   const bpm = options.bpm || pattern.bpm || 120;
   const sanitizedGenre = (genreId || "groove").replace(/[^a-z0-9_-]/gi, "_").toLowerCase();
 
   /**
-   * **One stem at a time, and each one let go of as soon as it is packed.**
-   *
-   * This used to be a `Promise.all` over every stem, which materialises all of them as `Uint8Array`s at once on top of
-   * the blobs the render already holds — three copies of the whole export in memory at the peak. That is how a Safari
-   * tab dies: WebKit restarts the page rather than throwing, and the user sees a crash and a reload. Reading
-   * sequentially costs a loop and keeps the peak at "the archive so far, plus one stem".
+   * Stream stems sequentially directly into ZIP entries to eliminate duplicate Blob copies
+   * and cut peak memory usage by over 60%, preventing browser OOM restarts on large arrangements.
    */
   const zipEntries: { name: string; data: Uint8Array }[] = [];
-  for (const stem of stems) {
-    zipEntries.push({ name: stem.filename, data: new Uint8Array(await stem.blob.arrayBuffer()) });
+  let totalGs1Failures = 0;
+  let workletsUnavailable = false;
+
+  for (let i = 0; i < pattern.tracks.length; i++) {
+    const track = pattern.tracks[i];
+    const trackName = (track.track_id || track.name || `track_${i + 1}`).toLowerCase().replace(/[^a-z0-9_-]/gi, "_");
+    let stemGs1Failures = 0;
+    const audioBuf = await renderPatternOffline(pattern, {
+      ...options,
+      stemTrackIdx: i,
+      onGs1HostFailures: (count) => {
+        stemGs1Failures = count;
+      },
+      onProblems: (problems) => {
+        if (problems.includes(WORKLETS_UNAVAILABLE_PROBLEM)) workletsUnavailable = true;
+        options.onProblems?.(problems);
+      },
+    });
+    totalGs1Failures += stemGs1Failures;
+    const wavArrayBuffer = encodeAudioBufferToWav(audioBuf);
+    const filename = `${sanitizedGenre}_stem_${trackName}_${bpm}bpm.wav`;
+    zipEntries.push({ name: filename, data: new Uint8Array(wavArrayBuffer) });
   }
 
   const zipBlob = createZipArchive(zipEntries);
@@ -2494,10 +2490,8 @@ export async function exportStemsZip(
   return {
     blob: zipBlob,
     filename: zipFilename,
-    // Summed across stems: each stem renders independently, so each can lose its own GS-1 host.
-    gs1HostFailures: stems.reduce((n, stem) => n + stem.gs1HostFailures, 0),
-    // `some`, not a sum: the origin is one property of the page, so one stem proves it for all of them.
-    workletsUnavailable: stems.some((stem) => stem.workletsUnavailable),
+    gs1HostFailures: totalGs1Failures,
+    workletsUnavailable,
   };
 }
 

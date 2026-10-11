@@ -194,6 +194,8 @@ export function useArrangementFileActions({
       if (result.gs1HostFailures > 0) return t("export_wav_degraded_gs1", { filename: result.filename, count: result.gs1HostFailures });
       if (result.limiterKind === "fallback") return t("export_wav_degraded_limiter", { filename: result.filename });
       if (result.kind === "mp3") return t("export_mp3_done", { filename: result.filename, kbps: result.bitrateKbps ?? 192 });
+      if (result.kind === "aac") return `已导出 AAC: ${result.filename} ✓ (${result.bitrateKbps ?? 192} kbps)`;
+      if (result.kind === "opus") return `已导出 Opus: ${result.filename} ✓ (${result.bitrateKbps ?? 192} kbps)`;
       if (result.kind === "stems") return t("export_stems_done", { filename: result.filename });
       return t("export_wav_done", { filename: result.filename });
     },

@@ -412,6 +412,24 @@ export function useExportActions({
       // The same master as the WAV, so it needs the same catalogue — see `handleExportWav`.
       const audioLanes = await prepareAudioLaneExport(pattern, () => appCatalogueRuntime.load());
       if (exportRunRef.current !== run) return;
+      const { isWebCodecsAudioSupported, exportMasterWebCodecs } = await import("../../../audio/WebCodecsExporter");
+      if (await isWebCodecsAudioSupported("aac")) {
+        const result = await exportMasterWebCodecs(pattern, currentGenre.id, {
+          codec: "aac",
+          bpm,
+          swing,
+          drumKit,
+          ...audioLanes.options,
+          onRenderProgress: progressFor(run, "mp3"),
+        });
+        if (exportRunRef.current !== run) return;
+        triggerWavDownload(result.blob, result.filename);
+        const base = `已导出 AAC: ${result.filename} ✓ (${result.bitrateKbps} kbps)`;
+        const lanes = audioLaneNotice(audioLanes);
+        showToast(lanes ? `${base} · ${lanes}` : base);
+        return;
+      }
+
       const result = await exportMasterMp3(pattern, currentGenre.id, {
         bpm,
         swing,
