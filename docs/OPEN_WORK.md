@@ -24704,3 +24704,32 @@ describe("the grid's editing actions", () => {
   ⭐ **一个我自己的节奏教训 ✓（与代码无关但值得记 ✓）**：目标轮次**不消耗墙钟时间** ✓ ——
     我一度用"每轮偷看一眼"来等 CI ✓，结果 20 秒内连读数次、烧掉大半轮次预算 ✓。
     正确做法是**在工具调用里真正阻塞等待**（`sleep`／`job_output wait:true`／盯 run 的轮询作业 ✓）。
+
+### 一千零二十七、🚀✅ **v2.36.2 已发布：159/159 个曲风都有片段，渲染有了进程级看门狗**（2026-10-11 ✓，判据全部实测 ✓）
+
+  ⭐ **发布输出 ✓**：`full CI ok` ⇒ `deploy ok` ⇒ `tag ok` ⇒ `remote ok` ⇒ `✅ deployed and published` ⇒ `release exit=0` ✓；
+    `main` = `977430f` ✓、`refs/tags/v2.36.2` = `dfacde9` ✓。
+  ⭐ **看门狗（本次的核心）✓** ✓：根因是**两个定时器都救不了"事件循环停转"** ——
+    客户端超时在 `scripts/mcp_call.mjs:84`（180s ✓）、服务端在 `mcp/render/worker.ts:224`（900s ✓），
+    而 `vocal-trance` 那次两者都没触发 ✓ ⇒ 看门狗必须**在进程外** ✓：
+    `scripts/lib/watchdog.mjs` 把子进程放进**自己的进程组** ✓、超时用 **SIGKILL 杀整组** ✓（只杀包装器会留下渲染中的孙进程 ✓）、
+    返回 `killedByWatchdog` ✓；`scripts/cut_missing_clips.mjs` 用它逐个曲风跑 ✓（杀掉后**继续下一个** ✓）。
+    **能红的判据** ✓：`src/test/renderWatchdog.test.ts` 喂一个**永不回答**的子进程 ✓ ⇒ 1521ms 被杀（限 1500ms ✓）、
+    且**下一个任务照跑** ✓；**红证明**：把 kill 去掉后同一断言**永不返回** ✓（我的 60s timeout 才收掉）⇒ 判据依赖的正是那个机制 ✓。
+  ⭐ **4 个曲风全部切出 ✓**（`goa-trance` 442s ✓、`vocal-trance` 443s ✓、`euro-trance` ✓、`dream-trance` 47s ✓）
+    ⇒ **清单 159 条 = 159 个曲风一个不缺** ✓；R2 桶 `groove/clips` **159 个文件** ✓；
+    越界仅 3 条且带可见警告 ✓；`health` 总表 `audited: 159` ✓。
+    ⚠️ 如实记一笔 ✓：`vocal-trance` 这次**没触发看门狗**、自己跑完了 ✓ ⇒ 那次挂死**非确定性** ✓ ——
+    这恰是"必须进程外兜底"的理由 ✓。
+  ⭐ **我在本轮犯的两个错（都已修 ✓）** ✓：
+    ① **merge 写成 4 条** ✗：暂存分片里 `url` 存的是**完整 R2 URL** ✓，而 merge 用
+      `existsSync(`${OUT}/${clip.url}`)` 判断文件存在 ✓ ⇒ 155 条全被 "left out" ✓，只剩我新写的 4 条（裸文件名）✓
+      ⇒ **修法**：分片里一律写**裸文件名** ✓，URL 交给 `--base` 在 merge 时统一施加 ✓；
+    ② **TS7016**（`watchdog.mjs` 无声明）✗：按仓库既有先例（`scripts/check_render_cpu_budget.d.mts` ✓）
+      补 `scripts/lib/watchdog.d.mts` ✓ ⇒ typecheck 0 错 ✓（**发布前**抓到，没白烧远端 CI ✓）。
+    ⚠️ 又踩一次自伤 ✓：`pkill -f "scripts/release.sh"` **把我自己的 shell 也匹配杀了** ✓（模式出现在同一条命令文本里 ✓）
+      ⇒ 该命令自杀 ✓ ⇒ 改用**按 pidfile 杀** ✓。
+  ⭐ **线上验收 ✓**：`version.json` = **2.36.2** ✓；`changelog.json` 首条 = **2.36.2**、**152** 中文字符 ✓；
+    线上清单 **159 条** ✓、`engineVersion 2.36.2` ✓；4 个新片段皆 `audio/mpeg` ✓；
+    **线上 `/m` 真浏览器探针** ✓：`player: true` ✓、`src` 是 R2 URL ✓、`compare: true` ✓、
+    播放后 **`readyState 4 / duration 16.6 / currentTime 4.7 / paused false`** ✓、**零 page error** ✓。
