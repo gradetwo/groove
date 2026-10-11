@@ -24974,3 +24974,26 @@ describe("the grid's editing actions", () => {
     前者的片段只在 停止／切曲风／卸载 时被 pause ✓（无 genre prop、无重置 effect ✓），后者只在事件处理里清 ✓。
     加守卫后浏览器复跑同一条链 ✓：full ⇒ `clip-audition-audio` 存在 ✓、`src` = `…/clips/chicago-house.mp3` ✓、
     `paused=false` ✓、`currentTime` `0 → 0.73` ✓；drums ⇒ 该元素消失 ✓、`audio` = `[]` ✓、`pageerror` 无 ✓。
+
+  🖱️ **四条表面的浏览器读数（2026-10-11 ✓，`vite preview` ＋ chromium 1440×900 ✓，**真鼠标** `page.mouse.click` ✓，
+    门用 `audio-start-button` 关掉 ✓）**：
+    ```
+    [1] /compare?ids=chicago-house,punk-rock  单边 "Full Band · Clip"
+        elementFromPoint(按钮中心) = SPAN.（按钮自己的子节点 ✓）
+        clip-audition-audio: src=…/clips/chicago-house.mp3  readyState=1  paused=false  currentTime 0 → 0.64 ✓
+    [2] 再按同步合成（title 含 "Phase-locked"）
+        clip-audition-audio = 不存在 ✓  audio 总数 = 0 ✓  pageerror = 无 ✓   ← 合成仍只走引擎 ✓
+    [3] /explore/timeline   单曲风试听键（aria-label="Audition"）→ 键变 "Stop" ✓  请求 …/clips/chicago-house.mp3 ✓
+    [4] /explore/stories    同上 → "Stop" ✓                                     请求 …/clips/delta-blues.mp3 ✓
+    ```
+    ⇒ 「full ⇒ 片段、合成／drums ⇒ 引擎」在浏览器里四条都成立 ✓。
+  ⚠️ **「鼠标点不到、键盘 Enter 能到」的成因（量到了 ✓，不是猜 ✓）**：是**音频启动门**的遮罩 ✓。
+    门没关掉时它盖住整页 ✓：冷启动时 `start()` 要先跑 GS-1 探针才 `setOpen(false)` ✓（失败则**按设计留在原地并说明** ✓），
+    这段时间 `elementFromPoint` 命中门／卡片 ✓，鼠标事件被吃掉 ✓；而 `focus()` ＋ Enter 直接在**获得焦点的元素**上派发 ✓，
+    绕过遮罩 ✓ —— 所以同一构建会出现"鼠标不行、键盘行" ✓。冷启动实测约 **6 s** 内关门并写入 `groove_audio_started` ✓；
+    门一旦真的关掉 ✓，按钮中心 `elementFromPoint` = 按钮自己的 `<span>` ✓、无任何 fixed/absolute 遮挡 ✓、
+    真鼠标点击即挂载片段 ✓（上面 [1]–[4] 都是这么测的 ✓）。门的这个行为是既有且有意的 ✓，本轮**未改** ✓
+    （改它会动到"音频没启动时要留在原地说明"这条 ✓，不属本次范围 ✓）。
+  ⚠️ **`useGenreAudition` 的 `clips:false`（手机壳）** ✓：由 jsdom 判据 `genreAuditionClip.test.tsx` 第 3 例钉住 ✓
+    （引擎构造被调用 ✓、片段元素为 0 ✓）；**本轮没有**做手机 `/m` 的浏览器读数 ✓ —— 如实记下 ✓。
+  🧹 **探针已全部移除 ✓**：`grep -rn "clip-probe\|TEMP-PROBE" src/` ⇒ 无 ✓；临时脚本 `scripts/tmp_*` 均已删除 ✓。
