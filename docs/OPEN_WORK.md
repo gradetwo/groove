@@ -24786,3 +24786,27 @@ describe("the grid's editing actions", () => {
   ⚠️ **一个仍然要记住的口径教训 ✓**：`verify-live-mobile.mjs` 里那个 `more` 字段用的是**整页节点数** ✗，
     它在 2.36.5 上对 help/search 报 `NOTHING` ✗ —— 而同一站点用**正确口径**（`[role="dialog"]`）测得**全部 opened** ✓。
     ⇒ **面板是否打开，只能看 dialog，不能看节点数**（模态框会换屏，节点数可持平）✓。
+
+### 一千零三十、🎯 **手机播放路径改造：现状读数与施工图**（店主 2026-10-11 的要求：除 jam/explore 外都放 MP3）
+
+  ⭐ **现状（已量 ✓）** ✓：`src/mobile/MobileApp.tsx` 里**所有**播放动作都走实时引擎试听 ✓ ——
+    `139` 注释 "One audition engine for the whole shell" ✓；`151` `const { playingGenreId, toggleAudition, stopAudition, … }` ✓；
+    `206–215` 播放条换曲 ⇒ `toggleAudition` ✓；`243–250` 切曲风 ⇒ `toggleAudition` ✓；`263–271` 点曲风播放 ⇒ `toggleAudition` ✓。
+    ⇒ 而片段播放器（`MobileClipPlayer`，放 R2 上的预生成 MP3 ✓）只在**先触发试听、再按它自己的 ▶** 时发声 ✓
+    ⇒ 这就是"听着不像 mp3"的机制 ✓。
+  ✅ **已完成的第一步 ✓**（提交 `15a5aef` ✓）：`MobileClipPlayer` 增加 `autoPlay?: boolean` ✓（片段就绪即 `play()` ✓，
+    必须在用户手势内 ⇒ 壳在同一个点击里设置它 ✓）；判据 `mobileClipPlayback.test.tsx` 新增一例"自己开始"✓（**能红** ✓），
+    该文件 3 例绿 ✓、typecheck 0 错 ✓。
+  ⭐ **施工图（下一步照此做 ✓）** ✓：
+    1. **纯函数**：`src/mobile/mobileModules.ts` 加 `export function usesClipPlayback(module: MobileModule): boolean { return module !== "jam" && module !== "explore"; }`
+       （测试**可以**直接 import `src/mobile/**` ✓ —— 边界判据已改为"测试不是面" ✓）；配真值表判据（4 个模块 ✓，能红 ✓）；
+    2. **壳内分叉**：在 `MobileApp` 里引入 `const clipMode = usesClipPlayback(module);` 与 `const [clipGenreId, setClipGenreId] = useState<string | null>(null);`
+       ⇒ 把 `206–215`（播放条播放/暂停）、`243–250`（切曲风）、`263–271`（点曲风播放）三处改为：
+       `clipMode ? setClipGenreId(id) : void toggleAudition(record)` ✓；
+    3. **挂载**：把 `<MobileClipPlayer genreId={clipGenreId} autoPlay />` 放在壳的**非 jam/explore** 分支里（与播放条并列 ✓），
+       并且 `clipMode && clipGenreId` 时不显示引擎的播放条状态（或让条显示片段状态 ✓，避免两个"正在播放"互相矛盾 ✓）；
+    4. **jam/explore 不动** ✓（仍 `toggleAudition` ✓）；
+    5. **本地探针**：逐模块复验 —— home/challenge ⇒ 存在 `<audio>` 且 `src` = `…/clips/<genre>.mp3`、`readyState 4`、`currentTime` 递增 ✓；
+       jam/explore ⇒ **不创建**片段 `<audio>` ✓（走引擎 ✓）；
+    6. **发布 v2.36.6** ✓：远端 CI（权威）⇒ deploy ⇒ main ⇒ tag ⇒ 线上 `version.json` 读出 2.36.6 ✓ ⇒ 线上手机 UA 复验同样四条 ✓。
+  ⚠️ **纪律 ✓**：先跑判据再提交 ✓（本会话已因"先提交后看测试"白烧一次远端 CI ✗）；杀进程只用 pidfile／显式 PID ✓。
