@@ -1,23 +1,23 @@
 {
-  "version": "2.36.1",
-  "releaseDate": "2026-10-10",
+  "version": "2.36.2",
+  "releaseDate": "2026-10-11",
   "changelogCount": 10,
   "latest": {
-    "version": "2.36.1",
+    "version": "2.36.2",
     "date": "2026-10-11",
-    "category": "fix",
+    "category": "feature",
     "title": {
-      "zh": "手机端可读性与样式归属的小修",
-      "en": "Small fixes for phone readability and style ownership"
+      "zh": "全部 159 个曲风都有片段，渲染加了进程级看门狗",
+      "en": "All 159 genres have a clip, and the renderer got a process-level watchdog"
     },
     "highlights": [
       {
-        "zh": "手机最暗的一层文字调亮：对底色从 3.95:1 提到 5.24:1，越过正文门槛。",
-        "en": "The dimmest phone text is lighter: 3.95:1 became 5.24:1 on the page, clearing the body-text floor."
+        "zh": "最后 4 个曲风补切完成（goa/vocal/euro/dream-trance，各 16.6 秒）⇒ 清单 159 条，159 个曲风一个不缺。",
+        "en": "The last four genres are cut (goa, vocal, euro and dream trance, 16.6 s each), so the list holds 159 clips and no genre is missing."
       },
       {
-        "zh": "和弦页三处写死的灰改用本皮肤墨色；App 里手机壳的懒加载移到其它视图旁边。",
-        "en": "Three hardcoded greys in the chords view use the skin's own ink, and the phone shell's lazy import sits with the other views in App."
+        "zh": "渲染挂死时由进程组看门狗杀掉并继续下一个曲风；配可红判据：喂永不回答的子进程，1.5 秒被杀且下一任务照跑。",
+        "en": "A wedged render is killed by a process-group watchdog and the batch carries on, with a criterion that feeds it a child which never answers."
       }
     ],
     "truncated": false
