@@ -401,10 +401,15 @@ export function MobileApp({
           {isPlayer ? (
             <MobilePlayerScreen
               genreId={genreId!}
-              isPlaying={playingGenreId === genreId}
+              /**
+               * ⭐ The screen and the sound must agree. On modules that play the clip, the transport is the clip, so
+               * `isPlaying` follows the clip's own genre rather than the engine's audition — otherwise the full player
+               * would say "idle" while the MP3 was playing (owner, 2026-10-11).
+               */
+              isPlaying={clipMode ? clipGenreId === genreId : playingGenreId === genreId}
               playMode={playMode}
               readClock={readClock}
-              onTogglePlay={handleToggleAudition}
+              onTogglePlay={(id: string) => (clipMode ? setClipGenreId((current) => (current ? null : id)) : handleToggleAudition(id))}
               onPlayGenre={playGenreInPlayer}
               onCycleMode={cyclePlayMode}
               onSkip={skip}
