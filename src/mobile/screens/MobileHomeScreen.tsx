@@ -36,7 +36,8 @@ import { MobileClipPlayer } from "../MobileClipPlayer";
 import type { GenreCategory } from "../../types/genre";
 import { CATEGORY_SWATCH, genreArtBackground } from "../genreArt";
 import { GenreCover } from "../../components/GenreCover";
-import { filterTimelineStories, genreMatchesQuery, genreNameZh } from "../genreQuery";
+import { genreMatchesQuery, genreNameZh } from "../genreQuery";
+import { filterTimelineStories } from "../../utils/timelineFilter";
 
 /**
  * `id → index item` for the whole shipped library.
@@ -344,7 +345,12 @@ function HomeTimeline({ onSelectGenre, query, category }: { onSelectGenre: (genr
    */
   const eras = useMemo<EraNode[]>(
     () =>
-      filterTimelineStories(TIMELINE_STORIES, (id) => INDEX_BY_ID.get(id), query, category).map(({ story, genreIds }) => {
+      filterTimelineStories(TIMELINE_STORIES, (id) => {
+        const genre = INDEX_BY_ID.get(id);
+        if (!genre) return false;
+        if (category !== "all" && genre.category !== category) return false;
+        return genreMatchesQuery(genre, query);
+      }).map(({ story, genreIds }) => {
         const genres = genreIds
           .map((id) => INDEX_BY_ID.get(id))
           .filter((genre): genre is GenreIndexItem => Boolean(genre));
