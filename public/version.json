@@ -1,19 +1,23 @@
 {
-  "version": "2.36.6",
+  "version": "2.36.7",
   "releaseDate": "2026-10-11",
   "changelogCount": 10,
   "latest": {
-    "version": "2.36.6",
+    "version": "2.36.7",
     "date": "2026-10-11",
     "category": "feature",
     "title": {
-      "zh": "手机版除即兴和探索外，都播放预生成片段",
-      "en": "Every phone module but jam and explore now plays the rendered clip"
+      "zh": "桌面端能用片段试听的都改走预生成 MP3",
+      "en": "Desktop auditions that can use a pre-cut clip now do"
     },
     "highlights": [
       {
-        "zh": "手机壳的播放条、挑战屏播放键与全屏播放器一律播放该曲风的预生成 MP3；即兴与探索仍用实时引擎（要听/改参数）。",
-        "en": "The phone shell's bar, the challenge transport and the full-screen player all play the genre's pre-cut MP3, while jam and explore keep the live engine they exist to hear."
+        "zh": "曲风详情的整曲试听、对比的单边试听、两条时间轴的试听都播放预生成 MP3；鼓试听、同步 A/B 合成与即兴仍用实时引擎（它们没有对应片段）。",
+        "en": "The genre page's full audition, the compare view's single-genre audition and both timelines play the pre-cut MP3, while drums, the synchronous A/B composite and jam keep the live engine, which is the only thing that can make those sounds."
+      },
+      {
+        "zh": "每套皮肤的封面随发布投放上线（不随仓库分发，避免每次推送搬动数百 MB）。",
+        "en": "Every skin's artwork ships with the deploy rather than in the repository, so each push no longer carries hundreds of megabytes."
       }
     ],
     "truncated": false
