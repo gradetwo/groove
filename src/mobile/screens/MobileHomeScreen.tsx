@@ -36,7 +36,7 @@ import { MobileClipPlayer } from "../MobileClipPlayer";
 import type { GenreCategory } from "../../types/genre";
 import { CATEGORY_SWATCH, genreArtBackground } from "../genreArt";
 import { GenreCover } from "../../components/GenreCover";
-import { genreMatchesQuery, genreNameZh } from "../genreQuery";
+import { filterTimelineStories, genreMatchesQuery, genreNameZh } from "../genreQuery";
 
 /**
  * `id → index item` for the whole shipped library.
@@ -233,7 +233,7 @@ export function MobileHomeScreen({ playingGenreId, onSelectGenre }: MobileHomeSc
         ))}
       </div>
 
-      <HomeTimeline onSelectGenre={onSelectGenre} />
+      <HomeTimeline onSelectGenre={onSelectGenre} query={query} category={category} />
 
       <ul className="mt-3 space-y-2.5" data-testid="mobile-home-list">
         {visibleGenres.map((genre) => {
@@ -333,7 +333,7 @@ interface EraNode {
  * now reports the origin **years** the index does have, rather than loading fourteen category chunks to
  * decorate a timeline. The geography is still on each genre's own page, which loads its record.
  */
-function HomeTimeline({ onSelectGenre }: { onSelectGenre: (genreId: string) => void }) {
+function HomeTimeline({ onSelectGenre, query, category }: { onSelectGenre: (genreId: string) => void; query: string; category: GenreCategory | "all" }) {
   const { t, language } = useLanguage();
 
   /**
@@ -344,8 +344,8 @@ function HomeTimeline({ onSelectGenre }: { onSelectGenre: (genreId: string) => v
    */
   const eras = useMemo<EraNode[]>(
     () =>
-      TIMELINE_STORIES.map((story) => {
-        const genres = story.genre_ids
+      filterTimelineStories(TIMELINE_STORIES, (id) => INDEX_BY_ID.get(id), query, category).map(({ story, genreIds }) => {
+        const genres = genreIds
           .map((id) => INDEX_BY_ID.get(id))
           .filter((genre): genre is GenreIndexItem => Boolean(genre));
         const years = [...new Set(genres.map((genre) => genre.origin_year))]
@@ -358,7 +358,7 @@ function HomeTimeline({ onSelectGenre }: { onSelectGenre: (genreId: string) => v
           categories: [...new Set(genres.map((genre) => genre.category))],
         };
       }),
-    []
+    [query, category]
   );
 
   return (

@@ -9,6 +9,8 @@ export interface RouteState {
    * the same precedent `/new` and `/console` already set.
    */
   mobileShell?: boolean;
+  /** The shell's full-screen player, from `/m?player=1&genre=<id>` — the shell switches modules in its own state, but this one is a *route out of* the shell, so it belongs in the URL. */
+  mobilePlayer?: boolean;
   /**
    * ⭐ **A new project rather than a place to browse** — and this route is the one that must **not** get a genre.
    *
@@ -57,7 +59,8 @@ export function parseUrlToRoute(pathname: string, search: string, hash: string =
      * parse into a route of its own — that rule was a deliberate removal, and reviving it by accepting a prefix would
      * break it. The phone shell switches modules in its own state (`mobileModules.ts`), not in the URL.
      */
-    return { ...parseUrlToRoute("/", search, hash), mobileShell: true };
+    const phoneParams = new URLSearchParams(search.startsWith("?") ? search.slice(1) : search);
+    return { ...parseUrlToRoute("/", search, hash), mobileShell: true, mobilePlayer: phoneParams.get("player") === "1" };
   }
 
   const params = new URLSearchParams(search);
@@ -254,7 +257,15 @@ export function formatRouteToUrl(route: RouteState): string {
    * carried over, so "the phone shell, as it is" is exactly `/m`. Parsing and formatting stay a closed pair, which is how
    * `router.test.ts` uses them.
    */
-  if (route.mobileShell) return "/m";
+  if (route.mobileShell) {
+    // ⭐ The shell's module lives in its own state, but the full-screen player and the open genre are *places*: without
+    // them here the URL cannot express "the player is open", which is exactly what made the bar's button a no-op.
+    const phone = new URLSearchParams();
+    if (route.mobilePlayer) phone.set("player", "1");
+    if (route.genreId) phone.set("genre", route.genreId);
+    const query = phone.toString();
+    return query ? `/m?${query}` : "/m";
+  }
   // Use clean paths where possible, with fallback query params
   switch (route.tab) {
     case "detail":

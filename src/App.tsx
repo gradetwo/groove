@@ -319,7 +319,20 @@ const MainApp: React.FC = () => {
   if (route.mobileShell) {
     return (
       <React.Suspense fallback={null}>
-        <MobileApp module={mobileModule} onSelectModule={setMobileModule} genreId={route.genreId} />
+        <MobileApp
+          module={mobileModule}
+          onSelectModule={setMobileModule}
+          genreId={route.genreId}
+          mobilePlayer={route.mobilePlayer}
+          onOpenPlayer={(genre) => navigate({ mobileShell: true, mobilePlayer: true, genreId: genre })}
+          onCollapsePlayer={() => navigate({ mobileShell: true, mobilePlayer: false })}
+          onOpenGenre={(genre) => navigate({ mobileShell: true, genreId: genre })}
+          onCloseGenre={() => navigate({ mobileShell: true })}
+          onOpenSettings={() => setSettingsOpen(true)}
+          onOpenUpdates={() => setUpdatesOpen(true)}
+          onOpenHelp={() => setHelpOpen(true)}
+          onOpenSearch={() => setSearchOpen(true)}
+        />
       </React.Suspense>
     );
   }

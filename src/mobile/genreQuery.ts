@@ -46,3 +46,31 @@ export function genreMatchesQuery(
     (genre.aliases ?? []).some((alias) => alias.toLowerCase().includes(lower))
   );
 }
+
+
+/**
+ * ⭐ **The timeline is a curated story, not a catalogue — but it still has to obey the search field.**
+ *
+ * The home screen's list and its `GENRES · n` count already narrow with the query; the timeline above them kept drawing
+ * the full set, which is why typing on a phone looked like it did nothing at all (owner, 2026-10-11). This is the same
+ * `genreMatchesQuery` the list uses, applied to each story's genre ids: a story that loses every id disappears, so the
+ * timeline visibly shrinks instead of quietly disagreeing with the list beneath it.
+ */
+export function filterTimelineStories<T extends { genre_ids: string[] }>(
+  stories: readonly T[],
+  resolve: (id: string) => { id: string; category?: string } | undefined,
+  query: string,
+  category: string,
+): { story: T; genreIds: string[] }[] {
+  const out: { story: T; genreIds: string[] }[] = [];
+  for (const story of stories) {
+    const genreIds = story.genre_ids.filter((id) => {
+      const genre = resolve(id);
+      if (!genre) return false;
+      if (category !== "all" && genre.category !== category) return false;
+      return genreMatchesQuery(genre as never, query);
+    });
+    if (genreIds.length > 0) out.push({ story, genreIds });
+  }
+  return out;
+}
