@@ -49,6 +49,16 @@ const renderPlayer = () =>
   );
 
 describe("the phone clip player", () => {
+  it("⭐ starts by itself when the module's transport is the clip", async () => {
+    const { container } = render(
+      <LanguageProvider>
+        <MobileClipPlayer genreId="chicago-house" autoPlay />
+      </LanguageProvider>,
+    );
+    await waitFor(() => expect(container.querySelector("[data-testid='mobile-clip-player'] audio")).toBeTruthy(), { timeout: 6000 });
+    await waitFor(() => expect(playMock).toHaveBeenCalled(), { timeout: 6000 });
+  });
+
   it("⭐ points its audio element at the genre's rendered clip", async () => {
     const { container } = renderPlayer();
     await waitFor(() => expect(container.querySelector("[data-testid='mobile-clip-play']")).toBeTruthy(), { timeout: 6000 });

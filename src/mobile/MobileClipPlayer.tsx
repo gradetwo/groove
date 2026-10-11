@@ -26,9 +26,15 @@ export interface MobileClipPlayerProps {
   genreId: string;
   /** Optional second genre, which turns the control into an A/B comparison (owner: *曲风对比*). */
   compareGenreId?: string;
+  /**
+   * ⭐ **Start as soon as the clip is ready.** The owner's rule for the phone (2026-10-11): every module except 即兴 (jam)
+   * and 探索 (explore) plays the pre-cut MP3, so on those modules the clip *is* the transport and needs no second press.
+   * It must be reached from a user gesture — the shell sets this in the same click that starts playback.
+   */
+  autoPlay?: boolean;
 }
 
-export function MobileClipPlayer({ genreId, compareGenreId }: MobileClipPlayerProps): React.ReactElement {
+export function MobileClipPlayer({ genreId, compareGenreId, autoPlay = false }: MobileClipPlayerProps): React.ReactElement {
   const { t } = useLanguage();
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const [clips, setClips] = useState<GenreClip[] | null>(null);
@@ -81,6 +87,13 @@ export function MobileClipPlayer({ genreId, compareGenreId }: MobileClipPlayerPr
     (audio as HTMLAudioElement & { mozPreservesPitch?: boolean }).mozPreservesPitch = false;
     (audio as HTMLAudioElement & { webkitPreservesPitch?: boolean }).webkitPreservesPitch = false;
   }, [rate, clip]);
+
+  useEffect(() => {
+    if (!autoPlay) return;
+    const audio = audioRef.current;
+    if (!audio) return;
+    void audio.play().then(() => setPlaying(true)).catch(() => setPlaying(false));
+  }, [autoPlay, clip]);
 
   const toggle = useCallback(() => {
     const audio = audioRef.current;
