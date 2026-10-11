@@ -17,8 +17,9 @@ import { useGenreAudition } from "../hooks/useGenreAudition";
 import { auditionArrangementFor } from "./mobileGenreData";
 import { MobileModuleTabBar } from "./MobileModuleTabBar";
 import { MobilePlayerBar } from "./MobilePlayerBar";
+import { MobileClipPlayer } from "./MobileClipPlayer";
 import { useCoverWarmupBothSizes } from "../hooks/useCoverWarmup";
-import { MOBILE_MODULE_PLAN_KEYS, type MobileModule } from "./mobileModules";
+import { MOBILE_MODULE_PLAN_KEYS, usesClipPlayback, type MobileModule } from "./mobileModules";
 import { GENRE_INDEX, loadGenre } from "./mobileGenreData";
 import { nextGenreForMode, nextPlayMode, normalisePlayMode, type PlayMode } from "./vinyl/vinylMath";
 import "./mobile.css";
@@ -201,6 +202,10 @@ export function MobileApp({
    * The queue is the **index** (`id` + `category`, which is all `nextGenreForMode` reads), and only the
    * chosen id is resolved to a full record before the transport gets it.
    */
+  /** ⭐ Modules but jam and explore play the rendered clip (owner, 2026-10-11). */
+  const clipMode = usesClipPlayback(module);
+  const [clipGenreId, setClipGenreId] = useState<string | null>(null);
+
   const skip = useCallback(
     (direction: 1 | -1) => {
       const from = genreId ?? playingGenreId;
@@ -458,6 +463,13 @@ export function MobileApp({
         </Suspense>
       </main>
 
+      {/* ⭐ The clip slot: on modules but jam and explore, the sound comes from the rendered clip. */}
+      {clipMode && clipGenreId && (
+        <div className="px-4 pb-2" data-testid="mobile-clip-bar-slot">
+          <MobileClipPlayer genreId={clipGenreId} autoPlay />
+        </div>
+      )}
+
       {/* The bar sits above the tab bar; the content above reserves room for both. */}
       {showPlayerBar && (
         <MobilePlayerBar
@@ -465,7 +477,14 @@ export function MobileApp({
           isPlaying={barIsPlaying}
           aboveTabBar={showTabBar}
           playMode={playMode}
-          onToggle={() => (barIsPlaying ? stopAudition() : handleToggleAudition(barGenreId))}
+          onToggle={() => {
+            // ⭐ The owner's rule: on every module but jam and explore the transport is the clip, not the engine.
+            if (clipMode) {
+              setClipGenreId((current) => (current ? null : barGenreId));
+              return;
+            }
+            return barIsPlaying ? stopAudition() : handleToggleAudition(barGenreId);
+          }}
           onCycleMode={cyclePlayMode}
           onOpen={() => onOpenPlayer?.(barGenreId)}
           /* The rail and the tempo both come from the transport, so the bar cannot disagree with it. */

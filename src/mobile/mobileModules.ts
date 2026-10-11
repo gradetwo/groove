@@ -75,3 +75,15 @@ function shouldEnterPhoneShell(input: {
   // An explicit destination wins: `?tab=`, `?genre=`, `?groove=` and friends are all deep links.
   return !["tab", "genre", "groove", "m", "player"].some((key) => params.has(key));
 }
+
+
+/**
+ * ⭐ **Which modules play the pre-cut MP3, and which play the live engine.**
+ *
+ * The owner's rule (2026-10-11): every phone module plays the rendered clip — *except* 即兴 (jam) and 探索 (explore), where
+ * hearing and editing the engine itself is the point. One pure function, so the rule is readable in one place and can be
+ * pinned by a criterion instead of living as three scattered `if`s.
+ */
+export function usesClipPlayback(module: MobileModule): boolean {
+  return module !== "jam" && module !== "explore";
+}
