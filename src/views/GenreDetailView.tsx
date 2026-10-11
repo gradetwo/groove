@@ -138,6 +138,14 @@ export const GenreDetailView: React.FC<GenreDetailViewProps> = ({
    */
   const [clipGenreId, setClipGenreId] = useState<string | null>(null);
   /**
+   * ⭐ **The genre the clip state belongs to.** The seed effect below used to clear `clipGenreId` every time it ran;
+   * a re-render that produced a new `genre` object carrying the **same** id would then wipe a clip the current
+   * interaction had just started. It clears on a real genre change only, and the value lives in a ref so clearing
+   * cannot itself re-run the effect — the same "the clip belongs to this genre" guard `CompareView` reads as
+   * `clipGenreId === genre.id`.
+   */
+  const clipOwnerGenreRef = useRef(genre.id);
+  /**
    * ⭐ **"This full audition has no clip, so the engine is playing" — set at the press, not when the engine happens
    * to finish starting.** The first version gated the sentence on `isPlaying`, which the engine path only sets after
    * its sampler preparation resolves — so a genre with no clip (or an unreadable manifest) showed **nothing at all**,
@@ -194,9 +202,13 @@ export const GenreDetailView: React.FC<GenreDetailViewProps> = ({
     const defaultBpm = genre.default_bpm || 124;
     setBpm(defaultBpm);
     setBpmInput(String(defaultBpm));
-    // ⭐ A different genre is a different sound: a clip left mounted here would keep the old genre playing over the new page.
-    setClipGenreId(null);
-    setClipFallback(false);
+    // ⭐ A different genre is a different sound: clear the clip only on a real id change, never on a same-id re-render
+    // (which would clobber a clip the click just started — see `clipOwnerGenreRef`).
+    if (clipOwnerGenreRef.current !== genre.id) {
+      clipOwnerGenreRef.current = genre.id;
+      setClipGenreId(null);
+      setClipFallback(false);
+    }
 
     const engine = engineRef.current;
     if (!engine) return;

@@ -24966,3 +24966,11 @@ describe("the grid's editing actions", () => {
     先点对开始控件 ✓：日志三行齐全 ✓、`audio` = `[…/clips/chicago-house.mp3]` ✓、`readyState 4` ✓、
     `currentTime` 递增 ✓。⇒ **桌面片段试听在真实浏览器里是通的 ✓；那个"没反应"来自探测脚本的点击目标 ✓，
     不是产品 ✓。**（本条覆盖上面"成因推测"那句 ✓：不是推测了，是量到了 ✓。）
+
+  🛡️ **仍然加了一道硬化 ✓（2026-10-11 ✓，即便读数把成因指向探针）**：`GenreDetailView` 的 seed effect 原先**每次运行**
+    都 `setClipGenreId(null)` ✓；若某次重渲染给出**同 id、不同对象**的 `genre` ✓，它就会把这次点击刚起的片段清掉 ✓。
+    现改为只在 `genre.id` **真的变化**时清 ✓（`clipOwnerGenreRef` ＋ 只在变化分支里清 ✓），与 `CompareView` 的
+    `clipGenreId === genre.id` 守卫等价 ✓。`useGenreAudition` 与 `CompareView` **没有**这种 seed/reset 竞态 ✓：
+    前者的片段只在 停止／切曲风／卸载 时被 pause ✓（无 genre prop、无重置 effect ✓），后者只在事件处理里清 ✓。
+    加守卫后浏览器复跑同一条链 ✓：full ⇒ `clip-audition-audio` 存在 ✓、`src` = `…/clips/chicago-house.mp3` ✓、
+    `paused=false` ✓、`currentTime` `0 → 0.73` ✓；drums ⇒ 该元素消失 ✓、`audio` = `[]` ✓、`pageerror` 无 ✓。
