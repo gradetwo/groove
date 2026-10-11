@@ -1,23 +1,23 @@
 {
-  "version": "2.36.5",
+  "version": "2.36.6",
   "releaseDate": "2026-10-11",
   "changelogCount": 10,
   "latest": {
-    "version": "2.36.5",
+    "version": "2.36.6",
     "date": "2026-10-11",
-    "category": "fix",
+    "category": "feature",
     "title": {
-      "zh": "手机壳里的设置与手册面板又在了",
-      "en": "The phone shell's settings and manual panels are back"
+      "zh": "手机版除即兴和探索外，都播放预生成片段",
+      "en": "Every phone module but jam and explore now plays the rendered clip"
     },
     "highlights": [
       {
-        "zh": "手机壳的四个面板此前被放在两个分支各写一份；去重时误删了设置与手册两个，现已恢复为两个分支共用一个定义。",
-        "en": "The shell's four panels used to be written once per branch; the dedup deleted the settings and manual ones, and both now render from one shared definition."
+        "zh": "手机壳的播放条、挑战屏播放键与全屏播放器一律播放该曲风的预生成 MP3；即兴与探索仍用实时引擎（要听/改参数）。",
+        "en": "The phone shell's bar, the challenge transport and the full-screen player all play the genre's pre-cut MP3, while jam and explore keep the live engine they exist to hear."
       },
       {
-        "zh": "同时修正了验证口径：判断面板是否打开要看 [role=dialog]，而不是整页节点数（换了屏会让节点数持平）。",
-        "en": "The verification metric was fixed too: a panel is open when [role=dialog] appears, not when the page's node count grows — a screen swap can keep it flat."
+        "zh": "每套皮肤各自的封面恢复进仓库（此前被当作部署时投放的资源而从不入库）。",
+        "en": "Each skin's own cover art is back in the repository, after being treated as a deploy-time drop that was never committed."
       }
     ],
     "truncated": false
