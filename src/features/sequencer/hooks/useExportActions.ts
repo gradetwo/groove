@@ -412,24 +412,12 @@ export function useExportActions({
       // The same master as the WAV, so it needs the same catalogue — see `handleExportWav`.
       const audioLanes = await prepareAudioLaneExport(pattern, () => appCatalogueRuntime.load());
       if (exportRunRef.current !== run) return;
-      const { isWebCodecsAudioSupported, exportMasterWebCodecs } = await import("../../../audio/WebCodecsExporter");
-      if (await isWebCodecsAudioSupported("aac")) {
-        const result = await exportMasterWebCodecs(pattern, currentGenre.id, {
-          codec: "aac",
-          bpm,
-          swing,
-          drumKit,
-          ...audioLanes.options,
-          onRenderProgress: progressFor(run, "mp3"),
-        });
-        if (exportRunRef.current !== run) return;
-        triggerWavDownload(result.blob, result.filename);
-        const base = `已导出 AAC: ${result.filename} ✓ (${result.bitrateKbps} kbps)`;
-        const lanes = audioLaneNotice(audioLanes);
-        showToast(lanes ? `${base} · ${lanes}` : base);
-        return;
-      }
-
+      /**
+       * ⭐ **"Export MP3" must produce an MP3.** This action used to short-circuit to the WebCodecs AAC exporter whenever
+       * the browser could encode AAC, so on Safari pressing "Export MP3" wrote `…_master_120bpm.aac` — which the release
+       * E2E matrix caught (`MP3 export produced arrangement_master_120bpm.aac`, Desktop WebKit FAIL). The codec a reader
+       * gets must follow the action they pressed, so the WebCodecs path is reserved for an explicit AAC/Opus choice.
+       */
       const result = await exportMasterMp3(pattern, currentGenre.id, {
         bpm,
         swing,
