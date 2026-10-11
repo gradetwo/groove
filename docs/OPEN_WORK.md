@@ -24733,3 +24733,34 @@ describe("the grid's editing actions", () => {
     线上清单 **159 条** ✓、`engineVersion 2.36.2` ✓；4 个新片段皆 `audio/mpeg` ✓；
     **线上 `/m` 真浏览器探针** ✓：`player: true` ✓、`src` 是 R2 URL ✓、`compare: true` ✓、
     播放后 **`readyState 4 / duration 16.6 / currentTime 4.7 / paused false`** ✓、**零 page error** ✓。
+
+### 一千零二十八、🚧 **手机版交互排查与 v2.36.5 发布（交接记录）**（2026-10-11 ✓）
+
+  ⭐ **已修并验证 ✓** ✓：
+    ① **播放条 → 全屏播放器** ✓（根因：`App.tsx` 从未传 `mobilePlayer`/`onOpenPlayer` ⇒ `isPlayer` 恒 false）
+       ＋ 路由支持 `/m?player=1&genre=`（解析与格式化两向都改）✓；
+    ② **首页搜索** ✓：以前只管列表与计数，**时间轴不动** ✗ ⇒ 新增 `src/utils/timelineFilter.ts`（纯规则、谓词注入 ⇒
+       不违反"手机壳边界"判据）⇒ 实测 时间轴 **11→4**、列表 **477→51**、`GENRES · 159→17` ✓；
+    ③ **更多四入口** ✓：`SettingsModal`/`HelpCenterModal` 曾被我的"去重"从渲染树里**误删** ✗ ⇒ 恢复成
+       **两分支共用一个 `modals` 定义** ✓（`duplicationBudget` 同时保持绿 ✓）；
+    ④ **手机一律进 `/m`** ✓（`src/app/phoneEntry.ts`：除 `/m` 外任何桌面地址都进壳，`?desktop=1` 例外）✓；
+    ⑤ **片段确实播预生成 MP3** ✓（本地与线上实测：按下片段自己的 ▶ ⇒ `readyState 4`、`currentTime` 递增 ✓）。
+  ⭐ **新增判据（均能红 ✓）** ✓：`mobileShellRoute`／`mobileTimelineSearch`／`mobileClipPlayback`／`phoneEntry`；
+    并修正 `phoneShellCut`：**测试不是面**（组件测试必须能 import 手机壳）✓。
+  ⭐ **两条设计事实（非缺陷，如实记录 ✓）** ✓：**默认声音走实时引擎**（播放条/全屏无 `<audio>` ✓）；
+    **片段不会自动播放**（需按它自己的 ▶ ✓）。
+  ⚠️ **我犯过并被自己更正的错（写死 ✓）**：
+    ① 第一版"死控件审计"信号太弱（只比总节点数/testid 集合/URL）⇒ **7 条误报**（`chord-builder-toggle`、
+       `mobile-clip-play`、`jam:step-*`、`challenge:option-*`、`challenge:play`、`more:language`、`more:light-player` 全为正常）✓；
+    ② 两次"看起来全坏"的读数：**音频门控**在每次导航后都会再出现（不重新通过 ⇒ 点到遮罩 ✗）与
+       **度量口径**（模态框会换屏 ⇒ 总节点数可持平 242→242 ✗，正确信号是 `[role="dialog"]` ✓）；
+    ③ `pkill -f "…"` 把**自己的 shell** 匹配杀掉（第三次！）⇒ 只用 **pidfile／显式 PID** ✓；
+    ④ 提交写在测试之前（第四次）⇒ 改成**先跑判据、通过才提交**的守卫写法 ✓。
+  🚧 **发布现场（v2.36.5）** ✓：提交 `032d356` ✓；脚本 PID `272497`，日志 `/tmp/release12.log` ✓；
+    监视作业 `272851` → `/tmp/watch12.txt`（盯 run `38125672782`）✓；线上仍是 **2.36.4** ✓。
+    ⇒ **恢复方式** ✓：`tail /tmp/release12.log`；若 CI 失败 ⇒
+      `rid=$(gh run list --limit 1 --json databaseId -q '.[0].databaseId')` ⇒
+      `gh run view $rid --json jobs -q '.jobs[]|select(.conclusion=="failure")|.databaseId'` ⇒
+      `gh run view --job <id> --log | sed 's/\x1b\[[0-9;]*m//g' | grep -aE "Failed Tests|FAIL |AssertionError"` ✓。
+    ⇒ CI 通过后：用 `scratch/verify-live-mobile.mjs` 与 `scratch/verify-live-panels.mjs`（**已改为数 `[role="dialog"]` ✓**）
+      在线上逐项复验六项，并标注上面两条设计事实 ✓。
