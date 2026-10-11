@@ -12,7 +12,7 @@
  */
 
 import type { DrumPattern } from "../types/genre";
-import { renderPatternOffline, type RenderWavOptions } from "./WavExporter";
+import { renderPatternOffline, captureRenderDiagnostics, type RenderDiagnostics, type RenderWavOptions } from "./WavExporter";
 import type { MasterLimiterKind } from "./MasterLimiter";
 
 export interface WebCodecsExportOptions extends RenderWavOptions {
@@ -386,30 +386,14 @@ export async function exportMasterWebCodecs(
   options: WebCodecsExportOptions = {}
 ): Promise<ExportedCompressedAudio> {
   const codec = options.codec ?? "aac";
-  let limiterKind: MasterLimiterKind = "fallback";
-  let gs1HostFailures = 0;
-  let gs1PatchProblems: string[] = [];
-  let workletsUnavailable = false;
+  const diag: RenderDiagnostics = {
+    limiterKind: "fallback",
+    gs1HostFailures: 0,
+    gs1PatchProblems: [],
+    workletsUnavailable: false,
+  };
 
-  const audioBuf = await renderPatternOffline(pattern, {
-    ...options,
-    onLimiterKind: (kind) => {
-      limiterKind = kind;
-      options.onLimiterKind?.(kind);
-    },
-    onGs1HostFailures: (count) => {
-      gs1HostFailures = count;
-      options.onGs1HostFailures?.(count);
-    },
-    onGs1PatchProblems: (problems) => {
-      gs1PatchProblems = [...problems];
-      options.onGs1PatchProblems?.(problems);
-    },
-    onProblems: (problems) => {
-      workletsUnavailable = problems.includes("AudioWorklet unavailable");
-      options.onProblems?.(problems);
-    },
-  });
+  const audioBuf = await renderPatternOffline(pattern, captureRenderDiagnostics(options, diag));
 
   const { blob, bitrateKbps, durationSec } =
     codec === "opus"
@@ -426,9 +410,9 @@ export async function exportMasterWebCodecs(
     durationSec,
     codec,
     bitrateKbps,
-    limiterKind,
-    gs1HostFailures,
-    gs1PatchProblems,
-    workletsUnavailable,
+    limiterKind: diag.limiterKind,
+    gs1HostFailures: diag.gs1HostFailures,
+    gs1PatchProblems: diag.gs1PatchProblems,
+    workletsUnavailable: diag.workletsUnavailable,
   };
 }

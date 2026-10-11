@@ -22,6 +22,7 @@ import { useCoverWarmupBothSizes } from "../hooks/useCoverWarmup";
 import { MOBILE_MODULE_PLAN_KEYS, usesClipPlayback, type MobileModule } from "./mobileModules";
 import { GENRE_INDEX, loadGenre } from "./mobileGenreData";
 import { nextGenreForMode, nextPlayMode, normalisePlayMode, type PlayMode } from "./vinyl/vinylMath";
+import type { VinylClock } from "./vinyl/VinylCanvas";
 import "./mobile.css";
 /**
  * The skins.
@@ -214,19 +215,48 @@ export function MobileApp({
   /** ⭐ Modules but jam and explore play the rendered clip (owner, 2026-10-11). */
   const clipMode = usesClipPlayback(module);
   const [clipGenreId, setClipGenreId] = useState<string | null>(null);
+  const clipAudioRef = useRef<HTMLAudioElement | null>(null);
+
+  const stopClipAudio = useCallback(() => {
+    if (clipAudioRef.current) {
+      clipAudioRef.current.pause();
+      clipAudioRef.current.currentTime = 0;
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!clipMode && clipGenreId) {
+      stopClipAudio();
+      setClipGenreId(null);
+    } else if (clipMode && playingGenreId) {
+      stopAudition();
+    }
+  }, [clipMode, clipGenreId, playingGenreId, stopAudition, stopClipAudio]);
+
+  useEffect(() => () => { stopAudition(); stopClipAudio(); }, [stopAudition, stopClipAudio]);
+
+  const activeGenreId = clipMode ? clipGenreId : playingGenreId;
 
   const skip = useCallback(
     (direction: 1 | -1) => {
-      const from = genreId ?? playingGenreId;
+      const from = activeGenreId ?? genreId ?? DEFAULT_MOBILE_GENRE;
       if (!from) return;
       const nextId = nextGenreForMode(playMode, from, GENRE_INDEX, direction);
-      stopAudition();
-      void loadGenre(nextId).then((record) => {
-        if (record) void toggleAudition(record);
-      });
+      if (clipMode) {
+        stopAudition();
+        stopClipAudio();
+        setClipGenreId(nextId);
+      } else {
+        stopClipAudio();
+        setClipGenreId(null);
+        stopAudition();
+        void loadGenre(nextId).then((record) => {
+          if (record) void toggleAudition(record);
+        });
+      }
       if (mobilePlayer) onOpenPlayer?.(nextId);
     },
-    [genreId, mobilePlayer, onOpenPlayer, playMode, playingGenreId, stopAudition, toggleAudition]
+    [activeGenreId, clipMode, genreId, mobilePlayer, onOpenPlayer, playMode, stopAudition, stopClipAudio, toggleAudition]
   );
 
   /**
@@ -247,33 +277,46 @@ export function MobileApp({
 
   /**
    * Switch the record to another genre *without* leaving the player — the pull-down list's action.
-   *
-   * Deliberately not `openGenreAndPlay`: that one opens the genre's page, which is right from the
-   * library and wrong from inside the player (the whole point of the list is to stay on the record).
-   * Takes an id because the pull-down list is built from the index; the record is fetched, then played.
    */
   const playGenreInPlayer = useCallback(
     (id: string) => {
-      if (playingGenreId === id) return;
-      stopAudition();
-      void loadGenre(id).then((record) => {
-        if (record) void toggleAudition(record);
-      });
+      if (clipMode) {
+        if (clipGenreId === id) return;
+        stopAudition();
+        stopClipAudio();
+        setClipGenreId(id);
+      } else {
+        if (playingGenreId === id) return;
+        stopClipAudio();
+        setClipGenreId(null);
+        stopAudition();
+        void loadGenre(id).then((record) => {
+          if (record) void toggleAudition(record);
+        });
+      }
       onOpenPlayer?.(id);
     },
-    [onOpenPlayer, playingGenreId, stopAudition, toggleAudition]
+    [clipMode, clipGenreId, onOpenPlayer, playingGenreId, stopAudition, stopClipAudio, toggleAudition]
   );
 
   /**
    * One id in, one audition out.
-   *
-   * Every screen now speaks ids: they browse the index, so they do not carry a record to hand back.
-   * "Play this" therefore resolves the record first (`loadGenre`, one category chunk) and only then
-   * builds the pattern. Stopping is the one case that stays synchronous — there is nothing to load to
-   * stop what is already playing.
    */
   const handleToggleAudition = useCallback(
     (id: string) => {
+      if (clipMode) {
+        stopAudition();
+        if (clipGenreId === id) {
+          stopClipAudio();
+          setClipGenreId(null);
+        } else {
+          stopClipAudio();
+          setClipGenreId(id);
+        }
+        return;
+      }
+      stopClipAudio();
+      setClipGenreId(null);
       if (playingGenreId === id) {
         stopAudition();
         return;
@@ -282,62 +325,56 @@ export function MobileApp({
         if (record) void toggleAudition(record);
       });
     },
-    [playingGenreId, stopAudition, toggleAudition]
+    [clipMode, clipGenreId, playingGenreId, stopAudition, stopClipAudio, toggleAudition]
   );
 
-  /**
-   * The bar is driven by `playingGenreId` alone.
-   *
-   * It briefly needed a separate "current genre" state because the bar took a `Genre` object, which
-   * meant a shell that mounted while something was already playing had no genre to show — and two
-   * copies of "what is playing" is one too many. The bar resolves the genre from the id instead.
-   */
-  /**
-   * Tapping a card opens its page *and* plays it.
-   *
-   * This is the redesign the user asked for: the library no longer repeats one identical play button
-   * per row (ugly, and two taps for one intention), so the card is the target and the shell starts the
-   * genre as it navigates. The page opens immediately (it resolves its own record and fills in); the
-   * sound starts as soon as the record this id names arrives.
-   */
   const openGenreAndPlay = useCallback(
     (id: string) => {
-      if (playingGenreId !== id) handleToggleAudition(id);
+      if (clipMode) {
+        stopAudition();
+        if (clipGenreId !== id) {
+          stopClipAudio();
+          setClipGenreId(id);
+        }
+      } else {
+        stopClipAudio();
+        setClipGenreId(null);
+        if (playingGenreId !== id) handleToggleAudition(id);
+      }
       onOpenGenre?.(id);
     },
-    [handleToggleAudition, onOpenGenre, playingGenreId]
+    [clipMode, clipGenreId, handleToggleAudition, onOpenGenre, playingGenreId, stopAudition, stopClipAudio]
   );
 
   const isPlayer = module === "home" && Boolean(mobilePlayer) && Boolean(genreId);
   const isDetail = module === "home" && Boolean(genreId) && !mobilePlayer;
-  /**
-   * The bar is **always** there on the home module, and it has a genre even before anything has played.
-   *
-   * It used to appear only once something was playing, which meant a whole slot of the screen filled in one frame the moment
-   * a card was tapped — the owner's "卡顿和突兀" — and left nothing to press when the library had not been used yet. The bar
-   * now starts on the shell's default genre (the same `chicago-house` every route without a genre resolves to) with its play
-   * control in the *play* state, so tapping it starts that genre and the rest of the shell — the queue that mode and next
-   * advance through — is already seeded with a real genre.
-   */
-  const defaultGenreId = genreId ?? playingGenreId ?? DEFAULT_MOBILE_GENRE;
-  /**
-   * What the bar is showing: whatever is playing, else the last thing it showed, else the default.
-   *
-   * Falling straight back to the default the moment the transport stops would make the bar announce a genre nobody chose —
-   * the same kind of jump the user is complaining about, in the other direction.
-   */
+
+  const defaultGenreId = genreId ?? activeGenreId ?? DEFAULT_MOBILE_GENRE;
   const lastBarGenreRef = useRef<string | null>(null);
-  const barGenreId = playingGenreId ?? lastBarGenreRef.current ?? defaultGenreId;
+  const barGenreId = activeGenreId ?? lastBarGenreRef.current ?? defaultGenreId;
   lastBarGenreRef.current = barGenreId;
 
-  /**
-   * Warm what the player and the bar draw, in **both** sizes.
-   *
-   * The bar shows a thumbnail and the vinyl label bakes a 512 px picture from the **original** file, which nothing has fetched
-   * yet — so tapping a card showed a blank disc for a moment and every "next" showed another one.
-   */
   useCoverWarmupBothSizes(barGenreId);
-  const barIsPlaying = Boolean(playingGenreId) && playingGenreId === barGenreId;
+  const barIsPlaying = clipMode
+    ? Boolean(clipGenreId) && clipGenreId === barGenreId
+    : Boolean(playingGenreId) && playingGenreId === barGenreId;
+
+  const readClipClock = useCallback((): VinylClock | null => {
+    const audio = clipAudioRef.current;
+    if (!audio || audio.paused || !clipGenreId) return null;
+    const currentGenre = GENRE_INDEX.find((g) => g.id === clipGenreId);
+    const bpm = currentGenre?.default_bpm ?? 120;
+    const stepDuration = 15 / bpm;
+    const rate = audio.playbackRate || 1;
+    const totalStepsElapsed = (audio.currentTime * rate) / stepDuration;
+    const step = Math.floor(totalStepsElapsed);
+    const fraction = Math.min(1, Math.max(0, totalStepsElapsed - step));
+    return { step, fraction };
+  }, [clipGenreId]);
+
+  const currentReadClock = useCallback((): VinylClock | null => (clipMode && clipGenreId ? readClipClock() : readClock()), [clipMode, clipGenreId, readClipClock, readClock]);
+
+  const currentReadTempo = useCallback((): number | null => (clipMode && clipGenreId ? (GENRE_INDEX.find((g) => g.id === clipGenreId)?.default_bpm ?? 120) : readTempo()), [clipMode, clipGenreId, readTempo]);
   // The bar is the collapsed *form* of the player, so it is hidden while the full player is open.
   const showPlayerBar = module === "home" && !isPlayer;
   /**
@@ -417,8 +454,8 @@ export function MobileApp({
                */
               isPlaying={clipMode ? clipGenreId === genreId : playingGenreId === genreId}
               playMode={playMode}
-              readClock={readClock}
-              onTogglePlay={(id: string) => (clipMode ? setClipGenreId((current) => (current ? null : id)) : handleToggleAudition(id))}
+              readClock={currentReadClock}
+              onTogglePlay={(id: string) => handleToggleAudition(id)}
               onPlayGenre={playGenreInPlayer}
               onCycleMode={cyclePlayMode}
               onSkip={skip}
@@ -451,12 +488,12 @@ export function MobileApp({
             />
           ) : module === "challenge" ? (
             <MobileChallengeScreen
-              isPlaying={Boolean(playingGenreId)}
+              isPlaying={clipMode ? Boolean(clipGenreId) : Boolean(playingGenreId)}
               /**
                * ⭐ The distinction the owner asked for (2026-10-11): on the modules that play the rendered clip, the
                * challenge screen's own transport is the clip too — its play button is a module transport, not the bar.
                */
-              onTogglePlay={(id: string) => (clipMode ? setClipGenreId((current) => (current ? null : id)) : handleToggleAudition(id))}
+              onTogglePlay={(id: string) => handleToggleAudition(id)}
               onOpenGenre={(id) => onOpenGenre?.(id)}
             />
           ) : module === "explore" ? (
@@ -474,7 +511,7 @@ export function MobileApp({
               onOpenSearch={() => onOpenSearch?.()}
             />
           ) : module === "home" ? (
-            <MobileHomeScreen playingGenreId={playingGenreId} onSelectGenre={openGenreAndPlay} />
+            <MobileHomeScreen playingGenreId={clipMode ? null : playingGenreId} onSelectGenre={openGenreAndPlay} />
           ) : (
             <ModulePlaceholder module={module} />
           )}
@@ -484,7 +521,23 @@ export function MobileApp({
       {/* ⭐ The clip slot: on modules but jam and explore, the sound comes from the rendered clip. */}
       {clipMode && clipGenreId && (
         <div className="px-4 pb-2" data-testid="mobile-clip-bar-slot">
-          <MobileClipPlayer genreId={clipGenreId} autoPlay />
+          <MobileClipPlayer
+            genreId={clipGenreId}
+            autoPlay
+            onAudioRef={(el) => {
+              clipAudioRef.current = el;
+            }}
+            onEnded={() => {
+              if (playMode === "one") {
+                if (clipAudioRef.current) {
+                  clipAudioRef.current.currentTime = 0;
+                  void clipAudioRef.current.play().catch(() => {});
+                }
+              } else {
+                advanceRef.current?.();
+              }
+            }}
+          />
         </div>
       )}
 
@@ -495,19 +548,12 @@ export function MobileApp({
           isPlaying={barIsPlaying}
           aboveTabBar={showTabBar}
           playMode={playMode}
-          onToggle={() => {
-            // ⭐ The owner's rule: on every module but jam and explore the transport is the clip, not the engine.
-            if (clipMode) {
-              setClipGenreId((current) => (current ? null : barGenreId));
-              return;
-            }
-            return barIsPlaying ? stopAudition() : handleToggleAudition(barGenreId);
-          }}
+          onToggle={() => handleToggleAudition(barGenreId)}
           onCycleMode={cyclePlayMode}
           onOpen={() => onOpenPlayer?.(barGenreId)}
           /* The rail and the tempo both come from the transport, so the bar cannot disagree with it. */
-          readClock={readClock}
-          readTempo={readTempo}
+          readClock={currentReadClock}
+          readTempo={currentReadTempo}
         />
       )}
 

@@ -655,6 +655,26 @@ export function offlineWorkletsAvailable(ctx: BaseAudioContext): boolean {
 export const WORKLETS_UNAVAILABLE_PROBLEM =
   "the render ran without audio worklets: this context has no AudioWorklet, which a browser exposes only in a secure context (https, localhost or 127.0.0.1 — not a plain-HTTP LAN address), so the master limiter was a DynamicsCompressor with no true-peak ceiling or lookahead and GS-1 lanes were voiced by the native engine instead of the synth";
 
+export interface RenderDiagnostics {
+  limiterKind: MasterLimiterKind;
+  gs1HostFailures: number;
+  gs1PatchProblems: string[];
+  workletsUnavailable: boolean;
+}
+
+export function captureRenderDiagnostics(
+  options: RenderWavOptions,
+  diag: RenderDiagnostics
+): RenderWavOptions {
+  return {
+    ...options,
+    onLimiterKind: (kind) => { diag.limiterKind = kind; options.onLimiterKind?.(kind); },
+    onGs1HostFailures: (count) => { diag.gs1HostFailures = count; options.onGs1HostFailures?.(count); },
+    onGs1PatchProblems: (problems) => { diag.gs1PatchProblems = [...problems]; options.onGs1PatchProblems?.(problems); },
+    onProblems: (problems) => { diag.workletsUnavailable = problems.includes(WORKLETS_UNAVAILABLE_PROBLEM); options.onProblems?.(problems); },
+  };
+}
+
 /**
  * **One chunk of a render, with the timeline that says how to put it back together.**
  *

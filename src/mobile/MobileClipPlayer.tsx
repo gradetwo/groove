@@ -32,9 +32,19 @@ export interface MobileClipPlayerProps {
    * It must be reached from a user gesture — the shell sets this in the same click that starts playback.
    */
   autoPlay?: boolean;
+  /** Optional callback giving the host access to the underlying HTMLAudioElement for synchronization / clock. */
+  onAudioRef?: (audio: HTMLAudioElement | null) => void;
+  /** Callback when playback reaches the end of the clip. */
+  onEnded?: () => void;
 }
 
-export function MobileClipPlayer({ genreId, compareGenreId, autoPlay = false }: MobileClipPlayerProps): React.ReactElement {
+export function MobileClipPlayer({
+  genreId,
+  compareGenreId,
+  autoPlay = false,
+  onAudioRef,
+  onEnded,
+}: MobileClipPlayerProps): React.ReactElement {
   const { t } = useLanguage();
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const [clips, setClips] = useState<GenreClip[] | null>(null);
@@ -78,6 +88,25 @@ export function MobileClipPlayer({ genreId, compareGenreId, autoPlay = false }: 
    */
   const clip = useMemo(() => (clips ? clipForGenre({ clips }, genreIds[0]!) : undefined), [clips, genreIds]);
 
+  // Share audio element with host for clock synchronization
+  useEffect(() => {
+    onAudioRef?.(audioRef.current);
+    return () => {
+      onAudioRef?.(null);
+    };
+  }, [onAudioRef, clip]);
+
+  // Clean up and stop audio cleanly on track change or unmount
+  useEffect(() => {
+    return () => {
+      const audio = audioRef.current;
+      if (audio) {
+        audio.pause();
+        audio.currentTime = 0;
+      }
+    };
+  }, [clip]);
+
   /** ⭐ Speed is a property of the element, and pitch-following is the record's own behaviour, so both are applied here. */
   useEffect(() => {
     const audio = audioRef.current;
@@ -92,6 +121,8 @@ export function MobileClipPlayer({ genreId, compareGenreId, autoPlay = false }: 
     if (!autoPlay) return;
     const audio = audioRef.current;
     if (!audio) return;
+    audio.pause();
+    audio.currentTime = 0;
     void audio.play().then(() => setPlaying(true)).catch(() => setPlaying(false));
   }, [autoPlay, clip]);
 
@@ -131,8 +162,15 @@ export function MobileClipPlayer({ genreId, compareGenreId, autoPlay = false }: 
   const label = comparing && compareGenreId ? `${genreId} ↔ ${compareGenreId}` : genreId;
   return (
     <div data-testid="mobile-clip-player" className="flex items-center gap-2 px-1 py-2">
-      {/* ⭐ A clip has no speech to caption; the status line below names what is playing. */}
-      <audio ref={audioRef} src={clip.url} preload="none" onEnded={() => setPlaying(false)} />
+      <audio
+        ref={audioRef}
+        src={clip.url}
+        preload="none"
+        onEnded={() => {
+          setPlaying(false);
+          onEnded?.();
+        }}
+      />
       <button
         type="button"
         data-testid="mobile-clip-play"

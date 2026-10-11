@@ -22,7 +22,7 @@
  * disagreeing with each other would be a bug, not a nuance.
  */
 import { DrumPattern } from "../types/genre";
-import { renderPatternOffline, WORKLETS_UNAVAILABLE_PROBLEM, type RenderWavOptions } from "./WavExporter";
+import { renderPatternOffline, captureRenderDiagnostics, type RenderDiagnostics, type RenderWavOptions } from "./WavExporter";
 import type { MasterLimiterKind } from "./MasterLimiter";
 
 export interface ExportedMp3 {
@@ -87,6 +87,110 @@ export function toInt16(channel: Float32Array): Int16Array {
   return out;
 }
 
+/**
+ * Fused linear-interpolating resampler and 16-bit quantizer (Kernel Fusion).
+ * Eliminates redundant intermediate Float32Array allocations and traversal passes.
+ */
+export function resampleToInt16(channel: Float32Array, from: number, to: number): Int16Array {
+  if (from === to) return toInt16(channel);
+  const length = Math.max(1, Math.round((channel.length * to) / from));
+  const out = new Int16Array(length);
+  const ratio = (channel.length - 1) / Math.max(1, length - 1);
+  for (let i = 0; i < length; i += 1) {
+    const position = i * ratio;
+    const low = Math.floor(position);
+    const high = Math.min(channel.length - 1, low + 1);
+    const t = position - low;
+    const sample = Math.max(-1, Math.min(1, channel[low] * (1 - t) + channel[high] * t));
+    out[i] = sample < 0 ? sample * 0x8000 : sample * 0x7fff;
+  }
+  return out;
+}
+
+/**
+ * Batched contiguous buffer collector to eliminate small Uint8Array GC thrashing.
+ */
+class ChunkCollector {
+  private pages: Uint8Array[] = [];
+  private currentPage: Uint8Array;
+  private currentOffset = 0;
+  private pageSize = 64 * 1024;
+
+  constructor(pageSize = 64 * 1024) {
+    this.pageSize = pageSize;
+    this.currentPage = new Uint8Array(this.pageSize);
+  }
+
+  append(data: ArrayLike<number>, length: number) {
+    if (length <= 0) return;
+    let srcOffset = 0;
+    while (srcOffset < length) {
+      const available = this.pageSize - this.currentOffset;
+      const toCopy = Math.min(available, length - srcOffset);
+      for (let i = 0; i < toCopy; i++) {
+        this.currentPage[this.currentOffset + i] = data[srcOffset + i];
+      }
+      this.currentOffset += toCopy;
+      srcOffset += toCopy;
+      if (this.currentOffset >= this.pageSize) {
+        this.pages.push(this.currentPage);
+        this.currentPage = new Uint8Array(this.pageSize);
+        this.currentOffset = 0;
+      }
+    }
+  }
+
+  finish(): Uint8Array[] {
+    if (this.currentOffset > 0) {
+      this.pages.push(this.currentPage.subarray(0, this.currentOffset));
+    }
+    return this.pages;
+  }
+}
+
+/**
+ * Offloads MP3 encoding to a dedicated Web Worker if available.
+ */
+async function encodeWithWorker(
+  left: Int16Array,
+  right: Int16Array,
+  targetRate: number,
+  bitrateKbps: number,
+  onProgress?: (fraction: number) => void
+): Promise<Blob | null> {
+  if (typeof window === "undefined" || typeof Worker === "undefined") return null;
+  return new Promise((resolve) => {
+    try {
+      const worker = new Worker(new URL("./mp3Worker.ts", import.meta.url), { type: "module" });
+      worker.onmessage = (e: MessageEvent) => {
+        if (e.data.type === "PROGRESS") {
+          onProgress?.(e.data.fraction);
+        } else if (e.data.type === "DONE") {
+          worker.terminate();
+          resolve(new Blob(e.data.chunks, { type: "audio/mpeg" }));
+        }
+      };
+      worker.onerror = () => {
+        worker.terminate();
+        resolve(null);
+      };
+      const leftCopy = new Int16Array(left);
+      const rightCopy = new Int16Array(right);
+      worker.postMessage(
+        {
+          leftBuffer: leftCopy.buffer,
+          rightBuffer: rightCopy.buffer,
+          sampleRate: targetRate,
+          bitrateKbps,
+        },
+        [leftCopy.buffer, rightCopy.buffer]
+      );
+    } catch {
+      resolve(null);
+    }
+  });
+}
+
 /** LAME's natural block: a multiple of 576 samples, the Layer III granule pair. */
 const BLOCK_SIZE = 1152;
 
@@ -104,31 +208,44 @@ export async function encodeAudioBufferToMp3(
   options: { bitrateKbps?: number; onProgress?: (fraction: number) => void } = {}
 ): Promise<{ blob: Blob; resampled: boolean; bitrateKbps: number }> {
   const bitrateKbps = options.bitrateKbps ?? 192;
-  // The one dynamic import. Keep it inside the function: see the note at the top of the file.
-  const { Mp3Encoder } = await import("@breezystack/lamejs");
 
   const targetRate = nearestLameRate(buffer.sampleRate);
   const resampled = targetRate !== buffer.sampleRate;
   const leftSource = buffer.getChannelData(0);
   const rightSource = buffer.numberOfChannels > 1 ? buffer.getChannelData(1) : leftSource;
-  const left = toInt16(resampled ? resampleChannel(leftSource, buffer.sampleRate, targetRate) : leftSource);
-  const right = toInt16(resampled ? resampleChannel(rightSource, buffer.sampleRate, targetRate) : rightSource);
+  const left = resampled ? resampleToInt16(leftSource, buffer.sampleRate, targetRate) : toInt16(leftSource);
+  const right = resampled ? resampleToInt16(rightSource, buffer.sampleRate, targetRate) : toInt16(rightSource);
+
+  // 1. Offload to dedicated Web Worker when in browser (0% main thread CPU load)
+  const workerBlob = await encodeWithWorker(left, right, targetRate, bitrateKbps, options.onProgress);
+  if (workerBlob) {
+    options.onProgress?.(1);
+    return {
+      blob: workerBlob,
+      resampled,
+      bitrateKbps,
+    };
+  }
+
+  // 2. In-thread fallback (Node.js/Vitest/environments without Worker) with ChunkCollector pooling
+  // The one dynamic import. Keep it inside the function: see the note at the top of the file.
+  const { Mp3Encoder } = await import("@breezystack/lamejs");
 
   const encoder = new Mp3Encoder(2, targetRate, bitrateKbps);
-  const chunks: Uint8Array[] = [];
+  const collector = new ChunkCollector();
   for (let offset = 0; offset < left.length; offset += BLOCK_SIZE) {
     const encoded = encoder.encodeBuffer(left.subarray(offset, offset + BLOCK_SIZE), right.subarray(offset, offset + BLOCK_SIZE));
-    if (encoded.length > 0) chunks.push(new Uint8Array(encoded));
+    if (encoded.length > 0) collector.append(encoded, encoded.length);
     options.onProgress?.(Math.min(1, (offset + BLOCK_SIZE) / left.length));
     if ((offset / BLOCK_SIZE) % BLOCKS_PER_YIELD === BLOCKS_PER_YIELD - 1) {
       await new Promise((resolve) => setTimeout(resolve, 0));
     }
   }
   const tail = encoder.flush();
-  if (tail.length > 0) chunks.push(new Uint8Array(tail));
+  if (tail.length > 0) collector.append(tail, tail.length);
 
   return {
-    blob: new Blob(chunks as BlobPart[], { type: "audio/mpeg" }),
+    blob: new Blob(collector.finish() as BlobPart[], { type: "audio/mpeg" }),
     resampled,
     bitrateKbps,
   };
@@ -140,30 +257,13 @@ export async function exportMasterMp3(
   genreId = "groove",
   options: Mp3ExportOptions = {}
 ): Promise<ExportedMp3> {
-  let limiterKind: MasterLimiterKind = "fallback";
-  let gs1HostFailures = 0;
-  let gs1PatchProblems: string[] = [];
-  let workletsUnavailable = false;
-  const audioBuf = await renderPatternOffline(pattern, {
-    ...options,
-    onLimiterKind: (kind) => {
-      limiterKind = kind;
-      options.onLimiterKind?.(kind);
-    },
-    onGs1HostFailures: (count) => {
-      gs1HostFailures = count;
-      options.onGs1HostFailures?.(count);
-    },
-    onGs1PatchProblems: (problems) => {
-      gs1PatchProblems = [...problems];
-      options.onGs1PatchProblems?.(problems);
-    },
-    onProblems: (problems) => {
-      // The MP3 is the same render as the WAV, so it has to be able to say the same thing about its origin.
-      workletsUnavailable = problems.includes(WORKLETS_UNAVAILABLE_PROBLEM);
-      options.onProblems?.(problems);
-    },
-  });
+  const diag: RenderDiagnostics = {
+    limiterKind: "fallback",
+    gs1HostFailures: 0,
+    gs1PatchProblems: [],
+    workletsUnavailable: false,
+  };
+  const audioBuf = await renderPatternOffline(pattern, captureRenderDiagnostics(options, diag));
   const { blob, resampled, bitrateKbps } = await encodeAudioBufferToMp3(audioBuf, {
     bitrateKbps: options.bitrateKbps,
     onProgress: options.onProgress,
@@ -174,10 +274,10 @@ export async function exportMasterMp3(
     blob,
     filename: `${sanitizedGenre}_master_${bpm}bpm.mp3`,
     durationSec: audioBuf.duration,
-    limiterKind,
-    gs1HostFailures,
-    gs1PatchProblems,
-    workletsUnavailable,
+    limiterKind: diag.limiterKind,
+    gs1HostFailures: diag.gs1HostFailures,
+    gs1PatchProblems: diag.gs1PatchProblems,
+    workletsUnavailable: diag.workletsUnavailable,
     bitrateKbps,
     resampled,
   };
