@@ -25025,3 +25025,26 @@ describe("the grid's editing actions", () => {
     同一按钮 `focus()` ＋ Enter ⇒ **顶上的日志都不出现** ✓、`activeElement` 的 aria 仍是 "Audition" ✓
     ⇒ 那条"按遍 99 个按钮、0 个 `/clips/` 请求"的读数 ✓ **测的是没被激活的按钮** ✓，不是钩子 ✓。
     这也解释了它与详情页"鼠标不行、Enter 行"为何互相矛盾 ✓：两者都是**激活方式**的问题 ✓，不是产品路径 ✓。
+
+  🎯 **"鼠标点不到"的最终定性（2026-10-11 ✓，点名到元素 ✓）**：遮挡不是音频门 ✓，而是**新手引导模态**
+    `src/components/help/NewUserOnboardingModal.tsx:207` 的那个 `<p class="text-xs text-text-sub leading-relaxed pl-5 font-mono">` ✓
+    （未写 `groove_onboarding_completed` 的**全新 profile** 上它默认打开 ✓）。浏览器读数：
+    ```
+    全新 profile（不设 onboarding 标记）· 音频门用 audio-start-button 关掉
+    [data-testid='onboarding-skip-btn'] 存在 = true
+    elementFromPoint(片段按钮中心) = P.text-xs.text-text-sub.leading-relaxed.pl-5.font-mono   ← 引导模态的段落 ✓
+    点 [data-testid='onboarding-skip-btn'] 之后：
+    elementFromPoint(同一中心) = SPAN（按钮自己的子节点 ✓ inButton = true ✓）
+    真鼠标点击 ⇒ clip-audition-audio: src=…/clips/chicago-house.mp3  readyState=3  paused=false ✓  mp3 请求 1 ✓
+    ```
+    ⇒ 之前所有"鼠标 0／键盘 1"的读数 ✓ 都是**引导模态开着**时的读数 ✓（模态按设计覆盖整页、吞掉命中测试 ✓，
+    而 `focus()`＋Enter 不经过命中测试 ✓，所以键盘能到 ✓）。**不改布局** ✓：模态本来就该盖住整页 ✓，
+    段落挪开也不会改变"模态打开时点不到底下按钮" ✓；复验脚本要做的是先按
+    `[data-testid='onboarding-skip-btn']`（或设 `groove_onboarding_completed`）✓。产品路径本身正常 ✓。
+  🏷️ **时间轴／测验控件的选择器（给独立复验 ✓）**：
+    · 横向时间轴 ✓：`[data-testid='timeline-audition-<genreId>']`（实测 `timeline-audition-chicago-house` ✓）；
+    · 纵向时间轴 ✓：同上（实测 `timeline-audition-delta-blues` ✓）；
+    · 挑战页播放键 ✓：`[data-testid='challenge-toggle-play']` ✓（引擎 ✓，不是片段 ✓）；
+    · 星系页 ✓：**没有**试听控件 ⇒ 没有 testid ✓（实测 0 个 ✓，也不是遗漏 ✓）；
+    · 详情页 ✓：`button:has-text('Audition Pre-cut Clip')` ✓ / `Audition Drums Only` ✓；
+    · 对比页 ✓：`button:has-text('Full Band · Clip')` ✓ 与 `button[title*='Phase-locked']`（同步合成 ✓）。
