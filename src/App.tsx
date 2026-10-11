@@ -333,6 +333,44 @@ const MainApp: React.FC = () => {
           onOpenHelp={() => setHelpOpen(true)}
           onOpenSearch={() => setSearchOpen(true)}
         />
+        {/*
+          ⭐ **The panels the More module opens have to exist on this branch too.** They are declared after the desktop
+          return below, so while the shell was mounted the five entries set state that nothing drew — the exact "I tap it
+          and nothing happens" the owner reported. They are desktop-shaped dialogs shown over the phone surface: usable
+          first, phone-styled later (recorded rather than pretended).
+        */}
+        <GlobalSearch isOpen={searchOpen} onClose={() => setSearchOpen(false)} onSelectGenre={handleSelectGenre} />
+        <UpdatesModal isOpen={updatesOpen} onClose={() => setUpdatesOpen(false)} />
+<SettingsModal
+          isOpen={settingsOpen}
+          engine={engineInstance}
+          gs1Enabled={gs1Enabled}
+          onToggleGs1={() => setGs1Enabled(!gs1Enabled)}
+          /** U2: a guide dismissed without being finished must be recoverable. */
+          onReplayOnboarding={() => {
+          try {
+          localStorage.removeItem(ONBOARDING_COMPLETED_KEY);
+          } catch {
+          // A storage that refuses to forget is not a reason to refuse the replay.
+          }
+          setSettingsOpen(false);
+          setOnboardingOpen(true);
+          }}
+          onOpenUpdates={() => {
+          setSettingsOpen(false);
+          setUpdatesOpen(true);
+          }}
+          onClose={() => setSettingsOpen(false)}
+        />
+        {helpOpen && (
+          <HelpCenterModal
+            isOpen={helpOpen}
+            onClose={() => {
+              setHelpOpen(false);
+              setHelpCategory(undefined);
+            }}
+          />
+        )}
       </React.Suspense>
     );
   }
