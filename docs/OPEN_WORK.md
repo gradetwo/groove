@@ -24764,3 +24764,25 @@ describe("the grid's editing actions", () => {
       `gh run view --job <id> --log | sed 's/\x1b\[[0-9;]*m//g' | grep -aE "Failed Tests|FAIL |AssertionError"` ✓。
     ⇒ CI 通过后：用 `scratch/verify-live-mobile.mjs` 与 `scratch/verify-live-panels.mjs`（**已改为数 `[role="dialog"]` ✓**）
       在线上逐项复验六项，并标注上面两条设计事实 ✓。
+
+### 一千零二十九、🚀✅ **v2.36.5 已发布，手机版六项线上复验全绿**（2026-10-11 ✓）
+
+  ⭐ **发布 ✓**：`full CI ok ⇒ deploy ok ⇒ tag ok ⇒ remote ok ⇒ ✅ deployed and published ⇒ release exit=0` ✓；
+    线上 `version.json` = **2.36.5** ✓；`refs/tags/v2.36.5` = `bb41463` ✓。
+    ⚠️ 这一次是**第二次尝试**：第一次的 `full CI` 因 **GitHub API 的 TLS 握手超时**（网络瞬断）被判失败 ⇒
+      脚本按设计停下、不发布 ✓ ⇒ 直接重跑即过 ✓（不是代码问题 ✓）。
+  ⭐ **线上六项复验（手机 UA，2.36.5）✓** ✓：
+    | 项 | 读数 |
+    | --- | --- |
+    | 线上版本 | **2.36.5** ✓ |
+    | 手机进 `/` | **`landedOn: /m`**、`shell: true` ✓ |
+    | **点播放条 ⇒ 全屏播放器** | **`fullPlayer: true`** ✓ |
+    | **首页搜索** | 时间轴 **11→4**、`GENRES · 159→17` ✓ |
+    | **片段播放** | `src` = `…/clips/chicago-house.mp3`、**`readyState 4`、`currentTime 5.3`、`paused false`** ✓ |
+    | **更多四入口** | `verify-live-panels.mjs`（**数 `[role="dialog"]`** ✓）：settings ✓（524/dialogs 1）、help ✓（244→402/dialogs 1）、search ✓（244→616/dialogs 1）、updates ✓ |
+    | page error | **0** ✓ |
+  ⭐ **两条设计事实（照实记录 ✓）** ✓：`clipAutoStarted: {readyState 0, paused true}` ⇒ **片段不自动播放**（要按它自己的 ▶）✓；
+    **默认声音走实时引擎**（播放条/全屏没有 `<audio>`）✓ —— 这正是店主"听着不像 mp3"的来源 ✓。
+  ⚠️ **一个仍然要记住的口径教训 ✓**：`verify-live-mobile.mjs` 里那个 `more` 字段用的是**整页节点数** ✗，
+    它在 2.36.5 上对 help/search 报 `NOTHING` ✗ —— 而同一站点用**正确口径**（`[role="dialog"]`）测得**全部 opened** ✓。
+    ⇒ **面板是否打开，只能看 dialog，不能看节点数**（模态框会换屏，节点数可持平）✓。
