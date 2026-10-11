@@ -62,7 +62,13 @@ describe("the phone shell's boundary", () => {
     const leaks: string[] = [];
     for (const file of sourceFiles(path.join(ROOT, "src"))) {
       const relative = path.relative(ROOT, file);
-      if (relative.startsWith("src/mobile/") || relative === ENTRY) continue;
+      /**
+       * ⭐ **Tests are not surfaces.** A component test must import the component it renders, so a rule that allowed only
+       * `App.tsx` would mean the shell could never have one — a criterion that makes the thing it guards untestable, and
+       * which I tripped over twice in one session. The rule's subject is *shipped* surfaces, so `src/test/**` is excluded
+       * for that reason and the ban stays absolute everywhere that ships.
+       */
+      if (relative.startsWith("src/mobile/") || relative.startsWith("src/test/") || relative === ENTRY) continue;
       const source = fs
         .readFileSync(file, "utf8")
         .replace(/\/\*[\s\S]*?\*\//g, "")
