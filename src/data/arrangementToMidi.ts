@@ -191,8 +191,9 @@ function trackChunk(events: WriteEvent[]): number[] {
  * An arrangement that says nothing plays in four-four — the model's own documented default — so writing `4/4`
  * explicitly is a reading of the model rather than an invention.
  */
-function readTimeSignature(signature: string | undefined): { numerator: number; denominator: number; text: string } {
-  const match = /^(\d+)\s*\/\s*(\d+)$/.exec((signature ?? "").trim());
+function readTimeSignature(signature: string | [number, number] | undefined): { numerator: number; denominator: number; text: string } {
+  const sigStr = Array.isArray(signature) ? `${signature[0]}/${signature[1]}` : typeof signature === "string" ? signature : "";
+  const match = /^(\d+)\s*\/\s*(\d+)$/.exec(sigStr.trim());
   const numerator = match ? Number(match[1]) : 4;
   const denominator = match ? Number(match[2]) : 4;
   if (!Number.isFinite(numerator) || !Number.isFinite(denominator) || numerator <= 0 || denominator <= 0) {

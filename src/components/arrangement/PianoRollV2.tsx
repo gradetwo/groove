@@ -348,7 +348,7 @@ export function PianoRollV2({ notes, onAddNote, onRemoveNote, onMoveNote, onResi
           * new-note control next to it.
           */}
         {selected.length > 0 && onSetSelectionVelocity !== undefined && (
-          <label className="flex items-center gap-2 text-[10px] uppercase tracking-widest text-text-sub">
+          <label data-testid="selected-note-velocity" className="flex items-center gap-2 text-[10px] uppercase tracking-widest text-text-sub">
             {t("roll_selection_velocity")}
             <input
               type="range"

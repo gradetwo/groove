@@ -7,7 +7,8 @@
  * **It reads `public/samples/manifest.json` from disk rather than from the network.** The id list is a property of the repository at the version being run, and an agent asking "what can I play" should get the same answer offline as online; only the
  * addresses need a root, and they are omitted rather than guessed when one is not configured.
  */
-import { readFileSync } from "node:fs";
+import path from "node:path";
+import { existsSync, readFileSync } from "node:fs";
 import { catalogueFromManifestText, type SampleAsset } from "../src/data/sampleCatalogue";
 import { parseManifest } from "../src/data/sampleManifest";
 import { mergeUserLibraries } from "../src/data/userLibraries";
@@ -22,7 +23,41 @@ import {
 } from "../src/data/stringTechniques";
 import { ALL_SAMPLED_INSTRUMENTS } from "../src/data/sampledInstruments";
 
-const MANIFEST_PATH = "public/samples/manifest.json";
+function resolveManifestPath(): string {
+  const candidates = [
+    process.env.GROOVE_MCP_ROOT ? path.resolve(process.env.GROOVE_MCP_ROOT, "public/samples/manifest.json") : "",
+    path.resolve(process.cwd(), "public/samples/manifest.json"),
+    path.resolve(process.cwd(), "groove/public/samples/manifest.json"),
+    path.resolve("public/samples/manifest.json"),
+  ].filter(Boolean);
+  for (const candidate of candidates) {
+    if (existsSync(candidate)) return candidate;
+  }
+  return "public/samples/manifest.json";
+}
+
+let cachedManifestPath: string | null = null;
+let cachedManifestText: string | null = null;
+let cachedManifestJson: { entries?: { id: string }[] } | null = null;
+let cachedBaseCatalogue: { root: string; assets: SampleAsset[]; problems: string[] } | null = null;
+
+function loadManifest(): { text: string; manifest: { entries?: { id: string }[] } } {
+  if (!cachedManifestText) {
+    cachedManifestPath = resolveManifestPath();
+    cachedManifestText = readFileSync(cachedManifestPath, "utf8");
+    cachedManifestJson = JSON.parse(cachedManifestText);
+  }
+  return { text: cachedManifestText, manifest: cachedManifestJson! };
+}
+
+function getBaseCatalogue(root: string): { assets: SampleAsset[]; problems: string[] } {
+  if (!cachedBaseCatalogue || cachedBaseCatalogue.root !== root) {
+    const { text } = loadManifest();
+    const result = catalogueFromManifestText(text, root);
+    cachedBaseCatalogue = { root, assets: [...result.assets], problems: [...result.problems] };
+  }
+  return { assets: [...cachedBaseCatalogue.assets], problems: [...cachedBaseCatalogue.problems] };
+}
 
 /**
  * ⭐ **The instrument an `assetId` names, with the addresses that instrument's own file lives at.**
@@ -43,8 +78,12 @@ const MANIFEST_PATH = "public/samples/manifest.json";
  */
 export function catalogueAssetById(assetId: string): SampleAsset | undefined {
   const root = process.env.GROOVE_SAMPLE_ROOT ?? "";
-  const text = readFileSync(MANIFEST_PATH, "utf8");
   const stored = readUserLibraries();
+  if (stored.libraries.length === 0) {
+    const { assets } = getBaseCatalogue(root);
+    return assets.find((asset) => asset.assetId === assetId);
+  }
+  const { text } = loadManifest();
   const { assets } = catalogueFromManifestText(text, root, stored.libraries);
   return assets.find((asset) => asset.assetId === assetId);
 }
@@ -210,10 +249,8 @@ export function listCatalogueInstruments({
   limit?: number;
 } = {}): InstrumentList {
   const root = process.env.GROOVE_SAMPLE_ROOT ?? "";
-  const text = readFileSync(MANIFEST_PATH, "utf8");
-  const { assets, problems } = catalogueFromManifestText(text, root);
-
-  const manifest = JSON.parse(text) as { entries?: { id: string }[] };
+  const { manifest } = loadManifest();
+  const { assets, problems } = getBaseCatalogue(root);
   const libraries = (manifest.entries ?? []).map((entry) => entry.id);
 
   const all: CatalogueInstrument[] = assets
@@ -384,7 +421,7 @@ export interface SampleLibrary {
 
 export function listSampleLibraries(): { libraries: SampleLibrary[]; root: string; note: string } {
   const root = process.env.GROOVE_SAMPLE_ROOT ?? "";
-  const text = readFileSync(MANIFEST_PATH, "utf8");
+  const { text } = loadManifest();
   /**
    * ⭐ **The creator's own libraries are merged before anything derives an asset id from the manifest.**
    *

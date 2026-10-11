@@ -678,9 +678,8 @@ export function ArrangementViewV2({ currentSong, songId, capture, bar = 0, playe
    */
   const seekPatternSteps = useMemo(() => {
     if (seekTransport === undefined) return undefined;
-    const compiled = compileArrangementToPattern(arrangement, arrangement.notesByTrack ?? {});
-    return compiled.totalSteps ?? compiled.tracks[0]?.steps.length ?? STEPS_PER_BAR;
-  }, [seekTransport, arrangement]);
+    return midiPattern.totalSteps ?? midiPattern.tracks[0]?.steps.length ?? STEPS_PER_BAR;
+  }, [seekTransport, midiPattern]);
 
   /**
    * ⭐ **The ruler click, which is a seek — the whole of the audit's hardest finding.**
@@ -758,15 +757,14 @@ export function ArrangementViewV2({ currentSong, songId, capture, bar = 0, playe
    */
   const transportLoopRange = useMemo(() => {
     if (setTransportLoopRange === undefined || loopRange === undefined) return null;
-    const compiled = compileArrangementToPattern(arrangement, arrangement.notesByTrack ?? {});
     /**
      * The compile always states the length, and the fallback below is only here because `SequencerPattern.totalSteps`
      * is optional in the type: it is **the engine's own fallback, read off `setPattern`**, so the number this clamp
      * uses and the number the transport will hold cannot be two different readings of "how long is the pattern".
      */
-    const patternSteps = compiled.totalSteps ?? compiled.tracks[0]?.steps.length ?? STEPS_PER_BAR;
+    const patternSteps = midiPattern.totalSteps ?? midiPattern.tracks[0]?.steps.length ?? STEPS_PER_BAR;
     return loopStepsFor(loopRange, stepsPerBar, patternSteps);
-  }, [setTransportLoopRange, loopRange, stepsPerBar, arrangement]);
+  }, [setTransportLoopRange, loopRange, stepsPerBar, midiPattern]);
 
   /**
    * ⭐ **The brace changing is the transport being told, immediately — including when it changes to nothing.**
