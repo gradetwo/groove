@@ -1,23 +1,23 @@
 {
-  "version": "2.36.7",
+  "version": "2.37.0",
   "releaseDate": "2026-10-11",
   "changelogCount": 10,
   "latest": {
-    "version": "2.36.7",
+    "version": "2.37.0",
     "date": "2026-10-11",
     "category": "feature",
     "title": {
-      "zh": "桌面端能用片段试听的都改走预生成 MP3",
-      "en": "Desktop auditions that can use a pre-cut clip now do"
+      "zh": "WebCodecs 导出与 WAV 性能优化，手机播放修复",
+      "en": "WebCodecs export, faster WAV, and the mobile playback fixes"
     },
     "highlights": [
       {
-        "zh": "曲风详情的整曲试听、对比的单边试听、两条时间轴的试听都播放预生成 MP3；鼓试听、同步 A/B 合成与即兴仍用实时引擎（它们没有对应片段）。",
-        "en": "The genre page's full audition, the compare view's single-genre audition and both timelines play the pre-cut MP3, while drums, the synchronous A/B composite and jam keep the live engine, which is the only thing that can make those sounds."
+        "zh": "导出新增 WebCodecs（AAC/Opus）通道，WAV 走三层性能优化；MP3 编码改在 worker 里跑，占用与内存更小。",
+        "en": "Export gains a WebCodecs (AAC/Opus) path and a three-tier WAV optimisation, and MP3 encoding moves into a worker with a smaller footprint."
       },
       {
-        "zh": "每套皮肤的封面随发布投放上线（不随仓库分发，避免每次推送搬动数百 MB）。",
-        "en": "Every skin's artwork ships with the deploy rather than in the repository, so each push no longer carries hundreds of megabytes."
+        "zh": "手机端修好双路同时发声、切轨残留串音与动画不同步——播放条、全屏播放器与片段播放器现在只有一路在响。",
+        "en": "The phone shell no longer plays two transports at once: switching tracks stops the previous sound, the animations stay in step, and the bar, full player and clip player agree on who owns the audio."
       }
     ],
     "truncated": false
