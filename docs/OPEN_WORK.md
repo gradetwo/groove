@@ -24949,3 +24949,20 @@ describe("the grid's editing actions", () => {
     `readyState>0`、`currentTime` 递增；drums ⇒ 该元素不存在；`CompareView` 单边/同步 与
     `useGenreAudition`（两条时间轴/Galaxy/Challenge）同法复验；③全绿 ⇒ 发 **v2.36.7** ⇒ 线上复验
     （含 `/covers/<skin>/<genre>.jpg` 抽验真返回图片 ✓）；④`v2.36.6` 的 tag **仍未落盘** ✗ ⇒ 一并补推。
+
+  🔬 **临时探针把这件事定死了（2026-10-11 ✓，探针已移除 ✓）**：在 `handlePlayMode` 入口打一行日志（打印
+    `genre.id` / `Boolean(clip)` / `clipLoading` / `clipUnavailable` / `clipGenreId` ✓）＋ 在 `ClipAuditionAudio`
+    挂载时打一行 ✓，`vite preview` ＋ chromium 复跑 ✓，读数：
+    ```
+    [clip-probe] handlePlayMode {mode: full, genreId: chicago-house, hasClip: true, clipLoading: false, clipUnavailable: null}
+    [clip-probe] clip path -> setClipGenreId {stopping: false, next: chicago-house}
+    [clip-probe] ClipAuditionAudio mounted …/clips/chicago-house.mp3
+    ```
+    ⇒ 候选 A（按下时 `clip` 还是 undefined ✗）与候选 B（挂载被立刻撤销 ✗）**都被读数否掉** ✓。
+    同一构建里「门」的交互才是那个读数的来源 ✓：探针若点 `[data-testid='audio-start-gate']`（遮罩本身 ✓）
+    而不是 `[data-testid='audio-start-button']`（`AudioStartGate.tsx:231` 的真正开始控件 ✓），
+    `elementFromPoint`（按钮中心）实测 = `DIV.gate-overlay` ✓，此时**强制点击按钮**：
+    `handlePlayMode` 日志 = `[]` ✓、`audio` = `[]` ✓ —— 与失败的读数逐字一致 ✓；
+    先点对开始控件 ✓：日志三行齐全 ✓、`audio` = `[…/clips/chicago-house.mp3]` ✓、`readyState 4` ✓、
+    `currentTime` 递增 ✓。⇒ **桌面片段试听在真实浏览器里是通的 ✓；那个"没反应"来自探测脚本的点击目标 ✓，
+    不是产品 ✓。**（本条覆盖上面"成因推测"那句 ✓：不是推测了，是量到了 ✓。）
