@@ -78,13 +78,18 @@ public/covers/_batch_*
 # next to the build that copies `public/` into `dist/`, not in the repository. `src/test/genreCovers.test.ts` states the
 # contract: a skin whose directory is absent is skipped (this checkout has no drop), while one that is present must be
 # complete. The shared `public/covers/<genre>.jpg` set *is* tracked, because it is what every skin falls back to.
-public/covers/default/
-public/covers/minimal/
-public/covers/comic/
-public/covers/soviet/
-public/covers/sovietYears/
-public/covers/pixel/
-
+# ⭐ 店主 2026-10-11 决定：每皮肤封面恢复为源码内容，故不再忽略（原规则见 git 历史 ec67f79）。
+# public/covers/default/
+# ⭐ 店主 2026-10-11 决定：每皮肤封面恢复为源码内容，故不再忽略（原规则见 git 历史 ec67f79）。
+# public/covers/minimal/
+# ⭐ 店主 2026-10-11 决定：每皮肤封面恢复为源码内容，故不再忽略（原规则见 git 历史 ec67f79）。
+# public/covers/comic/
+# ⭐ 店主 2026-10-11 决定：每皮肤封面恢复为源码内容，故不再忽略（原规则见 git 历史 ec67f79）。
+# public/covers/soviet/
+# ⭐ 店主 2026-10-11 决定：每皮肤封面恢复为源码内容，故不再忽略（原规则见 git 历史 ec67f79）。
+# public/covers/sovietYears/
+# ⭐ 店主 2026-10-11 决定：每皮肤封面恢复为源码内容，故不再忽略（原规则见 git 历史 ec67f79）。
+# public/covers/pixel/
 tools/covers/__pycache__/
 tools/covers/_batch_scratch/
 public/covers/_*
