@@ -1,0 +1,13 @@
+{
+  "model": "qwen-image-2.1",
+  "preset": "quality",
+  "size": "1024x1024",
+  "steps": 40,
+  "seed": 1428,
+  "skin": "default",
+  "genre": "boom-bap",
+  "prompt": "High-end cinematic 3D render album cover, square, subject: a turntable and a crate of vinyl records on a graffiti-free subway platform, artistically expressing the sound of boom bap \u2014 dusty sampled loops, punchy swung drums. Deep near-black indigo ground (#0b0b14) fading to pure dark at the edges, lit only by emitted light: mint-teal (#5eead4) as the single sharp accent, an aurora wash of soft violet (#a78bfa) and rose (#fb7185) behind. Volumetric haze, bloom, long-exposure light trails, glass and water caustics, deep focus, generous negative space, subtle film grain over smooth gradients, premium and quietly futuristic. No text.",
+  "negative_prompt": "text, letters, words, typography, logo, watermark, signature, small print, fine print, corner mark, caption, UI, screenshot, frame, border, photograph of a real person, celebrity, album cover, brand, clipart, flat vector icon, stock photo, generic corporate imagery, floating geometric shapes, plastic 3D render, oversaturated HDR, low detail, blurry, jpeg artifacts",
+  "postprocess": null,
+  "timestamp": "2026-09-25T13:06:59Z"
+}
