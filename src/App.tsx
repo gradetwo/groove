@@ -764,24 +764,6 @@ const MainApp: React.FC = () => {
       {/* User Manual & Interactive Learning Center Modal */}
       {helpOpen && (
         <React.Suspense fallback={null}>
-          <HelpCenterModal
-            isOpen={helpOpen}
-            initialCategory={helpCategory}
-            onClose={() => {
-              setHelpOpen(false);
-              setHelpCategory(undefined);
-            }}
-            onSelectTab={handleSelectTab}
-            onOpenShortcuts={() => {
-              setHelpOpen(false);
-              setShortcutsOpen(true);
-            }}
-            onStartTutorial={handleStartTutorial}
-            onOpenOnboarding={() => {
-              setHelpOpen(false);
-              setOnboardingOpen(true);
-            }}
-          />
         </React.Suspense>
       )}
 
@@ -827,27 +809,6 @@ const MainApp: React.FC = () => {
 
       {/* Global settings panel (item ⑤): the app-level, non-per-track parameters. */}
       <React.Suspense fallback={null}>
-      <SettingsModal
-        isOpen={settingsOpen}
-        onClose={() => setSettingsOpen(false)}
-        engine={engineInstance}
-        gs1Enabled={gs1Enabled}
-        onToggleGs1={() => setGs1Enabled(!gs1Enabled)}
-        /** U2: a guide dismissed without being finished must be recoverable. */
-        onReplayOnboarding={() => {
-          try {
-            localStorage.removeItem(ONBOARDING_COMPLETED_KEY);
-          } catch {
-            // A storage that refuses to forget is not a reason to refuse the replay.
-          }
-          setSettingsOpen(false);
-          setOnboardingOpen(true);
-        }}
-        onOpenUpdates={() => {
-          setSettingsOpen(false);
-          setUpdatesOpen(true);
-        }}
-      />
       </React.Suspense>
 
       {/* Global Singleton Toast Container */}
