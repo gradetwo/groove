@@ -32,6 +32,8 @@ import { InteractiveTutorialCoach } from "./components/help/InteractiveTutorialC
 import { useAppShortcuts } from "./hooks/useAppShortcuts";
 import { ToastContainer, Skeleton, AriaLiveRegion, announcer } from "./ui";
 import { RouterProvider, useRouter } from "./app/router";
+import { useDeviceCapabilities } from "./hooks/useDeviceCapabilities";
+import { shouldEnterPhoneShell, DESKTOP_PREFERENCE_KEY } from "./app/phoneEntry";
 
 // Code splitting & lazy loading chunks for optimal performance
 /**
@@ -64,6 +66,21 @@ const MobileApp = React.lazy(() => import("./mobile/MobileApp").then((m) => ({ d
 const MainApp: React.FC = () => {
   const { t, isZh } = useLanguage();
   const { route, navigate } = useRouter();
+  const { isPhone } = useDeviceCapabilities();
+  /**
+   * ⭐ **A phone that opens the root belongs in the phone shell** (owner, 2026-10-11: "手机打开没有跳转到 /m").
+   * The decision is pure and lives in `app/phoneEntry.ts`; this is only the act of honouring it. `replace` rather than
+   * `assign` so the desktop root does not sit in the back stack as a place the phone keeps bouncing back from.
+   */
+  const prefersDesktopShell = (() => {
+    try { return window.localStorage.getItem(DESKTOP_PREFERENCE_KEY) === "1"; } catch { return false; }
+  })();
+  const enteringPhoneShell = !route.mobileShell && shouldEnterPhoneShell({
+    pathname: window.location.pathname, search: window.location.search, isPhone: isPhone, prefersDesktop: prefersDesktopShell,
+  });
+  useEffect(() => {
+    if (enteringPhoneShell) window.location.replace("/m");
+  }, [enteringPhoneShell]);
 
   const currentTab = route.tab;
 
@@ -292,6 +309,13 @@ const MainApp: React.FC = () => {
    * ⭐ **`/m` renders the phone shell** (owner's decision 2026-10-10). Inside `MainApp`, which is the component that holds the
    * router, and after every one of its hooks: a conditional return above them would change how many hooks run.
    */
+  /**
+   * ⭐ **A phone never paints the desktop sequencer on its way to `/m`** (owner, 2026-10-11: a phone must go through the
+   * phone route). The effect below performs the redirect; this stops the desktop UI from appearing for the frame before
+   * it lands — without it the phone would briefly render a layout it cannot use.
+   */
+  if (enteringPhoneShell) return null;
+
   if (route.mobileShell) {
     return (
       <React.Suspense fallback={null}>
