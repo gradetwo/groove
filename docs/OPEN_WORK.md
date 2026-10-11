@@ -24810,3 +24810,24 @@ describe("the grid's editing actions", () => {
        jam/explore ⇒ **不创建**片段 `<audio>` ✓（走引擎 ✓）；
     6. **发布 v2.36.6** ✓：远端 CI（权威）⇒ deploy ⇒ main ⇒ tag ⇒ 线上 `version.json` 读出 2.36.6 ✓ ⇒ 线上手机 UA 复验同样四条 ✓。
   ⚠️ **纪律 ✓**：先跑判据再提交 ✓（本会话已因"先提交后看测试"白烧一次远端 CI ✗）；杀进程只用 pidfile／显式 PID ✓。
+
+### 一千零三十一、🎧 **桌面端试听/对比改走片段：现状读数与范围边界**（店主 2026-10-11 的要求）
+
+  ⭐ **现状（已量 ✓）** ✓：`src/views/CompareView.tsx` 与 `src/views/GenreDetailView.tsx` 的试听**都走实时引擎** ✓
+    （`engine.play()` ✓、"Engine start-up guards" ✓、录制轨预热 ✓、录音未下载完时的可见状态 ✓）。
+  ⚠️ **范围边界（必须守 ✓）** ✓：`CompareView` 的注释写明它有**两个引擎** —— 一个用于**单曲风试听** ✓，
+    一个用于**同步合成**（两个曲风一起响 ✓）。⇒ **单曲风试听/听辨 ⇒ 改走预生成 MP3** ✓；
+    **同步 A/B 合成 ⇒ 只能用实时引擎** ✗（预生成片段是**单个曲风**的成品，没有"两曲风叠加"的片段 ✓）。
+    ⇒ 界面上要如实区分两者，不能让人以为两边都是片段 ✓。
+  ⭐ **施工图（下一步 ✓）** ✓：
+    1. `GenreDetailView`：把"听辨（full / drums 两种模式）"的播放接到片段播放器；
+       —— hmm ⚠️ 「drums 单独试听」用片段可能没有对应素材（片段是整曲混音 ✓）⇒ 这一点要先量：片段清单里是否有分轨？
+       若没有 ⇒ drums 模式**保留引擎** ✓，并在台账与 changelog 里写明原因 ✓；
+    2. `CompareView`：**单边试听**接片段；**同步合成**保留引擎 ✓（并用文案区分 ✓）；
+    3. 两条时间轴（`HorizontalTimelineView` / `VerticalTimelineView`）的试听接片段；
+    4. `CustomGenreMakerView` 与 Jam 类**保留引擎** ✓；
+    5. 每处补**能红的判据** + 桌面探针复验（`<audio src=…/clips/…>` 出现且在播 ✓）；
+    6. 全绿 ⇒ 与手机版一起发下一版 ⇒ 桌面浏览器逐项复验 ✓。
+  ⭐ **移动端本轮已完成 ✓（等发布确认 ✓）** ✓：手机三个播放通道（home 播放条 ✓、challenge 播放键 ✓、全屏播放器 ✓）
+    实测 **CLIP (MP3)**；jam/explore 实测引擎 ✓；`more` 无播放入口 ✓（规则空满足 ✓）；
+    `usesClipPlayback` + 真值表判据 ✓；v2.36.6 发布进行中（提交 `746a5c3`，日志 `/tmp/release14.log` ✓）。
