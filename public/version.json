@@ -1,23 +1,23 @@
 {
-  "version": "2.37.4",
+  "version": "2.37.5",
   "releaseDate": "2026-10-12",
   "changelogCount": 10,
   "latest": {
-    "version": "2.37.4",
+    "version": "2.37.5",
     "date": "2026-10-12",
     "category": "refactor",
     "title": {
-      "zh": "把调度器每步分配实测并钉成门禁",
-      "en": "Measure the scheduler's per-step allocations and pin them"
+      "zh": "可视化循环节流并在空闲停帧",
+      "en": "Throttle the visualiser loops and stop them when idle"
     },
     "highlights": [
       {
-        "zh": "音频调度器每步恰好分配 4 个对象（64 步 256 个），且不随轨道数增长；据此新增确定性门禁，每步多一次分配即红。",
-        "en": "The audio scheduler allocates exactly 4 objects per step (256 over 64 steps) and that does not grow with track count; a deterministic gate now trips on one extra allocation per step."
+        "zh": "5 处可视化循环（VinylCanvas、两个示波器、PhosphorOscilloscope、ConsolePanel 电平表）在移动/触屏节流到约 40 FPS，Header 可视化空闲时彻底停帧。",
+        "en": "Five visualiser loops (VinylCanvas, both scopes, PhosphorOscilloscope, the ConsolePanel meters) are throttled to about 40 FPS on mobile/touch, and the Header visualiser stops entirely when idle."
       },
       {
-        "zh": "结论是无需改产品代码：与 wasm 核心的零分配契约一致；此门禁只防回归，不含任何墙钟断言。",
-        "en": "The finding is that no product code needed changing, consistent with the wasm core's zero-allocation contract; the gate guards regressions and makes no wall-clock assertion."
+        "zh": "新增确定性判据：播放时每帧仍排队（节流而非冻死）、空闲时从不排队；把排队移到节流检查之后即变红。120Hz 帧率本机未测。",
+        "en": "A deterministic gate now pins that the loop is re-armed every frame while playing (throttled, not dead) and never while idle; moving the re-arm after the throttle check turns it red. No 120 Hz frame rate was measured here."
       }
     ],
     "truncated": false
