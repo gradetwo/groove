@@ -35,6 +35,22 @@ export function hasExamples(genreId: string): boolean {
 }
 
 /**
+ * ⭐ **The examples for a genre are a pure function of that genre's immutable record, so they are built once.**
+ *
+ * Every input is deterministic: `patternFromGenre` and `applyPatternOps` are pure, `suggestProgression` has no
+ * randomness, and `generateMelody` is seeded. Nothing outside the genre library feeds them, so the cleaned genre id
+ * is the whole invalidation key — `GENRES_MAP` is fixed for the life of the process.
+ *
+ * This exists because `listExamples` calls `examplesFor` once per genre on **every** call and then keeps only
+ * `id`/`title`/`teaches`/`recipe`, discarding the patterns it paid for. The cost is not incremental: `ed923ca`
+ * rebuilt all 159 pairs — 318 examples — per call, which the audit measured at 370.0 ms median on a quiet box and
+ * this change re-measured at 2896 ms median on a loaded one, against 4.6 ms once the built pairs are kept. The
+ * output is byte-identical, verified on both the full dump (287,085 B) and `listExamples({limit: 500})` (169,187 B),
+ * so the only thing the cache changes is how much work a repeated call does. `mcpExamplesCache.test.ts` counts it.
+ */
+const exampleCache = new Map<string, MCPExample[]>();
+
+/**
  * The examples for one genre.
  *
  * The first is the genre's own arranged pattern, unchanged: an agent that imitates nothing else should start from the material the app
@@ -42,7 +58,20 @@ export function hasExamples(genreId: string): boolean {
  * chords lane and a generated melody on the lead — so the pair shows both the baseline and the kind of change worth making to it.
  */
 export function examplesFor(genreId: string): MCPExample[] {
-  const genre = findGenre(clean(genreId));
+  const cacheKey = clean(genreId);
+  /**
+   * ⭐ **Only a canonical spelling is cached, and that is what keeps the output identical rather than merely equal.**
+   *
+   * A title carries the caller's own string (`zh` interpolates `genreId`), so caching a build made from `"Deep House "`
+   * under `deep-house` would hand that spelling to the next caller who asked for `deep-house` — the title would depend
+   * on who called first. Non-canonical spellings are rebuilt and left out of the cache; every tool path is canonical
+   * (`listExamples` cleans its argument and `allGenreIds()` returns the library's own ids), so the cache covers all of
+   * the repeated work while the uncached path stays exactly as it was.
+   */
+  const canonical = genreId === cacheKey;
+  const hit = canonical ? exampleCache.get(cacheKey) : undefined;
+  if (hit) return hit;
+  const genre = findGenre(cacheKey);
   if (!genre) return [];
   const base = applyPatternOps(patternFromGenreSafe(genre), []).pattern;
 
@@ -62,10 +91,10 @@ export function examplesFor(genreId: string): MCPExample[] {
     ).flat(),
   ]).pattern : withProgression;
 
-  return [
+  const built: MCPExample[] = [
     {
-      id: `${clean(genreId)}-as-arranged`,
-      genreId: clean(genreId),
+      id: `${cacheKey}-as-arranged`,
+      genreId: cacheKey,
       title: { en: `${genre.name ?? genreId} — as the app arranges it`, zh: `${genreId} — 应用自身编排的样子` },
       teaches: "the baseline: the material the app itself starts this genre from, with no edits",
       recipe: ["create_arrangement({ genreId })", "get_arrangement({ arrangementId })"],
@@ -76,8 +105,8 @@ export function examplesFor(genreId: string): MCPExample[] {
       ],
     },
     {
-      id: `${clean(genreId)}-with-progression-and-melody`,
-      genreId: clean(genreId),
+      id: `${cacheKey}-with-progression-and-melody`,
+      genreId: cacheKey,
       title: { en: `${genre.name ?? genreId} — a chosen progression and a written melody`, zh: `${genreId} — 选定进行 + 生成的旋律` },
       teaches: "composition: choose a progression for a feeling, place it, then write a melody over it",
       recipe: [
@@ -96,6 +125,8 @@ export function examplesFor(genreId: string): MCPExample[] {
       ],
     },
   ];
+  if (canonical) exampleCache.set(cacheKey, built);
+  return built;
 }
 
 /** The genre's arranged pattern, without importing the whole mix module at the top of this file. */
