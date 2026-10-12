@@ -43,16 +43,32 @@ let cachedBaseCatalogue: { root: string; assets: SampleAsset[]; problems: string
 
 /**
  * ⭐ **The fully-built instrument catalogue, cached.** Building it walks every asset through the
- * technique table (`situationsFor` + `servesSituation` per instrument) and sorts with `localeCompare` —
- * measured at ~180s for the full catalogue, while the result is deterministic for a given manifest and
- * root. The per-call filters (`library`/`category`/`query`/…) are cheap string operations, so only this
- * build is cached and the narrowing stays per-call.
+ * technique table (`situationsFor` + `servesSituation` per instrument) and sorts with `localeCompare`.
+ * The result is deterministic for a given manifest and root, so it is built once; the per-call filters
+ * (`library`/`category`/`query`/…) are cheap string operations and stay per-call.
  *
- * The key is the manifest text itself (already held in `cachedManifestText`) plus the root: the same
- * inputs the uncached path reads, so the cache can never disagree with a fresh build.
+ * On the shipped 4.0 MB manifest / 315-instrument catalogue that build is **sub-millisecond**: the
+ * baseline revision without this cache (`4a71254`), which rebuilds it on every call, measured 0.90 ms
+ * median for `{}`. So the invalidation key must not cost more than the build — the first cut keyed on
+ * the manifest text and cost ~4.3 ms per call, which is the regression the identity key below removes.
+ *
+ * The key is the root plus the parsed **manifest object**, compared by identity: `loadManifest`
+ * parses the file once and holds that one object for as long as the text is not re-read, so a
+ * content change replaces the object and the root change is string equality — the same inputs the
+ * uncached path reads, so the cache can never disagree with a fresh build.
+ *
+ * ⭐ **It is deliberately not the manifest text.** Hashing/concatenating and comparing the ~4 MB
+ * string cost more than the build it was meant to skip: measured 2026-10-12, `/tmp` harness, 3
+ * warm-ups discarded, 15 calls, `{}` on the same data — ed923ca (text key) 4.33 ms median vs
+ * 4a71254 (no built cache) 0.90 ms median, while the identity key restores ~0.6 ms. The identity
+ * check is O(1) and semantically identical: the text can only change when `loadManifest` re-reads,
+ * which also replaces this object.
  */
 interface BuiltCatalogue {
-  key: string;
+  /** The `GROOVE_SAMPLE_ROOT` the catalogue was built for. */
+  root: string;
+  /** The parsed manifest instance the catalogue was built from — see the identity note above. */
+  manifest: { entries?: { id: string }[] };
   all: CatalogueInstrument[];
   libraries: string[];
   categories: Array<{ name: string; count: number; subcategories: Array<{ name: string; count: number }> }>;
@@ -246,8 +262,11 @@ export interface InstrumentList {
  * Walking every asset through the technique table (`situationsFor` + `servesSituation` per
  * instrument) and the `localeCompare` sort dominates the call — the manifest and catalogue loads
  * above are already cached, but this build was not. The result is deterministic for a given
- * manifest text and root, so the cache key is exactly those inputs; a manifest change (or a
- * different `GROOVE_SAMPLE_ROOT`) rebuilds, anything else hits.
+ * manifest and root, so the cache key is exactly those inputs; a manifest change (or a different
+ * `GROOVE_SAMPLE_ROOT`) rebuilds, anything else hits.
+ *
+ * The key is compared **by identity and O(1)**: see the `BuiltCatalogue` note above for why the
+ * manifest text is not part of it.
  *
  * The per-call narrowing (`library`/`category`/`query`/`situation`/`limit`) stays outside the
  * cache: those are cheap string operations on the built list.
@@ -258,9 +277,12 @@ function getBuiltCatalogue(root: string): {
   categories: Array<{ name: string; count: number; subcategories: Array<{ name: string; count: number }> }>;
   mappedProblems: string[];
 } {
-  const { text, manifest } = loadManifest();
-  const key = root + "\n" + text;
-  if (cachedBuiltCatalogue && cachedBuiltCatalogue.key === key) {
+  const { manifest } = loadManifest();
+  if (
+    cachedBuiltCatalogue &&
+    cachedBuiltCatalogue.root === root &&
+    cachedBuiltCatalogue.manifest === manifest
+  ) {
     return cachedBuiltCatalogue;
   }
   const { assets } = getBaseCatalogue(root);
@@ -379,7 +401,7 @@ function getBuiltCatalogue(root: string): {
     );
   }
 
-  cachedBuiltCatalogue = { key, all, libraries, categories, mappedProblems };
+  cachedBuiltCatalogue = { root, manifest, all, libraries, categories, mappedProblems };
   return cachedBuiltCatalogue;
 }
 
