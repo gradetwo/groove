@@ -95,7 +95,23 @@
          while zero font files were ever actually fetched. We now request only the two
          small Latin families and let CJK text use the platform's own high-quality
          system fonts (PingFang SC / Hiragino / Microsoft YaHei). -->
-    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Space+Grotesk:wght@500;700&family=Inter:wght@400;500;600;700&family=Bangers&family=Permanent+Marker&family=Patrick+Hand&family=Comic+Neue:wght@400;700&family=Russo+One&family=PT+Sans+Narrow:wght@400;700&family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet" />
+    <!-- P1-04b: **off the parser's critical path.** With `rel="stylesheet"` and no `media`, the parser stopped
+         the first paint on this cross-origin request: measured 2026-10-12 on this box (load average 12–20, so
+         the numbers are indicators) it reached `responseEnd` at 2012–2458 ms and FCP landed at 2828/3604 ms
+         just behind it, and blocking the request in an A/B cut took total long tasks 8471 → 5343 ms while
+         `Layout` stayed at 4272 ms — the sheet gates the first paint, it is not the forced-layout cost.
+         `media="print"` cannot match the screen, so nothing waits for it; `onload` turns it on when it arrives
+         and `display=swap` was already there, so the families below and the design they set are unchanged —
+         text paints in the fallback stack and swaps. No `<noscript>` twin on purpose: with scripting off this
+         document shows a splash and never boots React, so a second copy of the URL buys fonts for a dead page.
+         `src/test/firstPaintStylesheet.test.ts` holds both halves of that (no blocking cross-origin sheet, and
+         every family named here is still one the stylesheets use). -->
+    <link
+      href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Space+Grotesk:wght@500;700&family=Inter:wght@400;500;600;700&family=Bangers&family=Permanent+Marker&family=Patrick+Hand&family=Comic+Neue:wght@400;700&family=Russo+One&family=PT+Sans+Narrow:wght@400;700&family=Press+Start+2P&family=VT323&display=swap"
+      rel="stylesheet"
+      media="print"
+      onload="this.media='all'"
+    />
   </head>
   <!-- `overflow-x-hidden` used to sit on this tag. It was the reason `position: sticky` never
        worked anywhere in the app: `overflow: hidden` makes the element a scroll container, so body
