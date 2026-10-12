@@ -1,23 +1,23 @@
 {
-  "version": "2.37.3",
+  "version": "2.37.4",
   "releaseDate": "2026-10-12",
   "changelogCount": 10,
   "latest": {
-    "version": "2.37.3",
+    "version": "2.37.4",
     "date": "2026-10-12",
     "category": "refactor",
     "title": {
-      "zh": "GS-1 升到 2.1.9、依赖改指 GitHub，和弦扫描提速",
-      "en": "GS-1 2.1.9 from GitHub, and a faster chord scan"
+      "zh": "把调度器每步分配实测并钉成门禁",
+      "en": "Measure the scheduler's per-step allocations and pin them"
     },
     "highlights": [
       {
-        "zh": "GS-1 依赖改为从 GitHub（gradetwo/synth）取源并支持 --ref 固定版本；vendored 核心升到 2.1.9（ABI 9），25 项契约校验通过、音符路径零分配。",
-        "en": "The GS-1 dependency now sources from GitHub (gradetwo/synth) with --ref pinning; the vendored core is 2.1.9 (ABI 9), 25 contract checks green, zero allocations on the note path."
+        "zh": "音频调度器每步恰好分配 4 个对象（64 步 256 个），且不随轨道数增长；据此新增确定性门禁，每步多一次分配即红。",
+        "en": "The audio scheduler allocates exactly 4 objects per step (256 over 64 steps) and that does not grow with track count; a deterministic gate now trips on one extra allocation per step."
       },
       {
-        "zh": "patternHealth 和弦扫描由逐音符重扫改为单趟索引：4096 音符 337→2.2 ms，并修正堆叠起音点造成的和弦身份差异。",
-        "en": "patternHealth's chord scan is one indexed pass instead of a per-note rescan: 4096 notes 337 to 2.2 ms, and the stacked-onset identity divergence is fixed."
+        "zh": "结论是无需改产品代码：与 wasm 核心的零分配契约一致；此门禁只防回归，不含任何墙钟断言。",
+        "en": "The finding is that no product code needed changing, consistent with the wasm core's zero-allocation contract; the gate guards regressions and makes no wall-clock assertion."
       }
     ],
     "truncated": false
