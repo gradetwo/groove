@@ -31,6 +31,14 @@
  *
  * Correctness is asserted beside the time on purpose: a cache that returned early, empty or stale would
  * be fast and wrong, and that is the other way this criterion has to be able to go red.
+ *
+ * **Reproducing the numbers.** A `/tmp` script imported each revision's `mcp/instruments.ts` through
+ * `vite-node` and timed the three shapes above — 3 warm-ups discarded, 25 calls per round, three
+ * interleaved rounds, so every cell is 75 samples and the medians are over those. They were taken at load
+ * average ~15.7 on 8 cores (other workstreams were building concurrently), which inflates every absolute
+ * number; the ratio between revisions is what the criterion needs. The red proof is this same file run in
+ * a worktree at `ed923ca`: `fastestMs` was 12.73 ms against the 1.5 ms cap. Green on the fixed tree is
+ * 0.38–0.41 ms even with four suites running at once.
  */
 import { describe, expect, it } from "vitest";
 import { listCatalogueInstruments } from "../../mcp/instruments";
