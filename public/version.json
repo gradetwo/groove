@@ -1,23 +1,23 @@
 {
-  "version": "2.37.2",
+  "version": "2.37.3",
   "releaseDate": "2026-10-12",
   "changelogCount": 10,
   "latest": {
-    "version": "2.37.2",
+    "version": "2.37.3",
     "date": "2026-10-12",
     "category": "refactor",
     "title": {
-      "zh": "性能：卷帘 ghost 层与 Explore 列表",
-      "en": "Performance: the roll's ghost layer, and the Explore list"
+      "zh": "GS-1 升到 2.1.9、依赖改指 GitHub，和弦扫描提速",
+      "en": "GS-1 2.1.9 from GitHub, and a faster chord scan"
     },
     "highlights": [
       {
-        "zh": "PianoRollLane 的循环 ghost 层不再逐音符扫描全部音符，改问已建索引：768 音符 585→25 ms、1500 音符 1572→48 ms，结果逐一相同。",
-        "en": "The roll's looped ghost layer no longer scans every note per ghost note but asks the index it already builds: 768 notes 585 to 25 ms, 1500 notes 1572 to 48 ms, with identical results."
+        "zh": "GS-1 依赖改为从 GitHub（gradetwo/synth）取源并支持 --ref 固定版本；vendored 核心升到 2.1.9（ABI 9），25 项契约校验通过、音符路径零分配。",
+        "en": "The GS-1 dependency now sources from GitHub (gradetwo/synth) with --ref pinning; the vendored core is 2.1.9 (ABI 9), 25 contract checks green, zero allocations on the note path."
       },
       {
-        "zh": "Explore 列表改为增量窗口：159→24 张卡、DOM 6495→1095 节点、中位渲染 800→151 ms；分组计数仍读全量，稳态终值不变。",
-        "en": "The Explore list now windows its cards: 159 to 24 on first paint, 6495 to 1095 DOM nodes, median render 800 to 151 ms; group counts still read the full list and the steady state is unchanged."
+        "zh": "patternHealth 和弦扫描由逐音符重扫改为单趟索引：4096 音符 337→2.2 ms，并修正堆叠起音点造成的和弦身份差异。",
+        "en": "patternHealth's chord scan is one indexed pass instead of a per-note rescan: 4096 notes 337 to 2.2 ms, and the stacked-onset identity divergence is fixed."
       }
     ],
     "truncated": false
