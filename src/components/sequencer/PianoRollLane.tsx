@@ -2632,7 +2632,7 @@ export const PianoRollLane: React.FC<PianoRollLaneProps> = ({
                           .map((note) => {
                             const ghostStep = note.stepIdx + offset;
                             if (ghostStep >= stepCount) return null;
-                            if (notes.some((n) => n.stepIdx === ghostStep && n.midi === note.midi)) return null;
+                            if (noteIndex.byCell.has(`${ghostStep}:${note.midi}`)) return null; // same membership test, O(1) from the index
                             const rowIdx = rowIdxMap.get(note.midi);
                             if (rowIdx === undefined) return null;
                             const top = rowIdx * rowH;
