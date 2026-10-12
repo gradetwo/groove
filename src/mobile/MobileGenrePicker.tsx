@@ -50,6 +50,29 @@ import type { GenreCategory } from "../types/genre";
 export const PICKER_MIN_TARGET_PX = 44;
 
 /**
+ * How much of a result set is in the first paint; the rest arrives in idle time.
+ *
+ * The picker's genre level holds the whole library (159 rows, ~1 800 nodes) under "all", and the library
+ * level holds a category. `MobileHomeScreen` measured the same list: rendering all of it before the first
+ * paint produced a single long task on a throttled phone. The window is the phone's existing answer —
+ * 24 rows first, then double in idle time (24 → 48 → 96 → 159), which completes in a few hundred
+ * milliseconds and nothing is hidden or unreachable in the meantime.
+ */
+export const PICKER_FIRST_CHUNK = 24;
+
+/** Run something when the browser is idle, falling back to a macrotask (jsdom has no `requestIdleCallback`). */
+const whenIdle = (run: () => void): (() => void) => {
+  const idle = (window as Window & { requestIdleCallback?: (cb: () => void, options?: { timeout: number }) => number })
+    .requestIdleCallback;
+  if (typeof idle === "function") {
+    const id = idle(run, { timeout: 400 });
+    return () => (window as Window & { cancelIdleCallback?: (id: number) => void }).cancelIdleCallback?.(id);
+  }
+  const id = window.setTimeout(run, 32);
+  return () => window.clearTimeout(id);
+};
+
+/**
  * The six categories, in the library's own order.
  *
  * Taken from `CATEGORY_SWATCH`'s key order rather than re-listed: that object is already the phone's
@@ -111,6 +134,8 @@ export function MobileGenrePicker({
   const [category, setCategory] = useState<GenreCategory | "all">(initialCategory ?? "all");
   const [level, setLevel] = useState<"categories" | "genres">(initialCategory ? "genres" : "categories");
   const [query, setQuery] = useState("");
+  /** How many of `genres` are in the DOM right now (see `PICKER_FIRST_CHUNK`). */
+  const [shown, setShown] = useState(PICKER_FIRST_CHUNK);
 
   /**
    * Reopening starts where a fresh look should, not where the last one left off.
@@ -124,6 +149,8 @@ export function MobileGenrePicker({
     setCategory(initialCategory ?? "all");
     setLevel(initialCategory ? "genres" : "categories");
     setQuery("");
+    // Reopening starts the window over too, so a panel that was left fully grown does not paint 159 rows again.
+    setShown(PICKER_FIRST_CHUNK);
   }, [open, initialCategory, currentGenreId]);
 
   /**
@@ -144,6 +171,25 @@ export function MobileGenrePicker({
       }),
     [category, query, searching]
   );
+
+  /**
+   * The picker draws a window of `genres`, the same way `MobileHomeScreen` draws its own list.
+   *
+   * A filter change restarts from one chunk — the rows that were rendered are not the rows that are — and the
+   * remaining rows arrive in idle passes, doubling each time (24 → 48 → 96 → the rest). The count
+   * (`mobile-genre-picker-count`) and the empty state still read the **full** filtered length; only the rows the
+   * DOM carries are windowed.
+   */
+  useEffect(() => {
+    setShown(PICKER_FIRST_CHUNK);
+  }, [query, category]);
+  useEffect(() => {
+    if (shown >= genres.length) return;
+    return whenIdle(() => setShown((current) => Math.min(genres.length, current * 2)));
+  }, [shown, genres.length]);
+
+  /** The rows to render: the head of the filtered list, and everything once the list is short. */
+  const visibleGenres = genres.length > shown ? genres.slice(0, shown) : genres;
 
   /** One count per category for the first level; the index is already in memory. */
   const counts = useMemo(() => {
@@ -237,7 +283,7 @@ export function MobileGenrePicker({
             className="max-h-[46dvh] overflow-y-auto overscroll-contain px-1 pb-1"
             data-testid="mobile-genre-picker-genres"
           >
-            {genres.map((genre, index) => {
+            {visibleGenres.map((genre, index) => {
               const current = genre.id === currentGenreId;
               return (
                 <li key={genre.id}>
