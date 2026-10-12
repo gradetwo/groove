@@ -197,3 +197,67 @@ describe("a drag across the roll", () => {
     expect(removed).toEqual([60, 62]);
   });
 });
+
+/**
+ * ⭐ **The notes are drawn for the window, not for the piece.**
+ *
+ * The cells were already windowed (the evaluation measured 4,736 buttons for eight bars) but every note in a row
+ * became an absolutely-positioned layer — a thousand-note arrangement built a thousand layers while the window
+ * showed sixty-four steps. The window is what decides now; a note is drawn only while its span touches it.
+ */
+describe("note virtualization", () => {
+  it("⭐ draws only the notes inside the visible window when the piece holds a thousand of them", () => {
+    // 256 beats is 1024 steps; one note per step keeps every note on the same row, so the count is the row's own.
+    const notes = Array.from({ length: 1000 }, (_, index) => ({
+      pitch: 60,
+      startBeats: index * STEP_BEATS,
+      lengthBeats: STEP_BEATS,
+      velocity: 100,
+    }));
+    renderRoll({ notes, beats: 256 });
+    // The test environment has no measured width, so the window is the default 0..64 — sixty-four notes, not a thousand.
+    expect(document.querySelectorAll('[data-note="true"]')).toHaveLength(64);
+    expect(screen.getByTestId("roll-note-60-63")).toBeTruthy();
+    // The note at the window's edge starts exactly where the cells stop, so it stays out with them.
+    expect(screen.queryByTestId("roll-note-60-64")).toBeNull();
+    // The last note of the piece is real — it was written, it plays — it just is not an element right now.
+    expect(screen.queryByTestId("roll-note-60-999")).toBeNull();
+  });
+
+  it("⭐ keeps a long note that starts left of the window while its length reaches into it", () => {
+    const notes = [
+      // Starts at step 150 and is held for 100 beats: its tail runs far into the window.
+      { pitch: 60, startBeats: 150 * STEP_BEATS, lengthBeats: 100, velocity: 100 },
+      // Starts left of the window and ends before it: stays out.
+      { pitch: 62, startBeats: 100 * STEP_BEATS, lengthBeats: 1, velocity: 100 },
+      // Starts right of the window: stays out.
+      { pitch: 64, startBeats: 300 * STEP_BEATS, lengthBeats: 1, velocity: 100 },
+      // Starts inside the window, so the mocked scroll below can be read as having taken effect.
+      { pitch: 66, startBeats: 200 * STEP_BEATS, lengthBeats: 1, velocity: 100 },
+    ];
+    renderRoll({ notes, beats: 256 });
+    // Pretend the person scrolled: 200 steps in, 50 steps of width — the measured window is 196..254 with the margin.
+    const scroller = document.querySelector(".overflow-x-auto") as HTMLElement;
+    Object.defineProperty(scroller, "clientWidth", { value: 50 * 12, configurable: true });
+    Object.defineProperty(scroller, "scrollLeft", { value: 200 * 12, configurable: true });
+    fireEvent.scroll(scroller);
+    expect(screen.getByTestId("roll-note-60-150")).toBeTruthy();
+    expect(screen.getByTestId("roll-note-66-200")).toBeTruthy();
+    expect(screen.queryByTestId("roll-note-62-100")).toBeNull();
+    expect(screen.queryByTestId("roll-note-64-300")).toBeNull();
+  });
+
+  it("⭐ still deletes a note that is in the window, so virtualization never changes a gesture", () => {
+    const notes = [
+      { pitch: 60, startBeats: 0, lengthBeats: 1, velocity: 100 },
+      // Outside the window: not drawn, and not deletable by a press because there is nothing to press.
+      { pitch: 60, startBeats: 100 * STEP_BEATS, lengthBeats: 1, velocity: 100 },
+    ];
+    const { onRemoveNote } = renderRoll({ notes, beats: 256 });
+    const note = screen.getByTestId("roll-note-60-0");
+    fireEvent.pointerDown(note);
+    fireEvent.pointerUp(note);
+    expect(onRemoveNote).toHaveBeenCalledWith({ pitch: 60, startBeats: 0 });
+    expect(screen.queryByTestId("roll-note-60-400")).toBeNull();
+  });
+});

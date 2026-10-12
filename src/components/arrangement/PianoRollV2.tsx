@@ -370,6 +370,19 @@ export function PianoRollV2({ notes, onAddNote, onRemoveNote, onMoveNote, onResi
         <div className="flex flex-col" style={{ minWidth: steps * CELL + 48 }} data-testid="roll-grid">
           {rows.map((pitch) => {
             const rowNotes = byRow.get(pitch) ?? [];
+            /**
+             * ⭐ **Only the notes the window touches become elements.** A row used to draw every note it held — a
+             * thousand-note arrangement built a thousand absolutely-positioned layers even when the window showed
+             * sixty-four steps. A note is kept when its span overlaps the visible step window: a note that starts
+             * before the window still counts while its length reaches into it, so a long note never pops out of
+             * existence mid-scroll. Position, gesture and identity are untouched — this only decides what becomes a
+             * DOM node, and the window already carries its own margin for drags that run off the edge.
+             */
+            const visibleRowNotes = rowNotes.filter((note) => {
+              const startStep = Math.round(note.startBeats / STEP_BEATS);
+              const endStep = startStep + Math.ceil(note.lengthBeats / STEP_BEATS);
+              return startStep < visibleSteps.to && endStep > visibleSteps.from;
+            });
             return (
               <div key={pitch} className="flex items-stretch">
                 <span
@@ -449,7 +462,7 @@ export function PianoRollV2({ notes, onAddNote, onRemoveNote, onMoveNote, onResi
                       />
                     ))}
                   </div>
-                  {rowNotes.map((note) => {
+                  {visibleRowNotes.map((note) => {
                     const step = Math.round(note.startBeats / STEP_BEATS);
                     return (
                       <div

@@ -41,6 +41,26 @@ let cachedManifestText: string | null = null;
 let cachedManifestJson: { entries?: { id: string }[] } | null = null;
 let cachedBaseCatalogue: { root: string; assets: SampleAsset[]; problems: string[] } | null = null;
 
+/**
+ * ⭐ **The fully-built instrument catalogue, cached.** Building it walks every asset through the
+ * technique table (`situationsFor` + `servesSituation` per instrument) and sorts with `localeCompare` —
+ * measured at ~180s for the full catalogue, while the result is deterministic for a given manifest and
+ * root. The per-call filters (`library`/`category`/`query`/…) are cheap string operations, so only this
+ * build is cached and the narrowing stays per-call.
+ *
+ * The key is the manifest text itself (already held in `cachedManifestText`) plus the root: the same
+ * inputs the uncached path reads, so the cache can never disagree with a fresh build.
+ */
+interface BuiltCatalogue {
+  key: string;
+  all: CatalogueInstrument[];
+  libraries: string[];
+  categories: Array<{ name: string; count: number; subcategories: Array<{ name: string; count: number }> }>;
+  /** Problems raised by the mapped-instrument check, which depends only on `all`. */
+  mappedProblems: string[];
+}
+let cachedBuiltCatalogue: BuiltCatalogue | null = null;
+
 function loadManifest(): { text: string; manifest: { entries?: { id: string }[] } } {
   if (!cachedManifestText) {
     cachedManifestPath = resolveManifestPath();
@@ -221,36 +241,29 @@ export interface InstrumentList {
 }
 
 /**
- * The instruments a caller may name, optionally narrowed to one library.
+ * The expensive half of `listCatalogueInstruments`, built once and cached.
  *
- * `limit` exists because `vcsl` alone declares 88 instruments and a reply carrying all of them is a lot of text for a question that is often "what is there"; the caller can page or narrow instead.
+ * Walking every asset through the technique table (`situationsFor` + `servesSituation` per
+ * instrument) and the `localeCompare` sort dominates the call — the manifest and catalogue loads
+ * above are already cached, but this build was not. The result is deterministic for a given
+ * manifest text and root, so the cache key is exactly those inputs; a manifest change (or a
+ * different `GROOVE_SAMPLE_ROOT`) rebuilds, anything else hits.
+ *
+ * The per-call narrowing (`library`/`category`/`query`/`situation`/`limit`) stays outside the
+ * cache: those are cheap string operations on the built list.
  */
-export function listCatalogueInstruments({
-  library,
-  category,
-  subcategory,
-  situation,
-  query,
-  limit,
-}: {
-  library?: string;
-  category?: string;
-  subcategory?: string;
-  /**
-   * ⭐ **Narrow to what the music is doing, not to what the instrument is called.**
-   *
-   * `situation: "plucked-walking"` is the request a composer actually has, and answering it needs the rule table
-   * rather than a name match. Only the situations the string rules name are accepted, which is checked against the
-   * table itself so a typo is a problem stated rather than an empty list that looks like "nothing available".
-   */
-  situation?: StringSituation;
-  /** Free text, matched the same way the library panel matches it — one rule, so an agent and a person find the same instruments with the same words. */
-  query?: string;
-  limit?: number;
-} = {}): InstrumentList {
-  const root = process.env.GROOVE_SAMPLE_ROOT ?? "";
-  const { manifest } = loadManifest();
-  const { assets, problems } = getBaseCatalogue(root);
+function getBuiltCatalogue(root: string): {
+  all: CatalogueInstrument[];
+  libraries: string[];
+  categories: Array<{ name: string; count: number; subcategories: Array<{ name: string; count: number }> }>;
+  mappedProblems: string[];
+} {
+  const { text, manifest } = loadManifest();
+  const key = root + "\n" + text;
+  if (cachedBuiltCatalogue && cachedBuiltCatalogue.key === key) {
+    return cachedBuiltCatalogue;
+  }
+  const { assets } = getBaseCatalogue(root);
   const libraries = (manifest.entries ?? []).map((entry) => entry.id);
 
   const all: CatalogueInstrument[] = assets
@@ -329,24 +342,6 @@ export function listCatalogueInstruments({
     .sort((a, b) => a.library.localeCompare(b.library) || a.name.localeCompare(b.name));
 
   /**
-   * Two filters rather than one, because they answer different questions: `library` is "everything from this download" and `category` is "every bass I have", which crosses libraries. The categories are listed so a caller can see what exists before
-   * filtering by a word it guessed.
-   */
-  const narrowed = filterInstruments(all, query ?? "")
-    .filter((instrument) => library === undefined || instrument.library === library)
-    .filter((instrument) => category === undefined || instrument.category === category)
-    .filter((instrument) => subcategory === undefined || instrument.subcategory === subcategory)
-    /**
-     * ⭐ **The situation filter, which is the query a composer actually has.**
-     *
-     * `situation: "plucked-walking"` must find the contrabass pizzicato without the caller knowing that a pluck is
-     * spelled `Pizz` in one program and `pizz` in another. The register travels with the rule — "walking" is a low
-     * line — so this filters on `servesSituation`, the same function that fills each instrument's own `situations`,
-     * rather than on the raw preference list.
-     */
-    .filter((instrument) => situation === undefined || (instrument.situations ?? []).includes(situation));
-
-  /**
    * The tree, built from the instruments rather than from the manifest: a category with nothing in it is not shown as empty, and a count is the number of things a click would actually reveal.
    */
   const byCategory = new Map<string, Map<string, number>>();
@@ -372,15 +367,76 @@ export function listCatalogueInstruments({
    * ⭐ **A mapped row whose asset this manifest does not declare is itself a problem**, and it is reported here rather
    * than discovered at render time: the table is a promise about what a name sounds like, and a mirror that cannot keep
    * it should say so where someone is choosing an instrument rather than where they are listening for one.
+   *
+   * Deterministic for a given `all`, so it lives in the cache rather than being re-derived per call.
    */
-  const mappedInstruments = ALL_SAMPLED_INSTRUMENTS.map((choice) => ({ ...choice }));
+  const mappedProblems: string[] = [];
   const knownIds = new Set(all.map((instrument) => instrument.assetId));
-  for (const choice of mappedInstruments) {
+  for (const choice of ALL_SAMPLED_INSTRUMENTS) {
     if (knownIds.has(choice.assetId)) continue;
-    problems.push(
+    mappedProblems.push(
       `the recorded-instrument table maps "${choice.instrument}" to "${choice.assetId}", which public/samples/manifest.json does not declare — that lane falls back to its built-in preset`
     );
   }
+
+  cachedBuiltCatalogue = { key, all, libraries, categories, mappedProblems };
+  return cachedBuiltCatalogue;
+}
+
+/**
+ * The instruments a caller may name, optionally narrowed to one library.
+ *
+ * `limit` exists because `vcsl` alone declares 88 instruments and a reply carrying all of them is a lot of text for a question that is often "what is there"; the caller can page or narrow instead.
+ */
+export function listCatalogueInstruments({
+  library,
+  category,
+  subcategory,
+  situation,
+  query,
+  limit,
+}: {
+  library?: string;
+  category?: string;
+  subcategory?: string;
+  /**
+   * ⭐ **Narrow to what the music is doing, not to what the instrument is called.**
+   *
+   * `situation: "plucked-walking"` is the request a composer actually has, and answering it needs the rule table
+   * rather than a name match. Only the situations the string rules name are accepted, which is checked against the
+   * table itself so a typo is a problem stated rather than an empty list that looks like "nothing available".
+   */
+  situation?: StringSituation;
+  /** Free text, matched the same way the library panel matches it — one rule, so an agent and a person find the same instruments with the same words. */
+  query?: string;
+  limit?: number;
+} = {}): InstrumentList {
+  const root = process.env.GROOVE_SAMPLE_ROOT ?? "";
+  // `getBaseCatalogue` is cached internally; the fresh `problems` copy per call keeps callers
+  // from seeing each other's mutations. The expensive build below is cached in `getBuiltCatalogue`.
+  const { problems: baseProblems } = getBaseCatalogue(root);
+  const { all, libraries, categories, mappedProblems } = getBuiltCatalogue(root);
+  const problems = [...baseProblems, ...mappedProblems];
+
+  /**
+   * Two filters rather than one, because they answer different questions: `library` is "everything from this download" and `category` is "every bass I have", which crosses libraries. The categories are listed so a caller can see what exists before
+   * filtering by a word it guessed.
+   */
+  const narrowed = filterInstruments(all, query ?? "")
+    .filter((instrument) => library === undefined || instrument.library === library)
+    .filter((instrument) => category === undefined || instrument.category === category)
+    .filter((instrument) => subcategory === undefined || instrument.subcategory === subcategory)
+    /**
+     * ⭐ **The situation filter, which is the query a composer actually has.**
+     *
+     * `situation: "plucked-walking"` must find the contrabass pizzicato without the caller knowing that a pluck is
+     * spelled `Pizz` in one program and `pizz` in another. The register travels with the rule — "walking" is a low
+     * line — so this filters on `servesSituation`, the same function that fills each instrument's own `situations`,
+     * rather than on the raw preference list.
+     */
+    .filter((instrument) => situation === undefined || (instrument.situations ?? []).includes(situation));
+
+  const mappedInstruments = ALL_SAMPLED_INSTRUMENTS.map((choice) => ({ ...choice }));
 
   return {
     instruments: limit !== undefined && limit >= 0 ? narrowed.slice(0, limit) : narrowed,

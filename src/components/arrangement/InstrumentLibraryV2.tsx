@@ -12,7 +12,7 @@
  *   · **"All" is a category**, because browsing and searching are the same panel and a person who cleared the search has not thereby chosen a filter.
  *   · **The current instrument is marked**, so the panel answers "what is it on now" as well as "what else is there".
  */
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useLanguage } from "../../i18n/LanguageContext";
 import type { InstrumentChoice } from "./TrackListV2";
 import { describeCoverage } from "./coverageLabel";
@@ -54,6 +54,15 @@ interface Entry {
  */
 import { instrumentMatches } from "../../data/instrumentSearch";
 
+/**
+ * ⭐ **The list is windowed, not fully rendered.** The catalogue holds hundreds of instruments and each row carries an
+ * audition button plus a coverage read, so rendering every match at once was a heavy DOM. The panel shows the first
+ * page and grows on demand — plain list growth rather than a true virtual scroller, deliberately: scroll position,
+ * keyboard navigation, focus, and find-in-page keep working the way a scroller that unmounts rows off-screen would
+ * not. Transparent to the user: the rows are identical, there are just never hundreds of them at once.
+ */
+const INSTRUMENT_PAGE_SIZE = 60;
+
 export function InstrumentLibraryV2({ instruments, currentAssetId, onChoose, onAudition, coverage }: InstrumentLibraryV2Props) {
   /** ⭐ What is sounding right now — the sentence that stops a working control looking like a dead one. */
   const [auditioning, setAuditioning] = useState<string | null>(null);
@@ -61,6 +70,8 @@ export function InstrumentLibraryV2({ instruments, currentAssetId, onChoose, onA
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState<string | undefined>(undefined);
   const [subcategory, setSubcategory] = useState<string | undefined>(undefined);
+  /** How many matches are currently on the page. Grows when the person asks for more; resets when the filter changes. */
+  const [visibleLimit, setVisibleLimit] = useState(INSTRUMENT_PAGE_SIZE);
 
   const entries = useMemo<Entry[]>(
     () =>
@@ -99,6 +110,19 @@ export function InstrumentLibraryV2({ instruments, currentAssetId, onChoose, onA
   const shown = entries
     .filter((entry) => (searching ? instrumentMatches({ assetId: entry.assetId, name: entry.name }, query) : category === undefined || entry.category === category))
     .filter((entry) => searching || subcategory === undefined || entry.subcategory === subcategory);
+
+  // A new filter is a new list: the window restarts at the first page rather than holding a stale count.
+  useEffect(() => {
+    setVisibleLimit(INSTRUMENT_PAGE_SIZE);
+  }, [query, category, subcategory, instruments]);
+
+  /**
+   * The current instrument is always in the window, even past the fold: the panel answers "what is it on now" as well
+   * as "what else is there", and a mark nobody can see is not an answer.
+   */
+  const currentIndex = currentAssetId ? shown.findIndex((entry) => entry.assetId === currentAssetId) : -1;
+  const effectiveLimit = currentIndex >= 0 ? Math.max(visibleLimit, currentIndex + 1) : visibleLimit;
+  const visible = shown.slice(0, effectiveLimit);
 
   return (
     <div data-testid="instrument-library" className="flex flex-col gap-2 rounded border border-[rgb(var(--d-line))] bg-panel p-2 shadow-lg">
@@ -179,7 +203,8 @@ export function InstrumentLibraryV2({ instruments, currentAssetId, onChoose, onA
             // Said rather than left blank: an empty list reads as "broken" and a sentence reads as "nothing matched".
             <li className="px-2 py-1 opacity-70">{t("instrument_no_match", { query: query.trim() })}</li>
           ) : (
-            shown.map((entry) => (
+            <>
+              {visible.map((entry) => (
               <li key={entry.assetId}>
                 <button
                   type="button"
@@ -234,7 +259,26 @@ export function InstrumentLibraryV2({ instruments, currentAssetId, onChoose, onA
                   </button>
                 )}
               </li>
-            ))
+              ))}
+              {/**
+               * ⭐ **The window's handle.** More matches exist below the fold; this row says exactly how many are shown
+               * and how many matched, and grows the window by another page. It is a normal list row on purpose — a
+               * control *inside* the scroll area keeps keyboard order and screen-reader context, where a button
+               * pinned under the list would not.
+               */}
+              {shown.length > effectiveLimit && (
+                <li>
+                  <button
+                    type="button"
+                    data-testid="instrument-show-more"
+                    onClick={() => setVisibleLimit((limit) => limit + INSTRUMENT_PAGE_SIZE)}
+                    className={rowClass(false)}
+                  >
+                    {t("instrument_show_more", { shown: effectiveLimit, total: shown.length })}
+                  </button>
+                </li>
+              )}
+            </>
           )}
         </ul>
       </div>

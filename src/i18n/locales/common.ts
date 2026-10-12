@@ -310,6 +310,10 @@ export const commonMessages = {
     en: "Tap ▷ to hear an instrument before you choose it",
     zh: "点 ▷ 可以先试听，再决定要不要选它",
   },
+  instrument_show_more: {
+    en: "Show more ({shown} of {total})",
+    zh: "显示更多（{shown}/{total}）",
+  },
   keyboard_needs_drumkit: {
     en: "This drum track plays the built-in kit: pick its roles (kick, snare, hat) rather than a sample",
     zh: "这条鼓轨用的是内置套鼓：选的是它的角色（底鼓、军鼓、踩镲），而不是采样乐器",
