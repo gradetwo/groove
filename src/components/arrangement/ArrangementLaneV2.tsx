@@ -237,9 +237,9 @@ function Region({
         ))}
         {/* The miniature: drawn above the gridlines, and not reachable by pointer or keyboard. */}
         <span aria-hidden="true" data-testid={`arrangement-miniature-${region.trackId}`} className="pointer-events-none absolute inset-x-0 bottom-0.5 top-0.5">
-          {region.miniatures.map((miniature, index) => (
+          {region.miniatures.map((miniature) => (
             <span
-              key={`${miniature.pitch}-${index}`}
+              key={`${miniature.pitch}:${miniature.x.toFixed(4)}`}
               data-miniature="note"
               data-pitch={miniature.pitch}
               className="absolute top-0 h-full rounded-[1px]"
