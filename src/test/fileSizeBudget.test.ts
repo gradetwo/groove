@@ -53,7 +53,14 @@ type Sizes = {
  * rather than silent.
  */
 const CAPS: Record<string, number> = {
-  atLeast600: 49,
+  /**
+   * ⭐ **Re-measured on 2026-10-12 (49 → 50): `src/views/ExploreListView.tsx` crossed six hundred.** The Explore list
+   * gained the windowed card list — `shown`/`EXPLORE_FIRST_CHUNK`, the focus-aware `visibleGenres` memo, the
+   * `visibleIds` set the groups filter by, and the comment that explains why the focused card must stay in the
+   * window — 581 → 650 lines. Its new gate (`exploreListWindow.test.tsx`, 5 cases) lives in a test file and does not
+   * count here. The other buckets are untouched, and this number may only go down from here.
+   */
+  atLeast600: 50,
   atLeast800: 31,
   atLeast1000: 25,
   atLeast1500: 13,

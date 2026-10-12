@@ -34,6 +34,30 @@ export interface ExploreListViewProps {
 /** How many of the list's covers to warm: two rows of the widest grid, plus slack. */
 const EXPLORE_WARM_COVERS = 9;
 
+/**
+ * How many of the filtered list's cards are in the DOM at first paint; the rest arrive in idle time.
+ *
+ * The list drew **every** group at once, so the first frame was the whole library: the audit that prompted
+ * this measured **159 cards and 6,495 DOM nodes** in one jsdom mount (median **800 ms** over six fresh
+ * mounts on a box at load average 2.7; see `exploreListWindow.test.tsx` for the pinned reading). What is
+ * worth doing first is the part the reader can see, so the window is the phone's existing answer — the
+ * same 24-row first chunk `MobileHomeScreen` and `MobileGenrePicker` use, doubling in idle time
+ * (24 → 48 → 96 → 159) until the list is complete.
+ */
+export const EXPLORE_FIRST_CHUNK = 24;
+
+/** Run something when the browser is idle, falling back to a macrotask (jsdom has no `requestIdleCallback`). */
+const whenIdle = (run: () => void): (() => void) => {
+  const idle = (window as Window & { requestIdleCallback?: (cb: () => void, options?: { timeout: number }) => number })
+    .requestIdleCallback;
+  if (typeof idle === "function") {
+    const id = idle(run, { timeout: 400 });
+    return () => (window as Window & { cancelIdleCallback?: (id: number) => void }).cancelIdleCallback?.(id);
+  }
+  const id = window.setTimeout(run, 32);
+  return () => window.clearTimeout(id);
+};
+
 const CATEGORY_COLORS: Record<GenreCategory, { badge: string; text: string; border: string }> = {
   Electronic: { badge: "bg-cyan-500/15 border-cyan-500/40 text-cyan-300", text: "text-cyan-400", border: "border-cyan-500/40" },
   "Rock/Metal": { badge: "bg-rose-500/15 border-rose-500/40 text-rose-300", text: "text-rose-400", border: "border-rose-500/40" },
@@ -77,6 +101,9 @@ export const ExploreListView: React.FC<ExploreListViewProps> = ({
   // Keyboard navigation
   const [focusedIndex, setFocusedIndex] = useState<number>(0);
   const listContainerRef = useRef<HTMLDivElement | null>(null);
+
+  /** How many of `filteredGenres` are in the DOM right now (see `EXPLORE_FIRST_CHUNK`). */
+  const [shown, setShown] = useState(EXPLORE_FIRST_CHUNK);
 
   // Filter and sort items
   const filteredGenres = useMemo(() => {
@@ -124,6 +151,43 @@ export const ExploreListView: React.FC<ExploreListViewProps> = ({
       return 0;
     });
   }, [categoryFilter, decadeFilter, regionFilter, subgenreMin, searchQuery, sortBy]);
+
+  /**
+   * A different result set starts small again: the cards that were rendered are not the cards that are.
+   *
+   * `sortBy` counts as a different set too — reordering moves a different genre to the head, and the window
+   * is a window over positions, not over one fixed list of genres.
+   */
+  useEffect(() => {
+    setShown(EXPLORE_FIRST_CHUNK);
+  }, [categoryFilter, decadeFilter, regionFilter, subgenreMin, searchQuery, sortBy]);
+  useEffect(() => {
+    if (shown >= filteredGenres.length) return;
+    /**
+     * Each idle pass doubles what is rendered (24 → 48 → 96 → the rest), the geometric growth the phone's
+     * two windows use: the list is complete in three or four passes rather than seven, and the first paint
+     * stays the cheap part either way.
+     */
+    return whenIdle(() => setShown((current) => Math.min(filteredGenres.length, current * 2)));
+  }, [shown, filteredGenres.length]);
+
+  /**
+   * The cards to render: the head of the filtered list, plus the focused card when the cursor has moved past it.
+   *
+   * The keyboard cursor is an index into `filteredGenres` and `Enter` reads that index directly, so the focused
+   * card must be in the DOM or the ring would point at nothing. The window **grows by exactly one card** to hold
+   * it rather than extending to the focus: `ArrowUp` from index 0 wraps to the end of the list, and "render
+   * everything up to the focus" would put all 159 cards back on that one keypress. The head keeps the first chunk,
+   * so at most `EXPLORE_FIRST_CHUNK + 1` cards are in the DOM before the idle passes finish.
+   */
+  const focusedGenre = filteredGenres[focusedIndex];
+  const visibleGenres = useMemo(() => {
+    const head = filteredGenres.length > shown ? filteredGenres.slice(0, shown) : filteredGenres;
+    if (!focusedGenre || head.includes(focusedGenre)) return head;
+    return [...head, focusedGenre];
+  }, [filteredGenres, shown, focusedGenre]);
+  /** Ids of the cards above, so a group can draw its share of the window without re-deriving the slice. */
+  const visibleIds = useMemo(() => new Set(visibleGenres.map((genre) => genre.id)), [visibleGenres]);
 
   // Grouped results map
   const groupedResults = useMemo(() => {
@@ -446,6 +510,8 @@ export const ExploreListView: React.FC<ExploreListViewProps> = ({
         ) : (
           groupedResults.map((group) => {
             const groupTheme = group.color || { badge: "bg-panel2 border-line text-text-sub", text: "text-text", border: "border-line" };
+            /** The group's share of the window. The header still counts the whole group, window or not. */
+            const visibleGroupGenres = group.genres.filter((genre) => visibleIds.has(genre.id));
 
             return (
               <div key={group.groupKey} className="space-y-3">
@@ -456,7 +522,10 @@ export const ExploreListView: React.FC<ExploreListViewProps> = ({
                     <h2 className="text-lg font-black text-text tracking-wide">
                       {group.title}
                     </h2>
-                    <span className="text-xs font-mono font-bold px-2 py-0.5 rounded-full bg-panel2 text-text-sub border border-line">
+                    <span
+                      className="text-xs font-mono font-bold px-2 py-0.5 rounded-full bg-panel2 text-text-sub border border-line"
+                      data-testid={`explore-group-count-${group.groupKey}`}
+                    >
                       {group.genres.length}
                     </span>
                   </div>
@@ -464,7 +533,7 @@ export const ExploreListView: React.FC<ExploreListViewProps> = ({
 
                 {/* Genres Cards Grid */}
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5">
-                  {group.genres.map((genre) => {
+                  {visibleGroupGenres.map((genre) => {
                     const color = CATEGORY_COLORS[genre.category] || CATEGORY_COLORS.Electronic;
                     const isFocused = filteredGenres[focusedIndex]?.id === genre.id;
 
