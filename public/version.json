@@ -1,23 +1,23 @@
 {
-  "version": "2.37.7",
+  "version": "2.38.0",
   "releaseDate": "2026-10-12",
   "changelogCount": 10,
   "latest": {
-    "version": "2.37.7",
-    "date": "2026-10-12",
-    "category": "fix",
+    "version": "2.38.0",
+    "date": "2026-10-13",
+    "category": "feature",
     "title": {
-      "zh": "手机片段：修掉预取与播放抢同一条片段",
-      "en": "Phone clips: stop the prefetch and the player racing for one clip"
+      "zh": "手机片段：可点击可键盘操作的进度条",
+      "en": "Phone clips: a position rail you can seek with"
     },
     "highlights": [
       {
-        "zh": "修复竞态：元素已在加载时不再预取；晚到的 blob 直接释放、绝不中途换 src。线上探针实测同一片段曾发出两次 /clips/ 请求（约 400 KB 的重复下载）。",
-        "en": "Fixes the race: no prefetch once the element is already loading, and a late blob is released rather than swapped in mid-load. The live probe had measured two /clips/ requests for one clip — a ~400 KB repeat download."
+        "zh": "手机片段播放器新增由真实音频驱动的进度条：点击或左右键 seek、两端自动 clamp、切片段与从零重播自动归零。",
+        "en": "The phone clip player gains a rail driven by the element's own audio: press or arrow keys to seek, both ends clamp, and it returns to zero on a clip switch and on a restart from the top."
       },
       {
-        "zh": "类级判据 7 条（已在加载不发请求、竞态中 blob 被释放且 src 不变）。组件级顺序在 jsdom 未覆盖，已如实说明。",
-        "en": "Seven class-level criteria, including that an already-loading element issues no fetch and a mid-load blob is released with src unchanged. The component-level ordering is not covered in jsdom and is stated as such."
+        "zh": "8 条判据覆盖映射、NaN/0 时长守卫、两端 clamp、点击 seek、键盘步进、切片段与重播归零。typecheck 0 错。",
+        "en": "Eight criteria cover the mapping, the NaN/zero-duration guard, both clamps, press-to-seek, keyboard steps, and the resets on clip switch and restart. Typecheck is clean."
       }
     ],
     "truncated": false
