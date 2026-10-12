@@ -1,23 +1,23 @@
 {
-  "version": "2.37.0",
-  "releaseDate": "2026-10-11",
+  "version": "2.37.1",
+  "releaseDate": "2026-10-12",
   "changelogCount": 10,
   "latest": {
-    "version": "2.37.0",
-    "date": "2026-10-11",
-    "category": "feature",
+    "version": "2.37.1",
+    "date": "2026-10-12",
+    "category": "performance",
     "title": {
-      "zh": "WebCodecs 导出与 WAV 性能优化，手机播放修复",
-      "en": "WebCodecs export, faster WAV, and the mobile playback fixes"
+      "zh": "性能：MCP 缓存、手机列表与首屏字体",
+      "en": "Performance: MCP caches, a windowed phone list, and the first-paint font"
     },
     "highlights": [
       {
-        "zh": "导出新增 WebCodecs（AAC/Opus）通道，WAV 走三层性能优化；MP3 编码改在 worker 里跑，占用与内存更小。",
-        "en": "Export gains a WebCodecs (AAC/Opus) path and a three-tier WAV optimisation, and MP3 encoding moves into a worker with a smaller footprint."
+        "zh": "MCP：catalogue 改 O(1) 命中（4.12→0.20 ms）、示例每曲风只建一次（2896→4.6 ms）、4 MB manifest 两遍解析改一遍（203→3.2 ms），输出逐字节一致。",
+        "en": "MCP: the catalogue is memoised (4.12 to 0.20 ms), examples are built once per genre (2896 to 4.6 ms) and the 4 MB manifest is parsed once, not twice (203 to 3.2 ms), byte-identical."
       },
       {
-        "zh": "手机端修好双路同时发声、切轨残留串音与动画不同步——播放条、全屏播放器与片段播放器现在只有一路在响。",
-        "en": "The phone shell no longer plays two transports at once: switching tracks stops the previous sound, the animations stay in step, and the bar, full player and clip player agree on who owns the audio."
+        "zh": "手机选曲列表窗口化（159→24 行）；字体移出首屏关键路径（中位 FCP 3536→2448 ms）；性能装置不再\"手机失败却退出 0\"。",
+        "en": "The phone genre picker windows its rows (159 to 24); the font leaves the critical path (median FCP 3536 to 2448 ms); the perf harness no longer fails the mobile profile and exits 0."
       }
     ],
     "truncated": false
