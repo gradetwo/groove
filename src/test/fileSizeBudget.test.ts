@@ -63,7 +63,14 @@ const CAPS: Record<string, number> = {
 // The twelve largest files, pinned at their measured length.
 const FILE_CAPS: Record<string, number> = {
   "src/audio/AudioEngine.ts": 3259,
-  "src/components/sequencer/PianoRollLane.tsx": 3241,
+  /**
+   * ⭐ **Re-measured on 2026-10-12, when the per-render O(n²) note lookups became a Map index** (perf audit ROI #2).
+   * The file grew 3241 → 3264 lines with `noteIndex` — one `useMemo` building `byCell`/`byStep`, its comment, and the
+   * two one-line callback bodies that now read from it. Measured on a 1,500-note roll: the find/filter sweep per render
+   * went 21.8 ms → 0.66 ms including the rebuild (33×), and pointer-move hit tests went O(n) → O(1). The buckets are
+   * untouched. **This number may only go down from here.**
+   */
+  "src/components/sequencer/PianoRollLane.tsx": 3264,
   "src/audio/WavExporter.ts": 2608,
   "src/views/GalaxyView.tsx": 2356,
   "src/audio/PolySynth.ts": 1949,

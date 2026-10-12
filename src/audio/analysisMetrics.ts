@@ -36,15 +36,95 @@ export function maxStepDb(channels: Float32Array[]): number {
   return max === 0 ? -Infinity : 20 * Math.log10(max);
 }
 
+/**
+ * The absolute first differences of every channel, concatenated, in a contiguous typed array.
+ *
+ * Shared by the two median-based metrics below. A plain `number[]` of 2M+ boxed doubles costs both
+ * allocation time and GC pressure; `Float64Array` keeps the whole working set in one unboxed buffer.
+ */
+function collectSteps(channels: Float32Array[]): Float64Array | null {
+  let total = 0;
+  for (const channel of channels) total += Math.max(0, channel.length - 1);
+  if (!total) return null;
+  const steps = new Float64Array(total);
+  let k = 0;
+  for (const channel of channels) {
+    for (let i = 1; i < channel.length; i += 1) steps[k++] = Math.abs(channel[i] - channel[i - 1]);
+  }
+  return steps;
+}
+
+/**
+ * In-place quickselect (Floyd-style tri-median pivot, insertion sort under 32 wide).
+ *
+ * Returns the value that would sit at index `rank` of the sorted array — O(n) expected instead of
+ * the O(n log n) full sort these call sites used to pay. Ordering ties never matter here: the rank
+ * holds the same value whichever valid permutation is chosen.
+ */
+function selectInPlace(s: Float64Array, rank: number): number {
+  let lo = 0;
+  let hi = s.length - 1;
+  while (lo < hi) {
+    if (hi - lo < 32) {
+      for (let i = lo + 1; i <= hi; i += 1) {
+        const v = s[i]!;
+        let j = i - 1;
+        while (j >= lo && s[j]! > v) {
+          s[j + 1] = s[j]!;
+          j -= 1;
+        }
+        s[j + 1] = v;
+      }
+      break;
+    }
+    const m = (lo + hi) >> 1;
+    if (s[m]! > s[lo]!) {
+      const t = s[m]!;
+      s[m] = s[lo]!;
+      s[lo] = t;
+    }
+    if (s[hi]! > s[m]!) {
+      const t = s[hi]!;
+      s[hi] = s[m]!;
+      s[m] = t;
+      if (s[m]! > s[lo]!) {
+        const t2 = s[m]!;
+        s[m] = s[lo]!;
+        s[lo] = t2;
+      }
+    }
+    const pivot = s[m]!;
+    {
+      const t = s[m]!;
+      s[m] = s[hi]!;
+      s[hi] = t;
+    }
+    let store = lo;
+    for (let i = lo; i < hi; i += 1) {
+      if (s[i]! < pivot) {
+        const t = s[store]!;
+        s[store] = s[i]!;
+        s[i] = t;
+        store += 1;
+      }
+    }
+    {
+      const t = s[store]!;
+      s[store] = s[hi]!;
+      s[hi] = t;
+    }
+    if (store === rank) break;
+    if (rank < store) hi = store - 1;
+    else lo = store + 1;
+  }
+  return s[rank]!;
+}
+
 /** Median absolute first difference, in dBFS — the signal's own "normal" slew rate. */
 export function medianStepDb(channels: Float32Array[]): number {
-  const steps: number[] = [];
-  for (const channel of channels) {
-    for (let i = 1; i < channel.length; i += 1) steps.push(Math.abs(channel[i] - channel[i - 1]));
-  }
-  if (!steps.length) return -Infinity;
-  steps.sort((a, b) => a - b);
-  const middle = steps[Math.floor(steps.length / 2)];
+  const steps = collectSteps(channels);
+  if (!steps) return -Infinity;
+  const middle = selectInPlace(steps, steps.length >> 1);
   return middle === 0 ? -Infinity : 20 * Math.log10(middle);
 }
 
@@ -53,16 +133,19 @@ export function medianStepDb(channels: Float32Array[]): number {
  *
  * A discontinuous envelope edge is a *single* huge step, whereas dense high-frequency content has many large
  * ones, so the count separates "a click" from "a bright signal" — a distinction the raw maximum cannot make.
+ *
+ * The median and the outlier sweep now share one pass over the samples: the old pair re-derived every
+ * first difference inside `stepOutlierCount` after `medianStepDb` had already built (and sorted) them.
  */
 export function stepOutlierCount(channels: Float32Array[], factor = 12): number {
-  const medianLinear = medianStepDb(channels);
-  if (!Number.isFinite(medianLinear)) return 0;
-  const threshold = 10 ** (medianLinear / 20) * factor;
+  const steps = collectSteps(channels);
+  if (!steps) return 0;
+  const middle = selectInPlace(steps.slice(), steps.length >> 1); // copy: select mutates
+  if (middle === 0) return 0;
+  const threshold = middle * factor;
   let count = 0;
-  for (const channel of channels) {
-    for (let i = 1; i < channel.length; i += 1) {
-      if (Math.abs(channel[i] - channel[i - 1]) > threshold) count += 1;
-    }
+  for (let i = 0; i < steps.length; i += 1) {
+    if (steps[i]! > threshold) count += 1;
   }
   return count;
 }

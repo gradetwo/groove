@@ -1,0 +1,8 @@
+ ✓ src/test/clickAnalysisBehaviour.test.ts (2 tests) 253ms
+ ✓ src/test/loader.test.ts (3 tests) 160ms
+
+ Test Files  5 passed (5)
+      Tests  95 passed (95)
+   Start at  07:46:54
+   Duration  20.13s (transform 2.58s, setup 673ms, collect 3.37s, tests 10.45s, environment 4.12s, prepare 413ms)
+

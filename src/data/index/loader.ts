@@ -71,13 +71,27 @@ export function invalidateGenreCache(id?: string): void {
 }
 
 /**
+ * In-flight request dedupe: concurrent `loadGenre` calls for the same id share one promise, so N
+ * components mounting at once trigger one chunk download/parse instead of N serialized ones
+ * (thundering herd — the cache only helps after the first call fully completes).
+ */
+const inFlight = new Map<string, Promise<Genre | null>>();
+
+/**
  * Loads a full genre by ID asynchronously on-demand (P1-13, P7-03)
  */
 export async function loadGenre(id: string): Promise<Genre | null> {
   if (cache.has(id)) {
     return cache.get(id)!;
   }
+  const pending = inFlight.get(id);
+  if (pending) return pending;
+  const p = loadGenreUncached(id).finally(() => inFlight.delete(id));
+  inFlight.set(id, p);
+  return p;
+}
 
+async function loadGenreUncached(id: string): Promise<Genre | null> {
   // Fast-track resolution for custom genres (P7-03)
   if (id.startsWith("custom-")) {
     const custom = await resolveCustomGenre(id);
@@ -94,11 +108,15 @@ export async function loadGenre(id: string): Promise<Genre | null> {
     if (cache.has(id)) return cache.get(id)!;
   }
 
-  // Fallback: search all chunks
-  for (const key of Object.keys(CATEGORY_LOADERS)) {
-    const list = await CATEGORY_LOADERS[key]();
-    list.forEach((g) => cache.set(g.id, g));
-    if (cache.has(id)) return cache.get(id)!;
+  // Fallback: search all chunks. Only worth paying for ids the lightweight index does not know
+  // about at all — when the index DID name a chunk and the genre still wasn't in it, the record is
+  // stale/deleted and sweeping every chunk just burns bandwidth and parse time to confirm a miss.
+  if (!item) {
+    for (const key of Object.keys(CATEGORY_LOADERS)) {
+      const list = await CATEGORY_LOADERS[key]();
+      list.forEach((g) => cache.set(g.id, g));
+      if (cache.has(id)) return cache.get(id)!;
+    }
   }
 
   // Final check for custom genres without prefix

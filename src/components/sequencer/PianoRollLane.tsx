@@ -309,6 +309,29 @@ export const PianoRollLane: React.FC<PianoRollLaneProps> = ({
   const notes = useMemo(() => notesFromTrack(track, 60, view.scale), [track, view.scale]);
   const selectedSet = useMemo(() => new Set(selection), [selection]);
 
+  /**
+   * Cell → note and step → notes lookups, indexed once per `notes` change.
+   *
+   * These used to linear-scan the note list: `noteAt` ran on every pointer move / drag event and on
+   * each keyboard edit, `notesAtStep` ran **once per rendered note** in the JSX (`data-chord-size`)
+   * plus again for the velocity lanes — O(n²) per render for a dense roll. A Map keyed by
+   * `stepIdx:midi` (the same identity `noteId` uses) makes both O(1).
+   */
+  const noteIndex = useMemo(() => {
+    const byCell = new Map<string, RollStepNote>();
+    const byStep = new Map<number, RollStepNote[]>();
+    for (const n of notes) {
+      byCell.set(`${n.stepIdx}:${n.midi}`, n);
+      let bucket = byStep.get(n.stepIdx);
+      if (!bucket) {
+        bucket = [];
+        byStep.set(n.stepIdx, bucket);
+      }
+      bucket.push(n);
+    }
+    return { byCell, byStep };
+  }, [notes]);
+
   const barCount = useMemo(() => Math.max(1, Math.ceil(stepCount / stepsPerBar)), [stepCount, stepsPerBar]);
   const loopLen = loopLengthOf(track, stepCount);
 
@@ -448,11 +471,11 @@ export const PianoRollLane: React.FC<PianoRollLaneProps> = ({
 
   /** The note exactly under a cell, or null. */
   const noteAt = useCallback(
-    (stepIdx: number, midi: number) => notes.find((n) => n.stepIdx === stepIdx && n.midi === midi) ?? null,
-    [notes]
+    (stepIdx: number, midi: number) => noteIndex.byCell.get(`${stepIdx}:${midi}`) ?? null,
+    [noteIndex]
   );
   /** Every note on a step — a chord is several. */
-  const notesAtStep = useCallback((stepIdx: number) => notes.filter((n) => n.stepIdx === stepIdx), [notes]);
+  const notesAtStep = useCallback((stepIdx: number) => noteIndex.byStep.get(stepIdx) ?? [], [noteIndex]);
 
   const commitDraft = useCallback(
     (next: SequencerPattern, nextSelection?: RollNoteId[]) => {
