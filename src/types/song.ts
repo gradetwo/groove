@@ -1,0 +1,435 @@
+/**
+ * The song model: clips and an arrangement.
+ *
+ * A project is clips and an arrangement: clips hold the patterns the step sequencer edits, and sections place those clips on a timeline, where they are rendered,
+ * exported and shared. (The history is worth one line and no more: this began as two patterns and a `songChain` of `ClipSlot` letters that nothing rendered or
+ * played, and this file is the model that made the chain real.)
+ *
+ * The split matters for where the work goes: **the step sequencer keeps editing a `SequencerPattern`** (a clip),
+ * and a new arrangement surface edits `sections`. Nothing about the editing model changes; it gains a parent.
+ */
+import type { SequencerPattern } from "./genre";
+
+/** The clip slots a project can hold. `A`/`B` are the historical pair; the rest are new. */
+/**
+ * The clip slots a song may use, in the order the UI shows them.
+ *
+ * **The array is the source of truth and the type derives from it**, which this change made obvious: widening the type alone changed nothing at all, because every
+ * consumer reads `CLIP_SLOTS`. Raised from `A`-`D` to `A`-`H` by the owner's decision of 2026-09-28 — four slots shared song-wide is the ceiling the fifth report hit
+ * on a nine-movement piece, where the movements were distinguished by mutes, velocity ramps and per-lane overrides instead of by material.
+ */
+export const CLIP_SLOTS = ["A", "B", "C", "D", "E", "F", "G", "H"] as const;
+export type ClipSlot = (typeof CLIP_SLOTS)[number];
+
+
+/**
+ * A drum fill: extra hits added to the last pass of a section.
+ *
+ * It is arrangement data rather than a second clip because that is what a fill *is* — the same groove with the last
+ * bar played differently — and because a generator can produce it for any genre without touching the 159 genre
+ * files. `steps` are offsets inside one pass of the clip (the pass the section puts last), so a 1-bar clip and a
+ * 4-bar clip both express "the last beat of the last bar" the same way.
+ */
+/** Steps a riser covers at the end of its pass. Longer than a fill's four: it has to be heard arriving. */
+export const RISER_STEPS = 8;
+/** The velocity a riser starts at and ends on. It rises across its steps, which is what makes it a riser. */
+export const RISER_VELOCITY_RAMP: [number, number] = [48, 120];
+
+export interface SongFill {
+  /** Track ids (or names) the extra hits land on. A track the clip does not have is simply not hit. */
+  tracks: string[];
+  /** Step offsets inside one pass of the clip. Out-of-range and non-finite values are ignored. */
+  steps: number[];
+  /** Velocity for the added hits, 1–127. Defaults to `DEFAULT_FILL_VELOCITY`. */
+  velocity?: number;
+  /**
+   * A *rising* velocity across the fill's own steps, `[first, last]`.
+   *
+   * A riser is a fill whose hits get louder (and, on a swept voice, brighter) as it arrives, so it is expressed as a
+   * fill with a ramp rather than as a second kind of event that every consumer — the flattener, the share link, the
+   * arrangement view — would have to learn separately.
+   */
+  velocityRamp?: [number, number];
+}
+
+/** The velocity an unspecified fill hit gets. Loud enough to read as a fill, quiet enough not to clip. */
+export const DEFAULT_FILL_VELOCITY = 112;
+
+/**
+ * Per-section overrides — the arrangement's own dynamics.
+ *
+ * These are the hook `docs/ARRANGEMENT_PLAN.md`'s B5 hangs on: "a build over 8 bars", "a fill in the last bar" and
+ * "the same clip, quieter" are statements about the *timeline*, and expressing them here means the renderer, the
+ * arrangement view and the exports all read the same numbers instead of each hacking the pattern.
+ */
+export interface SectionOverrides {
+  /**
+   * Velocity multiplier at the section's first and last pass: an 8-bar build is `[0.6, 1]`.
+   *
+   * The ramp multiplies `velocityScale`, so "a quiet build" and "a build" compose instead of overriding each other.
+   * Values are clamped to `[0, 4]` — the same order of magnitude as `velocityScale`, and enough headroom that a
+   * share link cannot turn a section into a 1000× gain.
+   */
+  velocityRamp?: [number, number];
+  /** Extra hits on the section's last pass. */
+  fill?: SongFill;
+  /**
+   * A riser into the next section: a fill-shaped hit on the clip's **texture lane** (fx), rising across its steps.
+   *
+   * Kept as a flag rather than as a hand-written fill because the lanes are the clip's business — the arrangement says
+   * "a riser here" and `resolveTimeline` finds the lane that can perform one, exactly as `fill` does for drums.
+   */
+  riser?: boolean;
+  /**
+   * Semitones to move this section's *pitched* lanes by — the harmonic half of "change the chord every 8 bars".
+   *
+   * Drums are untouched by construction: only a step that carries a pitch (`pitch` or a `pitches` stack) moves, and a
+   * kick has neither. Clamped to ±24 (two octaves) because a share link or a hand-edited project can carry anything,
+   * and clamped again per note into the MIDI range so a transposed line cannot leave the playable set.
+   */
+  transpose?: number;
+}
+
+/**
+ * One region on the timeline.
+ *
+ * `bars` is a repeat count, not a length: a 1-bar clip placed with `bars: 4` plays four times, which is what the
+ * renderer's old `bars` argument did — except that now the repeats can differ from section to section, which is
+ * the whole point.
+ */
+export interface SongSection {
+  /** Stable id so undo, the share codec and the arrangement view can reference a section across saves. */
+  id: string;
+  slot: ClipSlot;
+  /** How many times the clip repeats. At least 1; the arrangement view clamps to `MAX_SECTION_BARS`. */
+  bars: number;
+  /** Track ids silenced for this section (a breakdown, a drop). */
+  mute?: string[];
+  /**
+   * Per-lane clip choice: this section's `slot` for every lane that is not named here.
+   *
+   * The first step of the per-track arrangement (`docs/TRACK_ARRANGEMENT_PLAN.md`): a section is still one unit of
+   * time, and a lane that says nothing behaves exactly as it did before the field existed — which is the property the
+   * byte-identical test holds. Addressing a lane by its `track_id` rather than by its position means a lane that the
+   * other clip does not have falls back instead of silently taking a different lane's steps.
+   */
+  slots?: Partial<Record<string, ClipSlot>>;
+  /** Arrangement-level dynamics: 1 = as written, 0.8 = a quieter build-up. */
+  velocityScale?: number;
+  /** A human label for the section ("intro", "drop", "fill"), shown on the region. */
+  label?: string;
+  /** B5: the section's own build and fill. */
+  overrides?: SectionOverrides;
+}
+
+export interface Song {
+  id: string;
+  name: string;
+  genreId: string;
+  /**
+   * Optional tempo changes over the song's bars (owner decision 2b).
+   *
+   * Absent, every bar costs `4 * 60 / bpm` and nothing about the song differs from before; present, the map is read by `src/data/tempoMap.ts` and the
+   * renderer is expected to schedule from it rather than restarting the audio context. Additive in the same shape as `arrangement`, `extraClips`, `slots`,
+   * `syllables` and `laneId`.
+   */
+  tempoTrack?: Array<{ atBar: number; bpm: number; curve?: "jump" | "linear" }>;
+  bpm: number;
+  swing: number;
+  resolution: "1/8" | "1/16" | "1/32";
+  /** The pattern library: what the step sequencer edits and the sections place. */
+  clips: Partial<Record<ClipSlot, SequencerPattern>>;
+  sections: SongSection[];
+  loopRange: [number, number] | null;
+  /**
+   * ⭐ **Which name this project gives a note number** — the one display choice a project has to carry.
+   *
+   * Additive and absent by default: a project without it reads as `"C4"`, exactly as every project did before
+   * the field existed, so an old file or share link stays valid and needs no migration. Same shape and same
+   * reason as `tempoTrack` above.
+   *
+   * **It is a label and nothing else.** Note numbers are the truth, and this never reaches a frequency, a
+   * render or an export: `src/data/pitchTruth.ts` is the single place a convention is applied, and its
+   * criterion pins that switching conventions leaves the frequency identical. So there is nothing to migrate
+   * in a project that states none — only a reader to tell which convention they are looking at.
+   */
+  noteConvention?: "C4" | "C3" | "C5";
+}
+
+/** A section longer than this is a mistake, not an arrangement (and it would allocate minutes of audio). */
+/**
+ * How long one section may be, in bars.
+ *
+ * Raised from 64 to **256** by the owner's decision of 2026-09-28 ("relax the ceilings"), because a long movement had to be chopped into sections of at most 64 to
+ * fit — which is a workaround for a limit rather than a way of writing music. 256 bars is a little over eight minutes at 120 bpm in 4/4, so a movement can now be
+ * one section. It stays finite because the renderer allocates per bar: a bound that does not exist is a bound that is discovered as an out-of-memory.
+ */
+export const MAX_SECTION_BARS = 256;
+/** A song longer than this is refused by the renderer; it is 32 minutes at 120 BPM. */
+/**
+ * How long a song may be, in bars.
+ *
+ * Raised from 512 to **2048** by the same decision: the fifth report's composer finished a nine-movement piece at **348** bars and was already near the old ceiling,
+ * so the old number was a wall in the path of the work it was built for. 2048 bars is about 68 minutes at 120 bpm in 4/4, and it remains finite because every bar
+ * becomes steps in one flattened pattern — the reason chunked rendering is being built rather than assumed.
+ */
+export const MAX_SONG_BARS = 2048;
+
+/** One bar of one clip, after the timeline has been resolved. */
+export interface SongBar {
+  sectionId: string;
+  slot: ClipSlot;
+  /** The section's per-lane clip choices, when it has any (see `SongSection.slots`). */
+  slots?: Partial<Record<string, ClipSlot>>;
+  barInSection: number;
+  /** Index in the whole song, from 0. */
+  barIndex: number;
+  mute: string[];
+  /**
+   * The section's `velocityScale` **times** the bar's point on its `velocityRamp`.
+   *
+   * The ramp is folded in here rather than carried alongside, so every consumer that already honours
+   * `velocityScale` — `flattenSong`, the arrangement view's readout, any future one — gets an 8-bar build for free
+   * instead of each having to learn about ramps separately.
+   */
+  velocityScale: number;
+  /** The section's fill, present only on the section's **last** pass. */
+  fill?: SongFill;
+  /** The section's transposition in semitones, when it has one. */
+  transpose?: number;
+}
+
+export interface SongTimeline {
+  bars: SongBar[];
+  totalBars: number;
+  sections: SongSection[];
+  /** Problems that make the song unrenderable, phrased for a human. */
+  problems: string[];
+}
+
+const clampBars = (bars: number): number => {
+  if (!Number.isFinite(bars)) return 1;
+  return Math.max(1, Math.min(MAX_SECTION_BARS, Math.floor(bars)));
+};
+
+/** A share link or an import can carry anything; a ramp outside this range is a mistake, not a mix decision. */
+const clampRamp = (value: number): number => (Number.isFinite(value) ? Math.max(0, Math.min(4, value)) : 1);
+
+/** Two octaves up or down: past that an arrangement is transposing a line out of its instrument's range. */
+export const MAX_SECTION_TRANSPOSE = 24;
+
+/** A section's transposition, or 0 — the value every consumer can multiply by without asking. */
+export function sectionTranspose(section: Pick<SongSection, "overrides">): number {
+  const value = section.overrides?.transpose;
+  if (!Number.isFinite(value)) return 0;
+  return Math.max(-MAX_SECTION_TRANSPOSE, Math.min(MAX_SECTION_TRANSPOSE, Math.round(value as number)));
+}
+
+/**
+ * Where a bar sits on its section's ramp, as a multiplier.
+ *
+ * A one-bar section is always at the ramp's *end* value: it has no interior to ramp across, and ending is what the
+ * user meant by placing a build there (the value the next section starts from).
+ */
+function rampAt(ramp: [number, number] | undefined, barInSection: number, count: number): number {
+  if (!ramp) return 1;
+  const [from, to] = [clampRamp(ramp[0]), clampRamp(ramp[1])];
+  if (count <= 1) return to;
+  return from + ((to - from) * barInSection) / (count - 1);
+}
+
+/**
+ * Resolve a song into the bar-by-bar timeline the renderer walks, and report what is wrong with it.
+ *
+ * Returning problems instead of throwing is deliberate: the arrangement view has to be able to show a
+ * half-finished song (a section pointing at an empty slot) and the renderer refuses it with a reason, rather than
+ * the UI crashing on the way to that refusal.
+ */
+/**
+ * What the timeline needs from the *clip* to place a riser: which lane can perform one, and how long a pass is.
+ *
+ * A resolver rather than a value, because sections point at different clips and a four-bar clip's texture lane is not
+ * the same track id as another's.
+ */
+export interface TimelineOptions {
+  riserLanesFor?: (slot: ClipSlot) => readonly string[];
+  stepsPerPassFor?: (slot: ClipSlot) => number;
+}
+
+/** One fill for the last pass when a section asked for both: the union of the hits, and the riser's rise. */
+function mergeFillAndRiser(fill: SongFill | undefined, riser: SongFill | undefined): SongFill {
+  if (!fill) return riser as SongFill;
+  if (!riser) return fill;
+  return {
+    tracks: [...new Set([...fill.tracks, ...riser.tracks])],
+    steps: [...new Set([...fill.steps, ...riser.steps])].sort((a, b) => a - b),
+    velocity: Math.max(fill.velocity ?? DEFAULT_FILL_VELOCITY, riser.velocity ?? DEFAULT_FILL_VELOCITY),
+    ...(riser.velocityRamp ? { velocityRamp: riser.velocityRamp } : {}),
+  };
+}
+
+export function resolveTimeline(song: Song, options: TimelineOptions = {}): SongTimeline {
+  const problems: string[] = [];
+  const bars: SongBar[] = [];
+  const known = new Set(Object.keys(song.clips ?? {}) as ClipSlot[]);
+  for (const section of song.sections ?? []) {
+    if (!known.has(section.slot)) {
+      problems.push(`section "${section.label ?? section.id}" points at clip ${section.slot}, which is empty`);
+      continue;
+    }
+    const count = clampBars(section.bars);
+    if (count !== section.bars) {
+      problems.push(`section "${section.label ?? section.id}" has ${section.bars} bars, clamped to ${count}`);
+    }
+    const scale = Number.isFinite(section.velocityScale) ? (section.velocityScale as number) : 1;
+    const fill = normaliseFill(section.overrides?.fill);
+    /**
+     * A riser is expressed as a fill on the texture lane — see `SectionOverrides.riser`.
+     *
+     * The lanes are the *clip's* business, so the timeline asks the caller for them (`resolveTimeline`'s optional
+     * `riserLanes`), the same division of labour `fill` uses: this module owns the timeline, not the clip's tracks.
+     */
+    const riserLanes = section.overrides?.riser ? (options.riserLanesFor?.(section.slot) ?? []) : [];
+    const riserPass = Number(options.stepsPerPassFor?.(section.slot));
+    const riser =
+      riserLanes.length && Number.isFinite(riserPass) && riserPass > 0
+        ? (() => {
+            const pass = Math.floor(riserPass);
+            const first = Math.max(0, pass - RISER_STEPS);
+            const steps: number[] = [];
+            for (let step = first; step < pass; step += 1) steps.push(step);
+            return steps.length
+              ? {
+                  tracks: [...riserLanes],
+                  steps,
+                  velocity: RISER_VELOCITY_RAMP[1],
+                  velocityRamp: [...RISER_VELOCITY_RAMP] as [number, number],
+                }
+              : undefined;
+          })()
+        : undefined;
+    const transpose = sectionTranspose(section);
+    for (let bar = 0; bar < count; bar += 1) {
+      bars.push({
+        sectionId: section.id,
+        slot: section.slot,
+        ...(section.slots ? { slots: section.slots } : {}),
+        barInSection: bar,
+        barIndex: bars.length,
+        mute: section.mute ?? [],
+        velocityScale: scale * rampAt(section.overrides?.velocityRamp, bar, count),
+        // The fill is the section's *last* pass: it is what leads into the next section, and a riser rides with it.
+        ...(bar === count - 1 && (fill || riser) ? { fill: mergeFillAndRiser(fill, riser) } : {}),
+        ...(transpose ? { transpose } : {}),
+      });
+    }
+  }
+  if (!bars.length) problems.push("the song has no playable sections");
+  if (bars.length > MAX_SONG_BARS) {
+    problems.push(`the song is ${bars.length} bars, above the ${MAX_SONG_BARS}-bar limit`);
+  }
+  return { bars, totalBars: bars.length, sections: song.sections ?? [], problems };
+}
+
+/**
+ * Drop the parts of a fill that cannot be rendered, or `undefined` when nothing is left.
+ *
+ * A fill can arrive from a share link or a hand-edited project file, and the two things that must not survive are a
+ * non-integer step (which would address no step) and a velocity outside the MIDI range (which the renderer would
+ * clamp anyway, but silently). An empty track list is "no fill", not "a fill on everything".
+ */
+export function normaliseFill(fill: SongFill | undefined): SongFill | undefined {
+  if (!fill || !Array.isArray(fill.tracks) || !Array.isArray(fill.steps)) return undefined;
+  const tracks = [...new Set(fill.tracks.filter((track): track is string => typeof track === "string" && track.length > 0))];
+  const steps = [...new Set(fill.steps.filter((step) => Number.isFinite(step)).map((step) => Math.floor(step)))]
+    .filter((step) => step >= 0)
+    .sort((a, b) => a - b);
+  if (!tracks.length || !steps.length) return undefined;
+  const velocity = Number.isFinite(fill.velocity)
+    ? Math.max(1, Math.min(127, Math.round(fill.velocity as number)))
+    : DEFAULT_FILL_VELOCITY;
+  /**
+   * A ramp arrives from the same untrusted places, so both ends are clamped into the MIDI range and a reversed pair
+   * is put back in order rather than producing a fill that starts loud and ends silent.
+   */
+  let velocityRamp: [number, number] | undefined;
+  if (Array.isArray(fill.velocityRamp) && fill.velocityRamp.length === 2) {
+    const [from, to] = fill.velocityRamp;
+    if (Number.isFinite(from) && Number.isFinite(to)) {
+      const clamp = (value: number) => Math.max(1, Math.min(127, Math.round(value)));
+      const low = clamp(Math.min(from, to));
+      const high = clamp(Math.max(from, to));
+      velocityRamp = [low, high];
+    }
+  }
+  return { tracks, steps, velocity, ...(velocityRamp ? { velocityRamp } : {}) };
+}
+
+export interface CreateSongInput {
+  id: string;
+  name?: string;
+  genreId: string;
+  bpm: number;
+  swing?: number;
+  resolution?: "1/8" | "1/16" | "1/32";
+  clip: SequencerPattern;
+}
+
+/** A new song: one clip in slot A, one section of one bar — the smallest thing that can play. */
+export function createSong(input: CreateSongInput): Song {
+  return {
+    id: input.id,
+    name: input.name ?? input.genreId,
+    genreId: input.genreId,
+    bpm: input.bpm,
+    swing: input.swing ?? 0,
+    resolution: input.resolution ?? "1/16",
+    clips: { A: input.clip },
+    sections: [{ id: `${input.id}-s1`, slot: "A", bars: 1 }],
+    loopRange: null,
+  };
+}
+
+/** Append a section; the id is derived from the song so a saved song keeps stable ids. */
+
+/** Duplicate a section in place — how a "fill" or a "variation" gets made in practice. */
+
+/**
+ * Migrate the historical `songChain` into sections.
+ *
+ * `songChain: (ClipSlot)[]` was one bar per letter, so the mapping is one 1-bar section per entry. A project
+ * saved before this change therefore opens with exactly the bars it had, in the same order.
+ */
+export function migrateSongChain(song: Omit<Song, "sections"> & { sections?: SongSection[] }, songChain: Array<ClipSlot>): Song {
+  if (song.sections?.length) return { ...song, sections: song.sections };
+  return { ...song, sections: sectionsFromSongChain(song.id, songChain) };
+}
+
+/**
+ * One 1-bar section per chain entry — the whole migration, usable by a caller that holds a chain but no `Song`.
+ *
+ * An empty chain becomes one bar of A rather than nothing: a project with no sections cannot play, and the old
+ * default was `["A", "B"]`-ish in spirit (something, not silence).
+ */
+export function sectionsFromSongChain(songId: string, songChain: Array<ClipSlot>): SongSection[] {
+  const chain = songChain?.length ? songChain : (["A"] as Array<ClipSlot>);
+  return chain.map((slot, index) => ({ id: `${songId}-s${index + 1}`, slot, bars: 1 }));
+}
+
+/**
+ * The same view from a bare section list.
+ *
+ * The store keeps `sections` as the source of truth and derives `songChain` from it, and it has no `Song` to hand
+ * (it holds two patterns, not a clip library) — so the derivation lives here, once, instead of being re-implemented
+ * where the two could disagree.
+ */
+export function sectionsToSongChain(sections: readonly SongSection[]): Array<ClipSlot> {
+  const chain: Array<ClipSlot> = [];
+  for (const section of sections) {
+    const slot: ClipSlot = section.slot === "B" ? "B" : "A";
+    for (let bar = 0; bar < clampBars(section.bars); bar += 1) chain.push(slot);
+  }
+  return chain;
+}
+
+/** A one-line description of the arrangement, for a tooltip or a log. */

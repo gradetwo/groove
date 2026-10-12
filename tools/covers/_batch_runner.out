@@ -1,0 +1,31 @@
+2026-09-25T15:01:02Z BATCH-START session=batch model=qwen-image-2.1 preset=quality steps=40 size=1024x1024 genres=159 skins=6 targets=954 balance=240.67 cwd=/home/crow/music/groove/public/covers/_batch_scratch
+2026-09-25T15:01:02Z RECOVERY remote copies per job: VM /content/out/<job>/ and Drive MyDrive/DSH/<job> (recover with `colabgen jobs` / `colabgen cp --get`)
+2026-09-25T15:01:02Z RECOVERY local source PNGs kept at /home/crow/music/groove/public/covers/_batch_scratch/src
+2026-09-25T15:01:02Z FIXES applied: minimal+=min-structure clause; pixel=post-pixelate 160px NEAREST; negative+=signature/small print/fine print/corner mark
+2026-09-25T15:01:04Z SKIN-START default balance=240.67
+2026-09-25T15:01:06Z CHECKPOINT 2026-09-25T15:01:04Z done=0 skipped=20 failed=0 elapsed_min=0.1 avg_s=0.0 balance=240.67
+2026-09-25T15:01:11Z CHECKPOINT 2026-09-25T15:01:06Z done=0 skipped=40 failed=0 elapsed_min=0.1 avg_s=0.0 balance=240.67
+2026-09-25T15:01:52Z OK default east-coast-hip-hop seconds=41.2 seed=1701
+2026-09-25T15:02:46Z OK default edm-trap seconds=54.4 seed=1777
+2026-09-25T15:03:35Z OK default electric-blues seconds=48.8 seed=1158
+2026-09-25T15:03:46Z BATCH-INTERRUPTED signal=15 — safe to restart, completed images are skipped
+2026-09-25T15:04:23Z BATCH-START session=batch model=qwen-image-2.1 preset=quality steps=40 size=1024x1024 genres=159 skins=6 targets=954 balance=239.93 cwd=/home/crow/music/groove/public/covers/_batch_scratch
+2026-09-25T15:04:23Z RECOVERY remote copies per job: VM /content/out/<job>/ and Drive MyDrive/DSH/<job> (recover with `colabgen jobs` / `colabgen cp --get`)
+2026-09-25T15:04:23Z RECOVERY local source PNGs kept at /home/crow/music/groove/public/covers/_batch_scratch/src
+2026-09-25T15:04:23Z FIXES applied: minimal+=min-structure clause; pixel=post-pixelate 160px NEAREST; negative+=signature/small print/fine print/corner mark
+2026-09-25T15:04:25Z SKIN-START default balance=239.93
+2026-09-25T15:04:28Z CHECKPOINT 2026-09-25T15:04:25Z done=0 skipped=20 failed=0 elapsed_min=0.1 avg_s=0.0 balance=239.93
+2026-09-25T15:04:31Z CHECKPOINT 2026-09-25T15:04:28Z done=0 skipped=40 failed=0 elapsed_min=0.1 avg_s=0.0 balance=239.93
+2026-09-25T15:05:20Z OK default electro seconds=48.7 seed=1943
+2026-09-25T15:06:11Z OK default electro-house seconds=50.8 seed=1542
+2026-09-25T15:06:54Z OK default emo-rap seconds=43.5 seed=1990
+2026-09-25T15:07:36Z OK default euro-trance seconds=41.5 seed=1466
+2026-09-25T15:08:20Z OK default eurodance seconds=44.2 seed=1439
+2026-09-25T15:08:22Z CHECKPOINT 2026-09-25T15:08:20Z done=5 skipped=55 failed=0 elapsed_min=4.0 avg_s=45.7 balance=239.17
+2026-09-25T15:08:31Z BATCH-INTERRUPTED signal=15 — safe to restart, completed images are skipped
+2026-09-25T15:09:19Z REMOTE-ACTIVE run=covers-gen marker_age_s=1
+2026-09-25T15:09:19Z REFUSE-START local runner is not needed: the detached remote run (_review/… no, _batch_scratch/REMOTE_ACTIVE, run 'covers-gen') is alive and generating; a second writer would duplicate GPU work. Exiting cleanly.
+REFUSING to start: remote run 'covers-gen' is active (see _batch_scratch/REMOTE_ACTIVE). Pull artifacts with /home/crow/.venv/bin/python _batch_sync.py instead.
+2026-09-25T15:09:29Z REMOTE-ACTIVE run=covers-gen marker_age_s=10
+2026-09-25T15:09:29Z REFUSE-START local runner is not needed: the detached remote run (_review/… no, _batch_scratch/REMOTE_ACTIVE, run 'covers-gen') is alive and generating; a second writer would duplicate GPU work. Exiting cleanly.
+REFUSING to start: remote run 'covers-gen' is active (see _batch_scratch/REMOTE_ACTIVE). Pull artifacts with /home/crow/.venv/bin/python _batch_sync.py instead.

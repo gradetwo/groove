@@ -1,0 +1,168 @@
+/**
+ * Phone layout pass over the reused desktop views (探索's 和弦走向 / 底鼓设计 / 律动解构).
+ *
+ * The three sub-pages are the mature desktop views rendered as-is, so their markup cannot be edited
+ * from the phone module (`src/views/ChordProgressionsView.tsx`, `KickAnatomyView.tsx`,
+ * `MasterclassView.tsx` are shared with the desktop navigation). What *can* be owned here is the
+ * presentation: on a 390 px-wide phone the desktop `max-w-7xl mx-auto px-4 py-8`, its 2.5rem flex
+ * gaps, its `space-y-8` sections and its 24–36 px headings read as a shrunken desktop page and waste
+ * a lot of vertical space.
+ *
+ * Rules of engagement:
+ *  - Every rule is scoped under `.mobile-root [data-legacy="desktop"]`, so the desktop app is never
+ *    touched. The wrapper is also the marker the Playwright phone touch-target gate exempts, which is
+ *    why geometry properties are allowed here: shrinking spacing is the point, but no *control's*
+ *    hit area is reduced (tap targets inside are either left at their size or explicitly kept).
+ *  - This file is imported last in `MobileApp.tsx`, after `mobile.css`, so an equal-specificity rule
+ *    of ours wins. Where Tailwind's utility is generated with a compound selector (`space-y-*`), the
+ *    selector below adds one element to out-rank it rather than reaching for `!important`.
+ *  - `overflow-wrap`/`min-width` guards are added only where a reused element could otherwise force
+ *    the whole page wider than the phone.
+ */
+
+/* ------------------------------------------------------------------------------------------------
+ * The wrapper and each view's own root element
+ * ---------------------------------------------------------------------------------------------- */
+
+/* The wrapper's `mt-3` is a full 12 px the page does not need after the segmented switcher. */
+.mobile-root [data-legacy="desktop"] {
+  margin-top: 8px;
+  max-width: 100%;
+}
+
+/*
+ * Every reused view starts with `max-w-7xl mx-auto px-4 sm:px-6 py-8` (kick: `px-3 py-6`).
+ * The shell already pads the page (`px-4`), so the view's own horizontal padding is a second inset
+ * that costs 32 px of a 358 px reading width; and its `py-8` is dead space under the switcher.
+ */
+.mobile-root [data-legacy="desktop"] > div {
+  max-width: none;
+  margin-inline: 0;
+  padding: 2px 0 8px;
+}
+
+/* ------------------------------------------------------------------------------------------------
+ * Vertical rhythm
+ * ---------------------------------------------------------------------------------------------- */
+
+/* Chord view: `flex flex-col gap-10` between its three top-level sections. */
+.mobile-root [data-legacy="desktop"] > div[class*="gap-10"] {
+  gap: 16px;
+}
+
+/*
+ * Masterclass view: `space-y-8` on its own root, and `space-y-6` / `space-y-4` inside. Tailwind
+ * compiles `space-y-*` to `.space-y-8 > :not([hidden]) ~ :not([hidden])` (specificity 0,3,0), so the
+ * `div` in the selector is what out-ranks it — every one of these containers is a `div`.
+ */
+.mobile-root [data-legacy="desktop"] div[class*="space-y-8"] > * + * {
+  margin-top: 16px;
+}
+.mobile-root [data-legacy="desktop"] div[class*="space-y-6"] > * + * {
+  margin-top: 14px;
+}
+.mobile-root [data-legacy="desktop"] div[class*="space-y-5"] > * + * {
+  margin-top: 12px;
+}
+.mobile-root [data-legacy="desktop"] div[class*="space-y-4"] > * + * {
+  margin-top: 12px;
+}
+.mobile-root [data-legacy="desktop"] div[class*="space-y-3"] > * + * {
+  margin-top: 10px;
+}
+.mobile-root [data-legacy="desktop"] div[class*="space-y-2"] > * + * {
+  margin-top: 8px;
+}
+
+/* Grid / flex gaps at the section and card level. */
+.mobile-root [data-legacy="desktop"] [class*="gap-6"] {
+  gap: 14px;
+}
+.mobile-root [data-legacy="desktop"] [class*="gap-5"] {
+  gap: 12px;
+}
+.mobile-root [data-legacy="desktop"] [class*="gap-4"] {
+  gap: 10px;
+}
+.mobile-root [data-legacy="desktop"] [class*="gap-3"] {
+  gap: 10px;
+}
+
+/* The kick view spaces its blocks with one-off bottom/top margins rather than a gap. */
+.mobile-root [data-legacy="desktop"] [class*="mb-6"] {
+  margin-bottom: 12px;
+}
+.mobile-root [data-legacy="desktop"] [class*="mt-8"] {
+  margin-top: 16px;
+}
+
+/* ------------------------------------------------------------------------------------------------
+ * Surfaces: less internal padding, a slightly phone-shaped corner radius
+ * ---------------------------------------------------------------------------------------------- */
+
+.mobile-root [data-legacy="desktop"] .p-6,
+.mobile-root [data-legacy="desktop"] .p-5 {
+  padding: 14px;
+}
+.mobile-root [data-legacy="desktop"] .p-4 {
+  padding: 12px;
+}
+.mobile-root [data-legacy="desktop"] .p-3 {
+  padding: 10px;
+}
+
+.mobile-root [data-legacy="desktop"] [class*="rounded-3xl"] {
+  border-radius: 18px;
+}
+.mobile-root [data-legacy="desktop"] [class*="rounded-2xl"] {
+  border-radius: 14px;
+}
+
+/* ------------------------------------------------------------------------------------------------
+ * Type: the desktop headline scale (24–36 px) is too loud for a 358 px column
+ * ---------------------------------------------------------------------------------------------- */
+
+.mobile-root [data-legacy="desktop"] h1 {
+  font-size: 20px;
+  line-height: 1.2;
+}
+/* The chord view's hero title carries a desktop sub-line (`text-sm sm:text-base`) under the h1. */
+.mobile-root [data-legacy="desktop"] h1 > span {
+  margin-top: 2px;
+  font-size: 12px;
+}
+.mobile-root [data-legacy="desktop"] h2 {
+  font-size: 16px;
+  line-height: 1.3;
+}
+.mobile-root [data-legacy="desktop"] h3 {
+  font-size: 14px;
+  line-height: 1.35;
+}
+
+/* ------------------------------------------------------------------------------------------------
+ * No horizontal overflow
+ * ---------------------------------------------------------------------------------------------- */
+
+/*
+ * The chord view's piano keyboard and guitar fretboard are fixed-width instruments (`min-w-[560px]`
+ * / `min-w-[620px]`), but each already lives in its own `overflow-x-auto` panel, so they scroll
+ * inside the panel instead of widening the page — the keys keep their desktop size and the phone
+ * never scrolls sideways. Only the generic blow-out guards below are needed.
+ */
+
+/* A grid/flex child defaults to `min-width: auto`; that is what lets a wide child blow out the row. */
+.mobile-root [data-legacy="desktop"] :where(div, section, article, ul, ol) {
+  min-width: 0;
+}
+
+/* Media and long mono strings may not force the column wider. */
+.mobile-root [data-legacy="desktop"] canvas,
+.mobile-root [data-legacy="desktop"] img,
+.mobile-root [data-legacy="desktop"] video,
+.mobile-root [data-legacy="desktop"] svg {
+  max-width: 100%;
+}
+.mobile-root [data-legacy="desktop"] {
+  overflow-wrap: anywhere;
+}

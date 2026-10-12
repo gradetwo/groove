@@ -1,0 +1,487 @@
+name: CI
+
+on:
+  push:
+    # ⭐ **Every branch**, because branches are how parallel work is kept apart and the fast checks are what tells each one whether it is still healthy. The owner's division of labour (2026-09-30): a development push runs `validate` — typecheck, lint, unit tests, build,
+    # bundle budget — and the browser matrix is reserved for `main` and for a release, which asks for it by hand.
+    #
+    # Before this, only `main`, `next` and `dev` triggered anything, so a branch could only be checked by running the gate on the machine that wrote it — which is exactly what several worktrees at once make hard to do.
+    branches: ["**"]
+  pull_request:
+    branches: [main, next, dev]
+  # The heavy checks live in the `nightly` job: they are slow (the full desktop browser
+  # matrix) or environment-sensitive in ways that would report flakiness as a code failure
+  # on every pull request. A dedicated nightly slot keeps them running without making every
+  # push pay for them; `workflow_dispatch` runs the same set on demand.
+  #
+  # 03:17 UTC rather than 03:00: the top of the hour is when scheduled jobs queue up
+  # behind everyone else's.
+  schedule:
+    - cron: "17 3 * * *"
+  workflow_dispatch:
+    inputs:
+      # ⭐ **What a release asks for, and what it does not.** A release wants the browser matrix — the check that the app actually runs — and not the nightly sweep: coverage thresholds, loudness-baseline freshness and the perf gate are **measurements whose value is
+      # in their trend**, and some of them depend on the network and on external tools. They monitor; they do not decide whether a build may ship, and one of them blocked a release for no product reason on 2026-09-30.
+      nightly:
+        description: "Also run the nightly sweep (coverage, loudness freshness, perf)"
+        type: boolean
+        default: false
+
+jobs:
+  validate:
+    name: Typecheck, Lint, Unit Tests & Build
+    runs-on: ubuntu-latest
+    # `nightly` owns the scheduled run; see the schedule comment above.
+    if: github.event_name != 'schedule'
+
+    steps:
+      # v5 actions run on the Node 24 runtime. The v4 tags target Node 20, which GitHub
+      # deprecated on runners (2025-09-19) and now forces onto Node 24 with a warning.
+      # This is a *different* Node version from `.nvmrc` below: this one is the workflow's
+      # own runtime, `.nvmrc` is the project's floor (`engines` / `engine-strict`).
+      # `ffprobe` measures a sample's duration and reads both FLAC and WAV. It is **not** on the runner by default — the same lesson as `metaflac`, in the other workflow: a
+      # tool that exists on a development machine is not a tool that exists in CI, and the mirror chain's criteria need it in this job as well as in `manual-verify`.
+      - name: Install measurement dependencies
+        run: sudo apt-get update && sudo apt-get install -y ffmpeg
+
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v5
+        with:
+          # `.nvmrc` is the floor `engines` declares, so CI runs the *minimum* supported
+          # version rather than a newer one that would hide a too-high requirement.
+          #
+          # It used to say `20`, which no longer works: jsdom 30 (and the undici 8 it
+          # vendors, which calls `worker_threads.markAsUncloneable`) requires Node
+          # ^22.22.2, so on Node 20 the jsdom environment fails to construct — 190
+          # unhandled errors, no test executed, 0% coverage, and a red coverage gate that
+          # said nothing about the real problem. `engine-strict` in `.npmrc` now makes the
+          # install itself fail loudly on an unsupported Node.
+          node-version-file: ".nvmrc"
+          cache: "npm"
+
+      # Printed *before* the install, so an engine rejection shows which Node asked for it.
+      # (npm validates `engines` before running any script, so a `preinstall` hook cannot do this.)
+      - name: Node & npm versions
+        run: node -v && npm -v
+
+      - name: Install dependencies
+        run: npm ci
+
+      # The runner's own Node runtime for `uses:` actions is a separate axis from the
+      # project's Node floor below; this gate fails on an action still tagged for the
+      # deprecated Node 20 runtime.
+      - name: Actions Runtime Gate
+        run: npm run check:actions
+
+      # ⭐ **The disabled-gates ledger, checked on every push.**
+      #
+      # Four measurement gates are temporarily switched off by the owner's decision of 2026-10-02
+      # (`scripts/disabledGates.mjs` is the list; `docs/DISABLED_GATES.md` is the long form): they
+      # render — or check a baseline recorded from a render — without passing `audioLaneCatalogue`,
+      # so they fall back to the synthesiser and cannot see the sampling path at all. The gates
+      # themselves are untouched — their steps below, in the nightly groove jobs and in the manual
+      # workflow stay, print why they are off and exit 0.
+      #
+      # This step is what stops "temporarily" becoming "quietly": it fails if a listed gate still
+      # runs, if a gate is switched off without a ledger entry, or if a never-disable gate
+      # (typecheck, lint, tests, build, budget, red lines, schema, docs, the genre audit) was turned
+      # off, deleted, or dropped out of the verify chain.
+      - name: Disabled Gates Ledger
+        run: npm run check:disabled-gates
+
+      - name: Version Single-Source Check
+        run: npm run version:check
+
+      - name: Documentation Baseline Check
+        run: npm run docs:check
+
+      - name: TypeScript Typecheck
+        run: npm run typecheck
+
+      - name: ESLint Code Quality
+        run: npm run lint
+
+      - name: Red-Line Gate
+        run: npm run redlines
+
+      - name: Unit Tests & Coverage
+        # `CI_JUNIT` also writes JUnit XML, uploaded below. A red run's test output is otherwise unreadable from the
+        # API, and re-running 2,870 tests locally to find one failure is the load CI exists to absorb.
+        run: CI_JUNIT=test-results/junit.xml npm run test:coverage
+
+      - name: Upload Test Results
+        if: always()
+        uses: actions/upload-artifact@v5
+        with:
+          name: test-results
+          path: test-results/
+          if-no-files-found: ignore
+
+      - name: Upload Coverage Report
+        if: always()
+        uses: actions/upload-artifact@v5
+        with:
+          name: coverage-report
+          path: coverage/
+          if-no-files-found: ignore
+          retention-days: 14
+
+      - name: Genre Database Schema Lint
+        run: npm run lint:data
+
+      # Cross-database audit (159 genres, 300 relations, timeline stories) that used to
+      # be an orphan script nothing invoked.
+      - name: Genre Database Audit
+        run: npm run data:lint
+
+      # The report-to-table half of the loudness gate: it reads two files, needs no browser and takes about a second,
+      # so there is no reason for it to live only in `verify` and `manual-verify scope=audio` — which is exactly why
+      # it went red unnoticed for a day (23 of 159 genres were invisible to it; see `loudnessTrimWiring.test.ts`).
+      #
+      # ⏸ **Switched off on 2026-10-02 by the owner's decision, and the step stays here so that is visible.** It is
+      # the reading half of a render that never receives `audioLaneCatalogue`: the baseline it checks was recorded
+      # with every mapped lane on the synthesiser, so it cannot see the sampling path. `scripts/disabledGates.mjs`
+      # says why, when it comes back (catalogue into the render + re-recorded baseline) and who decided; the step
+      # prints that notice and exits 0. `npm run check:disabled-gates` fails if that list and this wiring disagree.
+      - name: Loudness Trim Gate (report vs table) [disabled — see scripts/disabledGates.mjs]
+        run: npm run check:loudness
+
+      - name: Production Build
+        run: npm run build
+
+      # The boot probe drives a real browser, so this job needs one. Chromium only: a page to open.
+      - name: Install Playwright Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: The built app starts
+        # The cheapest check with the widest blast radius, and the one that was missing when a "cosmetic" `index.html` edit
+        # deleted the entry script: `dist` was a dead shell with no error anywhere. `deploy.mjs` refuses a build that does not
+        # start, and this makes the same refusal part of the pull-request gate.
+        run: npm run probe:boot
+
+      - name: No step at the note events
+        # The measurement that found the worklet's wrong block assembly (a one-sample step at every note-on and note-off on the
+        # GS-1 path), kept as the guard for it: a synthetic unit test was tried first and passed against the broken code twice.
+        run: npm run probe:continuity
+
+      - name: Bundle Budget & Performance Gate
+        run: npm run check:budget
+
+  e2e:
+    name: E2E ${{ matrix.leg }} (Playwright)
+    runs-on: ubuntu-latest
+    needs: validate
+    # A backstop for the WebKit hang the target watchdog already catches (`test_matrix.js`): GitHub's default job
+    # timeout is *six hours*, so a wedged browser used to hold a runner for an afternoon — measured on 2026-09-23,
+    # the iPad leg sat in the matrix step from 07:09 until the run was cancelled at 10:30.
+    timeout-minutes: 45
+    # ⭐ **The heavy leg runs when a release is being prepared and not on every development push.**
+    #
+    # The owner's decision (2026-09-30): "开发过程中 CI/CD 也不一定要全跑，只跑相关的就好，不能拖慢开发迭代速度，发版时候全跑就可以了". The browser matrix is the slowest thing here — the desktop leg alone is around thirty minutes — and on a
+    # branch nobody is shipping from, that is thirty minutes between a change and its answer.
+    #
+    # So: `validate` (typecheck, lint, unit tests, build, bundle budget) judges every push, and this judges `main`, a pull request, and anything asked for by hand:
+    #
+    #   · `main` is what is live, so its pushes get the full matrix;
+    #   · a pull request is where a change is meant to be judged before it lands;
+    #   · `workflow_dispatch` is how a release asks for everything — `npm run ci:full` does exactly that.
+    #
+    # Skipped on schedule: `nightly` runs the same full matrix plus coverage, the loudness freshness check and the performance gate.
+    # ⭐ **The matrix runs where the answer matters and nowhere else**: `main` is what is live, a release asks for it by hand, and a development branch gets the fast checks instead. A pull request is a branch push, so it needs no separate rule.
+    if: github.event_name != 'schedule' && (github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch')
+    # One desktop leg, where this job used to walk all seven targets in a single runner and then split them
+    # across three legs — the phone and tablet legs went with the mobile version (2026-10-02).
+    #
+    # The targets are independent browsers, and one runner meant a WebKit hang blocked the rest and a single
+    # engine could only be re-checked by re-running the whole suite. `E2E_ONLY` (the filter `manual-verify.yml`
+    # already drives) narrows *within* the complete target set, and `fail-fast: false` keeps one engine's
+    # failure from cancelling the others.
+    #
+    # The leg still runs the full-matrix script (`test:e2e:all`); the filter narrows *within* the complete
+    # target set, so it cannot quietly become the shorter desktop-only profile (`ciWorkflows.test.ts` asserts
+    # that).
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - leg: Desktop browsers
+            only: Desktop
+          # ⭐ **This matrix is desktop-only, by the owner's decision of 2026-10-02: the mobile version is cut.**
+          #
+          # The phone shell, its criteria, its gates and the phone/tablet targets in `scripts/test_matrix.js` are
+          # gone; `mobile-preserved` keeps the phone build for maintenance. Before that the iPhone legs were
+          # already off — the owner froze iPhone support on 2026-09-30 ("与iphone有关的各种CI/CD都可以先关掉"), and
+          # the iPad leg followed here.
+          #
+          # The iPhone freeze was a decision and not a workaround for a flake: its last two legs failed on a worker
+          # fetch and a 44 px touch target, and both were left unfixed on purpose, because a frozen device's
+          # failures should not block the device we are shipping to.
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v5
+        with:
+          # Same floor as the `validate` job — see the comment there.
+          node-version-file: ".nvmrc"
+          cache: "npm"
+
+      # Printed *before* the install, so an engine rejection shows which Node asked for it.
+      # (npm validates `engines` before running any script, so a `preinstall` hook cannot do this.)
+      - name: Node & npm versions
+        run: node -v && npm -v
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright Browsers
+        run: npx playwright install --with-deps chromium firefox webkit
+
+      - name: Production Build
+        run: npm run build
+
+      # ⭐ **The desktop matrix on every push and pull request: three browsers.**
+      #
+      # It used to be seven targets, three desktop and four phone or tablet, and the comment here argued that a
+      # gate skipping two thirds of them is how an iPad-only regression survives. That argument was sound while the
+      # phone surface shipped; the owner has since cut the mobile version altogether, so the targets it was about no
+      # longer exist and the matrix is the desktop one. `docs/OPEN_WORK.md` §十三 has the decision and the branch.
+      - name: Cross-Browser & Cross-Device Test Matrix (${{ matrix.leg }})
+        env:
+          # Read by `scripts/test_matrix.js`: this leg's slice of the desktop targets.
+          E2E_ONLY: ${{ matrix.only }}
+        run: npm run test:e2e:all
+
+      # The arrangement's DOM probe, on the one leg that already has browsers *and* a production build.
+      #
+      # It serves `dist/` itself and drives it in a real browser, so it is neither a unit test (the contract it
+      # checks — a pointer press landing on the same cell on release — is not decidable from source) nor part of the
+      # matrix (it is not per-device). Running it here is what keeps the local machine out of the loop for the checks
+      # that can run on a runner.
+      #
+      # ⭐ **Two probes were retired on 2026-10-07** (`probe:grid-gutter`, `probe:arrangement`): they measured the
+      # studio's step-grid gutter and the v1 arrangement panel's regions and 44 px targets, and neither surface exists
+      # after the v1 retirement. `check_doc_refs.mjs` declares the removed scripts and paths; rebuilding the
+      # pixel/finger-target probe against `ArrangementViewV2` is recorded as work in the ledger.
+      # `probe:arrangement-audio` keeps its script (the manual `audio` scope runs it by path) but the release gate does
+      # not: it renders until the runner's browser disconnects.
+      - name: Arrangement DOM Probe (roll press and undo)
+        if: matrix.leg == 'Desktop browsers'
+        run: |
+          # `probe:arrangement-undo` presses a roll cell and requires the release to land on the same cell: a press
+          # focuses the panel, and without `preventScroll` the browser scrolled the window 226 px, moving a different
+          # cell under the pointer, so the write was refused and pressing a cell looked like it did nothing.
+          npm run probe:arrangement-undo
+
+      # E-10: Lighthouse is not installable in this environment, so the performance
+      # gate is a real-browser measurement with deterministic assertions (no genre
+      # data on first paint) plus reported FCP/LCP/CLS.
+      #
+      # One runner measures it: the number belongs to the build, not to the engine, so three copies would only
+      # burn three runners' minutes.
+      - name: Performance Gate (real browser, local build)
+        if: matrix.leg == 'Desktop browsers'
+        run: npm run perf:check
+
+  # The musical ratchet, sharded — one slice of the sample per runner.
+  #
+  # `check:groove` renders twelve genres through the app's own offline engine and judges six claims. It is
+  # single-threaded per genre (one page, one render at a time), so the serial gate is ~21 minutes of one core with
+  # every other core idle. Measured on a 12-vCPU VM: four shards in 569 s against 1272 s of serial work. A standard
+  # runner has 4 vCPUs and cannot host four (Vite + Chromium) stacks — the 8-vCPU/15 GB laptop could not either —
+  # which is why the split is **one shard per runner**, not N shards inside one job.
+  #
+  # A shard judges no budgets: it writes its rows and uploads them. `groove-gate` below owns the judgement, so the
+  # budgets are compared in exactly one place — and, since 2026-09-23, that place is the **only** measurement of the
+  # sample. `npm run verify` used to render all twelve genres inside one job while these four rendered three each on
+  # separate runners, and the two disagreed on identical code (`cutTail` 1 here against 2 there, and **5** when the
+  # four ran concurrently inside one runner — CPU starvation, not a mix change). One judge, one path: the verify
+  # chain no longer renders the sample at all, and `scope=verify` relies on these jobs in the same dispatch.
+  #
+  # The four-in-one-machine fan-out (`--shards=4`) exists and was measured faster (569 s against 1272 s), but it is
+  # not a judging path for that reason.
+  groove-shards:
+    name: Groove shard ${{ matrix.shard }}/4
+    runs-on: ubuntu-latest
+    # Part of the nightly sweep, so a release dispatch does not pay for it: the four-way fan-out is a measurement (see the note above), not a judging path.
+    if: github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && inputs.nightly)
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4]
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version-file: ".nvmrc"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      # Chromium only: the analyser drives one page. The other engines belong to the browser matrix, not here.
+      - name: Install Playwright Chromium
+        run: npx playwright install --with-deps chromium
+
+      # ⏸ **Switched off on 2026-10-02 by the owner's decision ("check:groove 一起禁"), and the step
+      # stays so that is visible.** `analyze_export_audio.mjs` renders without `audioLaneCatalogue`, so
+      # the render-derived claims (hollow mids, near-mono, a cut tail) are numbers about a mix that
+      # never contained a sampled lane. `scripts/disabledGates.mjs` carries the why / when / who; the
+      # step prints that notice and exits 0, and the aggregate below does the same.
+      - name: Groove gate shard ${{ matrix.shard }}/4 [disabled — see scripts/disabledGates.mjs]
+        run: npm run check:groove -- --shard=${{ matrix.shard }}/4 --rows-out=groove-rows/rows-${{ matrix.shard }}.json
+
+      # Uploaded even when the shard failed: partial rows are how the aggregate explains what is missing.
+      - name: Upload shard rows
+        if: always()
+        uses: actions/upload-artifact@v5
+        with:
+          name: groove-rows-${{ matrix.shard }}
+          path: groove-rows/
+          if-no-files-found: warn
+          retention-days: 14
+
+  groove-gate:
+    name: Groove gate (the aggregate judges the budgets)
+    runs-on: ubuntu-latest
+    needs: groove-shards
+    # `always()` on purpose: when a shard dies, this is the job that *names* the genres that went unmeasured — and
+    # it is cheap, because the merge path imports nothing outside Node's standard library.
+    if: always() && (github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && inputs.nightly))
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version-file: ".nvmrc"
+
+      # `merge-multiple` flattens the four artifacts into one directory; the aggregator reads every *.json in it
+      # and refuses anything that is not the sample, exactly once each.
+      - name: Download shard rows
+        uses: actions/download-artifact@v5
+        with:
+          pattern: groove-rows-*
+          merge-multiple: true
+          path: groove-rows
+
+      # Deliberately no `npm ci`: this step runs even when the shards failed, and `check_groove.mjs --merge-dir`
+      # needs nothing but Node. ⏸ Disabled with the shards above (owner, 2026-10-02): it judges the same budgets.
+      - name: Judge the union of the shards [disabled — see scripts/disabledGates.mjs]
+        run: npm run check:groove -- --merge-dir=groove-rows
+
+  # `CI / nightly`: everything that is too slow or too environment-sensitive to gate a push.
+  #
+  # What it adds over `validate` + `e2e`:
+  #  - `test:e2e:all` — the full desktop browser matrix, which the push-time gate now also runs
+  #    (kept here as well so a scheduled run is complete on its own);
+  #  - `test:coverage` — the coverage thresholds, which are stricter than the plain test run;
+  #  - `check:loudness:fresh` — re-renders sampled genres in a fresh page and compares against
+  #    the committed baseline, which needs a browser and ~1 minute but catches a baseline that
+  #    no longer describes the code (that check exists because a stale one survived for weeks);
+  #  - `perf:check` — the real-browser performance gate.
+  #
+  # The musical ratchet is *not* here: it is `groove-shards` + `groove-gate` above, on the same schedule, because
+  # one job cannot shard across runners and the gate is single-threaded per genre.
+  #
+  # Everything is uploaded (coverage + e2e-out), because a nightly failure is usually diagnosed
+  # from the artifact rather than from the log.
+  nightly:
+    name: Nightly (full matrix, coverage, loudness freshness, perf)
+    runs-on: ubuntu-latest
+    # Runs on the schedule, or when a dispatch explicitly asks for it — see the `nightly` input above.
+    if: github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && inputs.nightly)
+    # This job already carried a 90-minute bound (the full desktop browser matrix plus coverage plus the loudness
+    # re-render legitimately takes over an hour), so it needs no change: the hang backstop was only missing from the
+    # E2E legs, and a second `timeout-minutes` key is not a bigger bound — it is an invalid workflow file, which
+    # GitHub rejects before running a single job. Learned the direct way.
+    timeout-minutes: 90
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v5
+        with:
+          # Same floor as the push-time jobs — see the comment in `validate`.
+          node-version-file: ".nvmrc"
+          cache: "npm"
+
+      - name: Node & npm versions
+        run: node -v && npm -v
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright Browsers
+        run: npx playwright install --with-deps chromium firefox webkit
+
+      - name: Unit Tests & Coverage
+        # `CI_JUNIT` also writes JUnit XML, uploaded below. A red run's test output is otherwise unreadable from the
+        # API, and re-running 2,870 tests locally to find one failure is the load CI exists to absorb.
+        run: CI_JUNIT=test-results/junit.xml npm run test:coverage
+
+      - name: Upload Test Results
+        if: always()
+        uses: actions/upload-artifact@v5
+        with:
+          name: test-results
+          path: test-results/
+          if-no-files-found: ignore
+
+      - name: Upload Coverage Report
+        if: always()
+        uses: actions/upload-artifact@v5
+        with:
+          name: nightly-coverage
+          path: coverage/
+          if-no-files-found: ignore
+          retention-days: 14
+
+      - name: Production Build
+        run: npm run build
+
+      # Needs a browser and the committed baseline; see the job comment.
+      - name: Loudness Baseline Freshness
+        run: npm run check:loudness:fresh
+
+      # The musical ratchet lives in `groove-shards` + `groove-gate` above (one shard per runner), because a
+      # 4-vCPU runner cannot host four (Vite + Chromium) stacks and the serial gate is ~21 minutes of one core.
+
+      - name: Full Browser & Device Matrix
+        run: npm run test:e2e:all
+
+      - name: Upload E2E Artifacts
+        if: always()
+        uses: actions/upload-artifact@v5
+        with:
+          name: nightly-e2e
+          path: e2e-out/
+          if-no-files-found: ignore
+          retention-days: 14
+
+      - name: Interaction latency budget
+        # ⭐ Judges the probe's readings against budgets instead of only printing them. It sits beside the
+        # performance gate because it is the same kind of measurement: real browser, local build, and a
+        # value that is worth watching over time rather than on every push.
+        run: npm run probe:latency:gate
+
+
+      # The same kind of measurement in the same place: real browser, local build, and a number
+      # worth watching over time. It pins the ratio, not the wall clock, which depends on the machine.
+      - name: Render CPU budget
+        run: npm run probe:render-cpu:gate
+      - name: Performance Gate (real browser, local build)
+        run: npm run perf:check

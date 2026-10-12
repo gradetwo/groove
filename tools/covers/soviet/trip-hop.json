@@ -1,0 +1,14 @@
+{
+  "model": "qwen-image-2.1",
+  "preset": "quality",
+  "size": "1024x1024",
+  "steps": 40,
+  "seed": 1947,
+  "skin": "soviet",
+  "genre": "trip-hop",
+  "prompt": "Heavy-industry machined-metal rendering, square album cover, subject: a smoky dim lounge with a turntable and a half-full glass built as industrial machinery, expressing the sound of trip hop \u2014 slow dusty beats, brooding bass, cinematic haze, drawing on Bristol in the early 1990s, slow dusty beats in a smoky dim lounge. Cold gunmetal ground (#1b1e21, panels #22262a / #2b3034) with visible vertical brushed-steel grain, bone-white (#ede4cc) raked highlights, brass (#e6c766) as the single warm accent on one rated part. Stamped-steel plates with square corners, 2 px milled edges, inset bevels, rivets, seams, cast pitting and chipped paint, wide stencilled capital shapes with no readable letters, technical-plate frontal composition, low-key raking light, oil sheen, faint oxidation in the recesses. Cold, heavy, precise and premium. No text, no numbers, no logos.",
+  "origin": "Bristol in the early 1990s, slow dusty beats in a smoky dim lounge",
+  "negative_prompt": "text, letters, words, typography, logo, watermark, signature, small print, fine print, corner mark, caption, UI, screenshot, frame, border, photograph of a real person, celebrity, album cover, brand, clipart, flat vector icon, stock photo, generic corporate imagery, floating geometric shapes, plastic 3D render, oversaturated HDR, low detail, blurry, jpeg artifacts",
+  "postprocess": null,
+  "timestamp": "2026-09-25T17:17:45Z"
+}

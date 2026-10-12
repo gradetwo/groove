@@ -1,0 +1,820 @@
+{
+  "_comment": "Live-path loudness baseline (goal item 6): all 159 genres, measured on the tree that has feat/genre-instrument-curation merged (v1.16.17 + curated timbres) and BEFORE any per-genre mix or loudness trim. Producer: scripts/measure_live_loudness.mjs --all, which taps the app's realtime engine at AudioContext.destination over 1.8s of playback (post-limiter) in a real Chromium. METRIC WARNING: this is windowed broadband RMS, which averages in the silence between hits. It is NOT the same metric as the gated ITU-R BS.1770-4 integrated loudness (LUFS) used by the offline per-genre report (scripts/loudness.baseline.json), and the two disagree systematically on sparse material: ambient reads -24.7 dBFS RMS but only about -21.7 LUFS, because the gate discards the silence that dominates its RMS. Primary acceptance therefore uses the LUFS report; this file is the independent cross-check on a different metric and a different signal path (live engine vs offline render).",
+  "base": "v1.16.17 + curated timbres (feat/genre-instrument-curation merged), no mix/loudness work yet",
+  "metric": "master output RMS over 1.8s of playback, dBFS, sampled post-limiter (live path, NOT LUFS)",
+  "genres": [
+    {
+      "id": "chicago-house",
+      "rmsDb": -12.32,
+      "peakDb": 0.98
+    },
+    {
+      "id": "deep-house",
+      "rmsDb": -14.08,
+      "peakDb": 0.92
+    },
+    {
+      "id": "tech-house",
+      "rmsDb": -13.41,
+      "peakDb": 1.01
+    },
+    {
+      "id": "future-house",
+      "rmsDb": -14.19,
+      "peakDb": 0.44
+    },
+    {
+      "id": "progressive-house",
+      "rmsDb": -10.71,
+      "peakDb": 0.99
+    },
+    {
+      "id": "electro-house",
+      "rmsDb": -13.05,
+      "peakDb": 0.8
+    },
+    {
+      "id": "bass-house",
+      "rmsDb": -14.04,
+      "peakDb": 0.89
+    },
+    {
+      "id": "ghetto-house",
+      "rmsDb": -13.12,
+      "peakDb": 0.7
+    },
+    {
+      "id": "tropical-house",
+      "rmsDb": -13.71,
+      "peakDb": 0.54
+    },
+    {
+      "id": "acid-house",
+      "rmsDb": -13.56,
+      "peakDb": 0.68
+    },
+    {
+      "id": "french-house",
+      "rmsDb": -12.42,
+      "peakDb": 0.93
+    },
+    {
+      "id": "melodic-house",
+      "rmsDb": -13.67,
+      "peakDb": 0.69
+    },
+    {
+      "id": "afro-house",
+      "rmsDb": -14.5,
+      "peakDb": 0.77
+    },
+    {
+      "id": "nu-disco-house",
+      "rmsDb": -12.74,
+      "peakDb": 0.83
+    },
+    {
+      "id": "microhouse",
+      "rmsDb": -15.54,
+      "peakDb": 1.02
+    },
+    {
+      "id": "detroit-techno",
+      "rmsDb": -12.91,
+      "peakDb": 0.9
+    },
+    {
+      "id": "minimal-techno",
+      "rmsDb": -14.73,
+      "peakDb": 0.46
+    },
+    {
+      "id": "acid-techno",
+      "rmsDb": -12.6,
+      "peakDb": 0.93
+    },
+    {
+      "id": "dub-techno",
+      "rmsDb": -15.42,
+      "peakDb": 0.37
+    },
+    {
+      "id": "industrial-techno",
+      "rmsDb": -10.41,
+      "peakDb": 1.54
+    },
+    {
+      "id": "peak-time-techno",
+      "rmsDb": -9.77,
+      "peakDb": 1.25
+    },
+    {
+      "id": "hard-techno",
+      "rmsDb": -14.16,
+      "peakDb": 0.7
+    },
+    {
+      "id": "ambient-techno",
+      "rmsDb": -14.02,
+      "peakDb": 0.44
+    },
+    {
+      "id": "raw-techno",
+      "rmsDb": -12.87,
+      "peakDb": 0.87
+    },
+    {
+      "id": "schranz",
+      "rmsDb": -14.81,
+      "peakDb": 0.45
+    },
+    {
+      "id": "uplifting-trance",
+      "rmsDb": -10.16,
+      "peakDb": 1.31
+    },
+    {
+      "id": "progressive-trance",
+      "rmsDb": -10.6,
+      "peakDb": 1.38
+    },
+    {
+      "id": "psytrance",
+      "rmsDb": -12.94,
+      "peakDb": 0.29
+    },
+    {
+      "id": "goa-trance",
+      "rmsDb": -13.09,
+      "peakDb": 0.87
+    },
+    {
+      "id": "tech-trance",
+      "rmsDb": -11.47,
+      "peakDb": 1.09
+    },
+    {
+      "id": "hard-trance",
+      "rmsDb": -14.03,
+      "peakDb": 0.43
+    },
+    {
+      "id": "vocal-trance",
+      "rmsDb": -10.6,
+      "peakDb": 1.46
+    },
+    {
+      "id": "euro-trance",
+      "rmsDb": -11.34,
+      "peakDb": 0.81
+    },
+    {
+      "id": "dream-trance",
+      "rmsDb": -10.58,
+      "peakDb": 0.64
+    },
+    {
+      "id": "dubstep",
+      "rmsDb": -15.68,
+      "peakDb": 0.8
+    },
+    {
+      "id": "brostep",
+      "rmsDb": -13.49,
+      "peakDb": 0.72
+    },
+    {
+      "id": "riddim",
+      "rmsDb": -15.8,
+      "peakDb": 0.64
+    },
+    {
+      "id": "melodic-dubstep",
+      "rmsDb": -14.55,
+      "peakDb": 1.03
+    },
+    {
+      "id": "future-garage",
+      "rmsDb": -14.67,
+      "peakDb": 0.56
+    },
+    {
+      "id": "post-dubstep",
+      "rmsDb": -17.64,
+      "peakDb": 0.53
+    },
+    {
+      "id": "tearout-dubstep",
+      "rmsDb": -13.95,
+      "peakDb": 0.93
+    },
+    {
+      "id": "chillstep",
+      "rmsDb": -15.29,
+      "peakDb": 0.14
+    },
+    {
+      "id": "deathstep",
+      "rmsDb": -14.33,
+      "peakDb": 0.5
+    },
+    {
+      "id": "jungle",
+      "rmsDb": -12.64,
+      "peakDb": 0.57
+    },
+    {
+      "id": "liquid-dnb",
+      "rmsDb": -13.07,
+      "peakDb": 0.25
+    },
+    {
+      "id": "neurofunk",
+      "rmsDb": -12.29,
+      "peakDb": 0.3
+    },
+    {
+      "id": "jump-up",
+      "rmsDb": -13.71,
+      "peakDb": -0.12
+    },
+    {
+      "id": "techstep",
+      "rmsDb": -14.61,
+      "peakDb": 0.17
+    },
+    {
+      "id": "halftime",
+      "rmsDb": -18.69,
+      "peakDb": -2.18
+    },
+    {
+      "id": "breakcore",
+      "rmsDb": -9.68,
+      "peakDb": 0.72
+    },
+    {
+      "id": "ragga-jungle",
+      "rmsDb": -14,
+      "peakDb": 0.23
+    },
+    {
+      "id": "sambass",
+      "rmsDb": -13.96,
+      "peakDb": 0.16
+    },
+    {
+      "id": "uk-garage",
+      "rmsDb": -13.26,
+      "peakDb": 0.86
+    },
+    {
+      "id": "2-step-garage",
+      "rmsDb": -14.65,
+      "peakDb": 0.39
+    },
+    {
+      "id": "speed-garage",
+      "rmsDb": -13.42,
+      "peakDb": 1.13
+    },
+    {
+      "id": "grime",
+      "rmsDb": -13.32,
+      "peakDb": -0.05
+    },
+    {
+      "id": "bassline",
+      "rmsDb": -13.98,
+      "peakDb": 1.38
+    },
+    {
+      "id": "uk-funky",
+      "rmsDb": -14.55,
+      "peakDb": -0.74
+    },
+    {
+      "id": "dub",
+      "rmsDb": -16.14,
+      "peakDb": 0.51
+    },
+    {
+      "id": "speedbass",
+      "rmsDb": -12.18,
+      "peakDb": 1.16
+    },
+    {
+      "id": "edm-trap",
+      "rmsDb": -15.02,
+      "peakDb": 0.21
+    },
+    {
+      "id": "hard-trap",
+      "rmsDb": -13.52,
+      "peakDb": 0.19
+    },
+    {
+      "id": "hybrid-trap",
+      "rmsDb": -13.21,
+      "peakDb": 0.27
+    },
+    {
+      "id": "wave",
+      "rmsDb": -14.67,
+      "peakDb": -1.32
+    },
+    {
+      "id": "chicago-drill",
+      "rmsDb": -14.75,
+      "peakDb": 0.62
+    },
+    {
+      "id": "uk-drill",
+      "rmsDb": -13.69,
+      "peakDb": 0.2
+    },
+    {
+      "id": "brooklyn-drill",
+      "rmsDb": -14.17,
+      "peakDb": 0.73
+    },
+    {
+      "id": "jersey-drill",
+      "rmsDb": -11.91,
+      "peakDb": 0.07
+    },
+    {
+      "id": "future-bass",
+      "rmsDb": -14.06,
+      "peakDb": 0.72
+    },
+    {
+      "id": "kawaii-future-bass",
+      "rmsDb": -13.77,
+      "peakDb": 0.74
+    },
+    {
+      "id": "synthwave",
+      "rmsDb": -11.87,
+      "peakDb": 0.76
+    },
+    {
+      "id": "vaporwave",
+      "rmsDb": -17.57,
+      "peakDb": -0.18
+    },
+    {
+      "id": "chillwave",
+      "rmsDb": -19,
+      "peakDb": 0.25
+    },
+    {
+      "id": "downtempo",
+      "rmsDb": -15.4,
+      "peakDb": 0.49
+    },
+    {
+      "id": "trip-hop",
+      "rmsDb": -16.51,
+      "peakDb": -0.29
+    },
+    {
+      "id": "glitch-hop",
+      "rmsDb": -15.01,
+      "peakDb": 0.93
+    },
+    {
+      "id": "idm",
+      "rmsDb": -13.1,
+      "peakDb": 1.08
+    },
+    {
+      "id": "ambient",
+      "rmsDb": -24.72,
+      "peakDb": -7.3
+    },
+    {
+      "id": "ambient-dub",
+      "rmsDb": -18.55,
+      "peakDb": 0.67
+    },
+    {
+      "id": "lofi-house",
+      "rmsDb": -11.38,
+      "peakDb": 1.13
+    },
+    {
+      "id": "chiptune",
+      "rmsDb": -9.91,
+      "peakDb": 1.07
+    },
+    {
+      "id": "hardstyle",
+      "rmsDb": -12.71,
+      "peakDb": 0.64
+    },
+    {
+      "id": "hardcore-gabber",
+      "rmsDb": -13.32,
+      "peakDb": 0.99
+    },
+    {
+      "id": "frenchcore",
+      "rmsDb": -11.18,
+      "peakDb": 0.93
+    },
+    {
+      "id": "happy-hardcore",
+      "rmsDb": -12.18,
+      "peakDb": 0.75
+    },
+    {
+      "id": "moombahton",
+      "rmsDb": -13.98,
+      "peakDb": -0.37
+    },
+    {
+      "id": "jersey-club",
+      "rmsDb": -13.35,
+      "peakDb": 0.62
+    },
+    {
+      "id": "footwork",
+      "rmsDb": -11.49,
+      "peakDb": 0.19
+    },
+    {
+      "id": "phonk",
+      "rmsDb": -13.59,
+      "peakDb": 0.93
+    },
+    {
+      "id": "drift-phonk",
+      "rmsDb": -12.19,
+      "peakDb": 0.81
+    },
+    {
+      "id": "electro",
+      "rmsDb": -14.78,
+      "peakDb": -0.22
+    },
+    {
+      "id": "breakbeat",
+      "rmsDb": -14.91,
+      "peakDb": 0.25
+    },
+    {
+      "id": "big-beat",
+      "rmsDb": -14.95,
+      "peakDb": 0.02
+    },
+    {
+      "id": "rock-and-roll",
+      "rmsDb": -16.32,
+      "peakDb": 0.1
+    },
+    {
+      "id": "blues-rock",
+      "rmsDb": -17.95,
+      "peakDb": -0.2
+    },
+    {
+      "id": "hard-rock",
+      "rmsDb": -15.95,
+      "peakDb": -0.85
+    },
+    {
+      "id": "punk-rock",
+      "rmsDb": -13.43,
+      "peakDb": -0.11
+    },
+    {
+      "id": "post-punk",
+      "rmsDb": -15.32,
+      "peakDb": -0.02
+    },
+    {
+      "id": "new-wave",
+      "rmsDb": -14.71,
+      "peakDb": 0.1
+    },
+    {
+      "id": "heavy-metal",
+      "rmsDb": -13.8,
+      "peakDb": -0.38
+    },
+    {
+      "id": "thrash-metal",
+      "rmsDb": -12.07,
+      "peakDb": 0.02
+    },
+    {
+      "id": "death-metal",
+      "rmsDb": -12.06,
+      "peakDb": 0.11
+    },
+    {
+      "id": "black-metal",
+      "rmsDb": -11.1,
+      "peakDb": 0.87
+    },
+    {
+      "id": "doom-metal",
+      "rmsDb": -20.65,
+      "peakDb": -5.58
+    },
+    {
+      "id": "metalcore",
+      "rmsDb": -14.23,
+      "peakDb": -0.01
+    },
+    {
+      "id": "grunge",
+      "rmsDb": -18.23,
+      "peakDb": -0.01
+    },
+    {
+      "id": "alternative-rock",
+      "rmsDb": -16.63,
+      "peakDb": -0.28
+    },
+    {
+      "id": "progressive-rock",
+      "rmsDb": -14.96,
+      "peakDb": -0.13
+    },
+    {
+      "id": "math-rock",
+      "rmsDb": -14.68,
+      "peakDb": 0.35
+    },
+    {
+      "id": "shoe-gaze",
+      "rmsDb": -16.38,
+      "peakDb": -0.09
+    },
+    {
+      "id": "old-school-hip-hop",
+      "rmsDb": -15.16,
+      "peakDb": -0.07
+    },
+    {
+      "id": "boom-bap",
+      "rmsDb": -17.68,
+      "peakDb": 0.27
+    },
+    {
+      "id": "g-funk",
+      "rmsDb": -15.72,
+      "peakDb": 0.15
+    },
+    {
+      "id": "trap-rap",
+      "rmsDb": -15.27,
+      "peakDb": 0.05
+    },
+    {
+      "id": "conscious-hip-hop",
+      "rmsDb": -16.02,
+      "peakDb": 0.79
+    },
+    {
+      "id": "emo-rap",
+      "rmsDb": -15.49,
+      "peakDb": 0.09
+    },
+    {
+      "id": "lofi-hip-hop",
+      "rmsDb": -17.45,
+      "peakDb": -0.22
+    },
+    {
+      "id": "east-coast-hip-hop",
+      "rmsDb": -15.11,
+      "peakDb": -0.59
+    },
+    {
+      "id": "west-coast-hip-hop",
+      "rmsDb": -13.8,
+      "peakDb": 0.39
+    },
+    {
+      "id": "southern-hip-hop",
+      "rmsDb": -15.28,
+      "peakDb": 0
+    },
+    {
+      "id": "cloud-rap",
+      "rmsDb": -15.46,
+      "peakDb": -0.38
+    },
+    {
+      "id": "delta-blues",
+      "rmsDb": -16.53,
+      "peakDb": -0.43
+    },
+    {
+      "id": "chicago-blues",
+      "rmsDb": -14.81,
+      "peakDb": 0.06
+    },
+    {
+      "id": "texas-blues",
+      "rmsDb": -16.52,
+      "peakDb": -1.61
+    },
+    {
+      "id": "electric-blues",
+      "rmsDb": -18.68,
+      "peakDb": -0.81
+    },
+    {
+      "id": "traditional-jazz",
+      "rmsDb": -16.27,
+      "peakDb": -2.27
+    },
+    {
+      "id": "bebop",
+      "rmsDb": -12.84,
+      "peakDb": 0.1
+    },
+    {
+      "id": "hard-bop",
+      "rmsDb": -15.97,
+      "peakDb": 0.41
+    },
+    {
+      "id": "cool-jazz",
+      "rmsDb": -16.8,
+      "peakDb": -0.29
+    },
+    {
+      "id": "modal-jazz",
+      "rmsDb": -16.35,
+      "peakDb": -0.01
+    },
+    {
+      "id": "free-jazz",
+      "rmsDb": -14.81,
+      "peakDb": -0.01
+    },
+    {
+      "id": "jazz-fusion",
+      "rmsDb": -16.2,
+      "peakDb": -1.45
+    },
+    {
+      "id": "smooth-jazz",
+      "rmsDb": -16.81,
+      "peakDb": -0.51
+    },
+    {
+      "id": "acid-jazz",
+      "rmsDb": -14.58,
+      "peakDb": -1.05
+    },
+    {
+      "id": "gypsy-jazz",
+      "rmsDb": -14.4,
+      "peakDb": 0.28
+    },
+    {
+      "id": "traditional-pop",
+      "rmsDb": -14.6,
+      "peakDb": 0.15
+    },
+    {
+      "id": "synth-pop",
+      "rmsDb": -11.06,
+      "peakDb": -0.18
+    },
+    {
+      "id": "disco",
+      "rmsDb": -11.32,
+      "peakDb": 0.63
+    },
+    {
+      "id": "eurodance",
+      "rmsDb": -12.87,
+      "peakDb": 0.55
+    },
+    {
+      "id": "funk",
+      "rmsDb": -14.97,
+      "peakDb": -0.12
+    },
+    {
+      "id": "soul",
+      "rmsDb": -13.39,
+      "peakDb": 0.04
+    },
+    {
+      "id": "neo-soul",
+      "rmsDb": -18.75,
+      "peakDb": -0.64
+    },
+    {
+      "id": "contemporary-rnb",
+      "rmsDb": -14.17,
+      "peakDb": 0.23
+    },
+    {
+      "id": "alternative-rnb",
+      "rmsDb": -14.86,
+      "peakDb": -0.39
+    },
+    {
+      "id": "motown",
+      "rmsDb": -15.96,
+      "peakDb": 0.28
+    },
+    {
+      "id": "city-pop",
+      "rmsDb": -12.76,
+      "peakDb": 0.53
+    },
+    {
+      "id": "k-pop",
+      "rmsDb": -11.75,
+      "peakDb": 0.88
+    },
+    {
+      "id": "j-pop",
+      "rmsDb": -12.04,
+      "peakDb": 0.42
+    },
+    {
+      "id": "salsa",
+      "rmsDb": -15.57,
+      "peakDb": -0.31
+    },
+    {
+      "id": "bachata",
+      "rmsDb": -14.77,
+      "peakDb": 0
+    },
+    {
+      "id": "reggae",
+      "rmsDb": -17.55,
+      "peakDb": -0.6
+    },
+    {
+      "id": "dancehall",
+      "rmsDb": -14.96,
+      "peakDb": -0.09
+    },
+    {
+      "id": "reggaeton",
+      "rmsDb": -14.1,
+      "peakDb": 0.34
+    },
+    {
+      "id": "afrobeat",
+      "rmsDb": -16.53,
+      "peakDb": -0.75
+    },
+    {
+      "id": "amapiano",
+      "rmsDb": -15.28,
+      "peakDb": -0.14
+    },
+    {
+      "id": "bossa-nova",
+      "rmsDb": -15.78,
+      "peakDb": 0.03
+    },
+    {
+      "id": "samba",
+      "rmsDb": -14.77,
+      "peakDb": 0.35
+    },
+    {
+      "id": "cumbia",
+      "rmsDb": -15.38,
+      "peakDb": -1.68
+    },
+    {
+      "id": "kuduro",
+      "rmsDb": -14.58,
+      "peakDb": -2.02
+    }
+  ],
+  "spread": {
+    "maxMinusMin": 15.03,
+    "p90MinusP10": 5.3
+  },
+  "extremes": {
+    "quietest": [
+      "ambient",
+      -24.72
+    ],
+    "loudest": [
+      "breakcore",
+      -9.68
+    ]
+  },
+  "repeatability": {
+    "aggregateSpreadStableTo": "~0.1 dB",
+    "individualGenre": "up to ~0.9 dB (sampling window lands on different bars)"
+  }
+}

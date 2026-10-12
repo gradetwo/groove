@@ -1,0 +1,483 @@
+/**
+ * ⭐ **The audio analysis the product actually runs** — moved here from `src/test/helpers` (third evaluation, F07).
+ *
+ * The evaluation's F07 found the production click detector living in a test helper: the MCP analysis path imported it from
+ * `src/test/`, which is where a measurement nobody could optimise safely ends up (no layer rule looks at it, and a
+ * behaviour change there is easy to mistake for a test detail). The algorithm is unchanged by the move — the four fixture
+ * readings pinned in `scratch/f07-baseline.ts` and in `src/test/clickAnalysisBehaviour.test.ts` are the same before and
+ * after — and the whole file moves, because the metrics below are what the audit measures a render with, not fixtures.
+ *
+ * Signal-level metrics for the export audit.
+ *
+ * `helpers/loudness.ts` already owns loudness and true peak, and `helpers/timbre.ts` owns the spectral shape
+ * (a 13-band filterbank, deliberately not an FFT). These are the few measurements a listener's complaint maps
+ * onto directly and neither of those covers:
+ *
+ *   · **clicks** — the largest sample-to-sample jump, and how many jumps stand out from the signal's own
+ *     texture. A click is a discontinuity, so it shows up in the first difference and nowhere else;
+ *   · **clipping** — samples pinned at the ceiling;
+ *   · **space** — inter-channel correlation and side energy, which is how "it sounds mono and dry" becomes a
+ *     number rather than an impression;
+ *   · **tail** — the level of the final milliseconds, which is how "the ending is cut off" becomes measurable.
+ *
+ * Everything here is deterministic (no clock, no randomness) and pure, so the same buffer always gives the same
+ * numbers; the unit test pins each one against a synthetic signal whose answer is known by construction.
+ */
+
+/** Largest absolute first difference across the channels, in dBFS. `-Infinity` for silence. */
+export function maxStepDb(channels: Float32Array[]): number {
+  let max = 0;
+  for (const channel of channels) {
+    for (let i = 1; i < channel.length; i += 1) {
+      const step = Math.abs(channel[i] - channel[i - 1]);
+      if (step > max) max = step;
+    }
+  }
+  return max === 0 ? -Infinity : 20 * Math.log10(max);
+}
+
+/**
+ * The absolute first differences of every channel, concatenated, in a contiguous typed array.
+ *
+ * Shared by the two median-based metrics below. A plain `number[]` of 2M+ boxed doubles costs both
+ * allocation time and GC pressure; `Float64Array` keeps the whole working set in one unboxed buffer.
+ */
+function collectSteps(channels: Float32Array[]): Float64Array | null {
+  let total = 0;
+  for (const channel of channels) total += Math.max(0, channel.length - 1);
+  if (!total) return null;
+  const steps = new Float64Array(total);
+  let k = 0;
+  for (const channel of channels) {
+    for (let i = 1; i < channel.length; i += 1) steps[k++] = Math.abs(channel[i] - channel[i - 1]);
+  }
+  return steps;
+}
+
+/**
+ * In-place quickselect (Floyd-style tri-median pivot, insertion sort under 32 wide).
+ *
+ * Returns the value that would sit at index `rank` of the sorted array — O(n) expected instead of
+ * the O(n log n) full sort these call sites used to pay. Ordering ties never matter here: the rank
+ * holds the same value whichever valid permutation is chosen.
+ */
+function selectInPlace(s: Float64Array, rank: number): number {
+  let lo = 0;
+  let hi = s.length - 1;
+  while (lo < hi) {
+    if (hi - lo < 32) {
+      for (let i = lo + 1; i <= hi; i += 1) {
+        const v = s[i]!;
+        let j = i - 1;
+        while (j >= lo && s[j]! > v) {
+          s[j + 1] = s[j]!;
+          j -= 1;
+        }
+        s[j + 1] = v;
+      }
+      break;
+    }
+    const m = (lo + hi) >> 1;
+    if (s[m]! > s[lo]!) {
+      const t = s[m]!;
+      s[m] = s[lo]!;
+      s[lo] = t;
+    }
+    if (s[hi]! > s[m]!) {
+      const t = s[hi]!;
+      s[hi] = s[m]!;
+      s[m] = t;
+      if (s[m]! > s[lo]!) {
+        const t2 = s[m]!;
+        s[m] = s[lo]!;
+        s[lo] = t2;
+      }
+    }
+    const pivot = s[m]!;
+    {
+      const t = s[m]!;
+      s[m] = s[hi]!;
+      s[hi] = t;
+    }
+    let store = lo;
+    for (let i = lo; i < hi; i += 1) {
+      if (s[i]! < pivot) {
+        const t = s[store]!;
+        s[store] = s[i]!;
+        s[i] = t;
+        store += 1;
+      }
+    }
+    {
+      const t = s[store]!;
+      s[store] = s[hi]!;
+      s[hi] = t;
+    }
+    if (store === rank) break;
+    if (rank < store) hi = store - 1;
+    else lo = store + 1;
+  }
+  return s[rank]!;
+}
+
+/** Median absolute first difference, in dBFS — the signal's own "normal" slew rate. */
+export function medianStepDb(channels: Float32Array[]): number {
+  const steps = collectSteps(channels);
+  if (!steps) return -Infinity;
+  const middle = selectInPlace(steps, steps.length >> 1);
+  return middle === 0 ? -Infinity : 20 * Math.log10(middle);
+}
+
+/**
+ * How many sample-to-sample jumps exceed `factor` × the median jump.
+ *
+ * A discontinuous envelope edge is a *single* huge step, whereas dense high-frequency content has many large
+ * ones, so the count separates "a click" from "a bright signal" — a distinction the raw maximum cannot make.
+ *
+ * The median and the outlier sweep now share one pass over the samples: the old pair re-derived every
+ * first difference inside `stepOutlierCount` after `medianStepDb` had already built (and sorted) them.
+ */
+export function stepOutlierCount(channels: Float32Array[], factor = 12): number {
+  const steps = collectSteps(channels);
+  if (!steps) return 0;
+  const middle = selectInPlace(steps.slice(), steps.length >> 1); // copy: select mutates
+  if (middle === 0) return 0;
+  const threshold = middle * factor;
+  let count = 0;
+  for (let i = 0; i < steps.length; i += 1) {
+    if (steps[i]! > threshold) count += 1;
+  }
+  return count;
+}
+
+/** Samples at or above the ceiling. */
+export function clippedSampleCount(channels: Float32Array[], ceiling = 0.999): number {
+  let count = 0;
+  for (const channel of channels) {
+    for (let i = 0; i < channel.length; i += 1) {
+      if (Math.abs(channel[i]) >= ceiling) count += 1;
+    }
+  }
+  return count;
+}
+
+/**
+ * Pearson correlation between the two channels.
+ *
+ * `1` is identical (mono), `0` uncorrelated (wide), negative means the channels fight (a phase problem).
+ */
+export function channelCorrelation(left: Float32Array, right: Float32Array): number {
+  const n = Math.min(left.length, right.length);
+  if (!n) return 1;
+  let sumL = 0;
+  let sumR = 0;
+  let sumLR = 0;
+  let sumLL = 0;
+  let sumRR = 0;
+  for (let i = 0; i < n; i += 1) {
+    const l = left[i];
+    const r = right[i];
+    sumL += l;
+    sumR += r;
+    sumLR += l * r;
+    sumLL += l * l;
+    sumRR += r * r;
+  }
+  const covariance = sumLR / n - (sumL / n) * (sumR / n);
+  const sdL = Math.sqrt(Math.max(0, sumLL / n - (sumL / n) ** 2));
+  const sdR = Math.sqrt(Math.max(0, sumRR / n - (sumR / n) ** 2));
+  if (sdL === 0 || sdR === 0) return 1;
+  return covariance / (sdL * sdR);
+}
+
+/** Energy of the side signal relative to the mid signal, in dB. `-Infinity` means exactly mono. */
+export function sideToMidDb(channels: Float32Array[]): number {
+  if (channels.length < 2) return -Infinity;
+  const [left, right] = channels;
+  const n = Math.min(left.length, right.length);
+  let mid = 0;
+  let side = 0;
+  for (let i = 0; i < n; i += 1) {
+    const m = (left[i] + right[i]) / 2;
+    const s = (left[i] - right[i]) / 2;
+    mid += m * m;
+    side += s * s;
+  }
+  if (side === 0) return -Infinity;
+  if (mid === 0) return Infinity;
+  return 10 * Math.log10(side / mid);
+}
+
+/** RMS of the final `ms` milliseconds, in dBFS. A truncated render ends loud; a natural one decays. */
+export function tailRmsDb(channels: Float32Array[], sampleRate: number, ms = 50): number {
+  const window = Math.max(1, Math.round((ms / 1000) * sampleRate));
+  let sum = 0;
+  let count = 0;
+  for (const channel of channels) {
+    const start = Math.max(0, channel.length - window);
+    for (let i = start; i < channel.length; i += 1) {
+      sum += channel[i] * channel[i];
+      count += 1;
+    }
+  }
+  if (!count || sum === 0) return -Infinity;
+  return 10 * Math.log10(sum / count);
+}
+
+/** Peak of the final few milliseconds, in dBFS — the "was it cut mid-waveform" number. */
+export function finalPeakDb(channels: Float32Array[], sampleRate: number, ms = 5): number {
+  const window = Math.max(1, Math.round((ms / 1000) * sampleRate));
+  let peak = 0;
+  for (const channel of channels) {
+    const start = Math.max(0, channel.length - window);
+    for (let i = start; i < channel.length; i += 1) peak = Math.max(peak, Math.abs(channel[i]));
+  }
+  return peak === 0 ? -Infinity : 20 * Math.log10(peak);
+}
+
+/** Peak across the whole buffer, in dBFS. */
+export function samplePeakDb(channels: Float32Array[]): number {
+  let peak = 0;
+  for (const channel of channels) {
+    for (let i = 0; i < channel.length; i += 1) peak = Math.max(peak, Math.abs(channel[i]));
+  }
+  return peak === 0 ? -Infinity : 20 * Math.log10(peak);
+}
+
+/**
+ * Envelope decay shape of the loudest event in the buffer.
+ *
+ * Returns the ratio between the time to fall 20 dB and the time to fall 40 dB, normalised so that a **perfect
+ * exponential** is `0.5` (each 20 dB takes the same time). A ratio above 0.5 means the decay slows down (a
+ * linear or gated release, or a tail that never resolves); below 0.5 means it accelerates.
+ */
+export function decayShapeRatio(channels: Float32Array[], sampleRate: number): number | null {
+  const mono = channels[0];
+  if (!mono || mono.length === 0) return null;
+  // Find the loudest sample, then walk forward in 5 ms blocks.
+  let peakIndex = 0;
+  let peak = 0;
+  for (let i = 0; i < mono.length; i += 1) {
+    if (Math.abs(mono[i]) > peak) {
+      peak = Math.abs(mono[i]);
+      peakIndex = i;
+    }
+  }
+  if (peak === 0) return null;
+  const block = Math.max(1, Math.round(0.005 * sampleRate));
+  const levels: number[] = [];
+  for (let start = peakIndex; start + block <= mono.length; start += block) {
+    let sum = 0;
+    for (let i = start; i < start + block; i += 1) sum += mono[i] * mono[i];
+    levels.push(10 * Math.log10(Math.max(sum / block, 1e-12)));
+  }
+  const top = levels[0];
+  const findCrossing = (db: number) => levels.findIndex((level) => level <= top - db);
+  const t20 = findCrossing(20);
+  const t40 = findCrossing(40);
+  if (t20 < 1 || t40 <= t20) return null;
+  return t20 / t40;
+}
+
+/**
+ * Click detector: an *isolated* discontinuity, not a waveform's own edges.
+ *
+ * Two false positives had to be designed out, both found by running this on real stems:
+ *
+ *   · **square/pulse waveforms.** A bit-crushed or pulse lead is flat between its edges, so its local median
+ *     slew is ~0 and every edge looks like a discontinuity — one stem reported thousands of "clicks" that were
+ *     simply the waveform. The fix is to look at *when* the outliers happen: a waveform's edges repeat at a
+ *     stable rate, a click does not. Clusters whose spacing is regular and dense are the signal itself.
+ *   · **near-silent stems.** A chord stem peaking 35 dB down is mostly the noise floor, whose samples deviate
+ *     wildly from their neighbours in relative terms while being inaudible. Anything below the audibility gate
+ *     (`minPeakDb`, default -40 dBFS) is not measured at all.
+ *
+ * What remains is what a listener would call a click: a short cluster of samples standing far above the local
+ * texture, happening at irregular times.
+ */
+/**
+ * ⭐ **A small multiset kept in order, for the click detector's rolling window** (third evaluation, F07).
+ *
+ * Insertion and removal are binary search plus `splice`; the median is the middle element of the same multiset the original
+ * code sorted, so the number this returns is the number that code returned — the difference is that a step now costs one
+ * removal and one insertion instead of collecting and sorting ~55 values.
+ *
+ * `remove` deletes **one** copy, which is what a multiset needs: the window legitimately holds the same difference twice.
+ */
+class OrderedWindow {
+  private values: number[] = [];
+  /** ⭐ The first index whose value is >= `value`, so duplicates keep a stable place. */
+  private lowerBound(value: number): number {
+    let low = 0;
+    let high = this.values.length;
+    while (low < high) {
+      const mid = (low + high) >> 1;
+      if (this.values[mid]! < value) low = mid + 1;
+      else high = mid;
+    }
+    return low;
+  }
+  insert(value: number): void {
+    this.values.splice(this.lowerBound(value), 0, value);
+  }
+  remove(value: number): void {
+    const at = this.lowerBound(value);
+    if (at < this.values.length && this.values[at] === value) this.values.splice(at, 1);
+  }
+  reset(sorted: number[]): void {
+    this.values = sorted.slice();
+  }
+  /** The same `floor(n / 2)` the rebuild took: for an even count that is the upper of the two middles. */
+  median(): number {
+    return this.values[this.values.length >> 1]!;
+  }
+  get size(): number {
+    return this.values.length;
+  }
+}
+
+export function clickAnalysis(
+  channels: Float32Array[],
+  sampleRate: number,
+  options: { factor?: number; minPeakDb?: number; regularCv?: number } = {}
+): { count: number; worstDb: number | null; worstIndex: number | null; skippedQuiet: boolean } {
+  const factor = options.factor ?? 6;
+  const minPeakDb = options.minPeakDb ?? -40;
+  const regularCv = options.regularCv ?? 0.15;
+  const peakDb = samplePeakDb(channels);
+  if (!Number.isFinite(peakDb) || peakDb < minPeakDb) {
+    return { count: 0, worstDb: null, worstIndex: null, skippedQuiet: true };
+  }
+
+  const halfWindow = Math.max(4, Math.round(sampleRate * 0.0025));
+  const stride = 4;
+  let worstDb: number | null = null;
+  let worstIndex: number | null = null;
+  /** Sample indices that stand out, per channel, before clustering. */
+  const outlierIndices: number[][] = [];
+  for (const channel of channels) {
+    const indices: number[] = [];
+    const steps = new Float32Array(Math.max(0, channel.length - 1));
+    for (let i = 1; i < channel.length; i += 1) steps[i - 1] = Math.abs(channel[i] - channel[i - 1]);
+    /**
+     * ⭐ **The window is rolled, not rebuilt** (third evaluation, F07).
+     *
+     * The evaluation measured a first five-minute analysis at 161 s and traced it here: for **every** sample the window of
+     * ~55 values was rebuilt and sorted — 13.2 million rebuilds, 287 s on this machine. Two exact cuts, one after the
+     * other: the sort lost its comparator (a `Float64Array` sorts numerically in the engine), and now the window itself is
+     * carried forward.
+     *
+     * **Why carrying it forward is exact.** The window's values are `steps[from], steps[from + stride], …`, and
+     * `from = max(0, i - halfWindow)` moves by one per sample — so consecutive samples sample a *different* residue class
+     * of the stride and share almost nothing. But the same residue class comes around every `stride` samples, and then
+     * `from` and `to` have both advanced by exactly `stride`: the class's multiset loses the values that left the range and
+     * gains the ones that entered, and nothing else. One `OrderedWindow` per class therefore holds the same **multiset**
+     * the rebuild would have produced, so `median()` returns the same number — and a value is inserted and removed once
+     * per class, so the whole pass costs O(samples) rather than O(samples × window).
+     *
+     * The readings on the four fixture shapes in `scratch/f07-baseline.ts` were pinned bit for bit before this change and
+     * matched after it: `count`, `worstDb` and `worstIndex` are what says the shortcut did not change what a click is.
+     */
+    const windows = [new OrderedWindow(), new OrderedWindow(), new OrderedWindow(), new OrderedWindow()];
+    const windowRanges: Array<{ from: number; to: number } | undefined> = [undefined, undefined, undefined, undefined];
+    const strideClass = (index: number) => ((index % stride) + stride) % stride;
+    for (let i = 1; i < channel.length - 1; i += 1) {
+      const predicted = (channel[i - 1] + channel[i + 1]) / 2;
+      const deviation = Math.abs(channel[i] - predicted);
+      if (deviation === 0) continue;
+      const from = Math.max(0, i - halfWindow);
+      const to = Math.min(steps.length, i + halfWindow);
+      const cursor = strideClass(from);
+      const window = windows[cursor]!;
+      const previous = windowRanges[cursor];
+      if (previous === undefined || previous.from > from || previous.to > to) {
+        /** ⭐ First use of this class (or a range this window cannot roll to): build the multiset directly. */
+        const values: number[] = [];
+        for (let j = from; j < to; j += stride) values.push(steps[j]!);
+        if (!values.length) continue;
+        values.sort((a, b) => a - b);
+        window.reset(values);
+        windowRanges[cursor] = { from, to };
+      } else {
+        /** ⭐ Roll forward: what left the range goes, what entered it arrives. Both ends only move forward. */
+        for (let j = previous.from; j < from; j += stride) window.remove(steps[j]!);
+        for (let j = previous.to + strideClass(from - previous.to); j < to; j += stride) window.insert(steps[j]!);
+        windowRanges[cursor] = { from, to };
+      }
+      if (window.size === 0) continue;
+      const floor = window.median();
+      const ratioDb = 20 * Math.log10(deviation / Math.max(floor, 1e-9));
+      if (worstDb === null || ratioDb > worstDb) {
+        worstDb = ratioDb;
+        worstIndex = i;
+      }
+      if (ratioDb > 20 * Math.log10(factor)) indices.push(i);
+    }
+    outlierIndices.push(indices);
+  }
+
+  /**
+   * Cluster the outliers (gap > 2 ms starts a new event) and reject a *regular* series: a waveform's edges are
+   * evenly spaced, a click is not.
+   */
+  let count = 0;
+  for (const indices of outlierIndices) {
+    if (!indices.length) continue;
+    const gap = Math.max(2, Math.round(sampleRate * 0.002));
+    // The first outlier opens the first cluster — the loop below only opens *new* ones.
+    const clusters: number[] = [indices[0]];
+    let last = indices[0];
+    for (const index of indices) {
+      if (index - last > gap) clusters.push(index);
+      last = index;
+    }
+    if (clusters.length < 3) {
+      count += clusters.length;
+      continue;
+    }
+    const spacings = clusters.slice(1).map((index, i) => index - clusters[i]);
+    const mean = spacings.reduce((a, b) => a + b, 0) / spacings.length;
+    const variance = spacings.reduce((acc, value) => acc + (value - mean) ** 2, 0) / spacings.length;
+    const cv = mean > 0 ? Math.sqrt(variance) / mean : 1;
+    // Regular and dense => the waveform's own edge rate (a pulse lead), not a defect.
+    const isWaveform = cv < regularCv && mean < sampleRate * 0.05;
+    if (!isWaveform) count += clusters.length;
+  }
+  return { count, worstDb, worstIndex, skippedQuiet: false };
+}
+
+/**
+ * Onset times of the loudest transient, in milliseconds — the measure of whether swing reached the audio.
+ *
+ * Onsets are found on the *envelope* (a 1 ms rectified moving average) crossing a threshold after a quiet gap,
+ * which is what a drum hit looks like from the outside. The caller compares the intervals against the grid the
+ * pattern claims to be playing, so "swing is declared" and "swing is audible" stop being the same statement.
+ */
+export function onsetTimesMs(channels: Float32Array[], sampleRate: number, options: { thresholdDb?: number } = {}): number[] {
+  const mono = channels[0];
+  if (!mono || !mono.length) return [];
+  const smoothing = Math.max(1, Math.round(sampleRate * 0.001));
+  const envelope = new Float32Array(Math.ceil(mono.length / smoothing));
+  for (let i = 0; i < envelope.length; i += 1) {
+    let peak = 0;
+    for (let j = i * smoothing; j < Math.min(mono.length, (i + 1) * smoothing); j += 1) {
+      peak = Math.max(peak, Math.abs(mono[j]));
+    }
+    envelope[i] = peak;
+  }
+  let peak = 0;
+  for (const value of envelope) peak = Math.max(peak, value);
+  if (peak === 0) return [];
+  const threshold = peak * 10 ** ((options.thresholdDb ?? -18) / 20);
+  const onsets: number[] = [];
+  let quiet = true;
+  for (let i = 0; i < envelope.length; i += 1) {
+    if (quiet && envelope[i] >= threshold) {
+      onsets.push((i * smoothing * 1000) / sampleRate);
+      quiet = false;
+    } else if (!quiet && envelope[i] < threshold * 0.5) {
+      quiet = true;
+    }
+  }
+  return onsets;
+}

@@ -1,0 +1,979 @@
+#!/usr/bin/env node
+/**
+ * MCP gate: build the server, speak JSON-RPC to it over stdio, and check that it answers.
+ *
+ * This is deliberately a *client*, not an import: the unit tests already cover the handlers, and what can still
+ * be wrong after they pass is the protocol surface — a tool registered with a schema the SDK rejects, a resource
+ * template whose URI never matches, a prompt whose arguments are not strings. So the gate spawns the built
+ * bundle exactly as an MCP client would, lists everything, and calls the browser-free tools for real.
+ *
+ * `render_audio` is not called (it would start Chromium); the gate asserts it is *declared* and that its schema
+ * says so, and the render path has its own probe (`scripts/analyze_export_audio.mjs`).
+ */
+import { spawn } from "node:child_process";
+import { readFileSync } from "node:fs";
+import fs from "node:fs";
+import path from "node:path";
+import zlib from "node:zlib";
+import { buildMxlZip } from "../src/test/fixtures/mxl_zip.mjs";
+import { buildMidiFile, GBK_TRACK_NAME, GBK_TRACK_NAME_BYTES } from "../src/test/fixtures/midi_file.mjs";
+import { buildLogicProjectData, buildMetaDataPlist } from "../src/test/fixtures/logic_project.mjs";
+import { ACID_SHARE_CODE } from "../src/test/fixtures/gs1_share_code.mjs";
+
+const ROOT = process.cwd();
+const BUNDLE = path.join(ROOT, "dist-mcp", "groove-mcp.mjs");
+
+if (!fs.existsSync(BUNDLE)) {
+  console.error(`❌ ${path.relative(ROOT, BUNDLE)} is missing — run \`npm run mcp:build\` first.`);
+  process.exit(1);
+}
+
+/** A minimal MCP stdio client: newline-delimited JSON-RPC, one request at a time. */
+class Client {
+  constructor() {
+    this.child = spawn(process.execPath, [BUNDLE], { stdio: ["pipe", "pipe", "pipe"] });
+    this.buffer = "";
+    this.pending = new Map();
+    this.nextId = 1;
+    this.stderr = "";
+    this.child.stdout.on("data", (chunk) => {
+      this.buffer += chunk.toString();
+      let index;
+      while ((index = this.buffer.indexOf("\n")) !== -1) {
+        const line = this.buffer.slice(0, index).trim();
+        this.buffer = this.buffer.slice(index + 1);
+        if (!line) continue;
+        let message;
+        try {
+          message = JSON.parse(line);
+        } catch {
+          continue; // not a protocol frame (should not happen: stdout is protocol-only)
+        }
+        const resolve = this.pending.get(message.id);
+        if (resolve) {
+          this.pending.delete(message.id);
+          resolve(message);
+        }
+      }
+    });
+    this.child.stderr.on("data", (chunk) => {
+      this.stderr += chunk.toString();
+    });
+  }
+
+  request(method, params) {
+    const id = this.nextId++;
+    const payload = JSON.stringify({ jsonrpc: "2.0", id, method, params }) + "\n";
+    return new Promise((resolve, reject) => {
+      const timer = setTimeout(() => reject(new Error(`${method} timed out`)), 30000);
+      this.pending.set(id, (message) => {
+        clearTimeout(timer);
+        if (message.error) reject(new Error(`${method}: ${message.error.message}`));
+        else resolve(message.result);
+      });
+      this.child.stdin.write(payload);
+    });
+  }
+
+  notify(method, params) {
+    this.child.stdin.write(JSON.stringify({ jsonrpc: "2.0", method, params }) + "\n");
+  }
+
+  async close() {
+    this.child.kill("SIGTERM");
+    await new Promise((resolve) => setTimeout(resolve, 150));
+  }
+}
+
+const failures = [];
+const notes = [];
+const check = (label, ok, detail = "") => {
+  if (ok) notes.push(`✅ ${label}`);
+  else failures.push(`❌ ${label}${detail ? ` — ${detail}` : ""}`);
+};
+
+/** MCP tool results carry JSON in a text block; parse it back for assertions. */
+const payload = (result) => {
+  const text = result?.content?.[0]?.text ?? "";
+  try {
+    return JSON.parse(text);
+  } catch {
+    return { raw: text };
+  }
+};
+
+const client = new Client();
+try {
+  const init = await client.request("initialize", {
+    protocolVersion: "2024-11-05",
+    capabilities: {},
+    clientInfo: { name: "groove-mcp-gate", version: "1.0.0" },
+  });
+  client.notify("notifications/initialized", {});
+  check("initialize answers with server info", init?.serverInfo?.name === "groove-lab", JSON.stringify(init?.serverInfo ?? {}));
+  check("initialize advertises tools/resources/prompts", Boolean(init?.capabilities?.tools && init?.capabilities?.resources && init?.capabilities?.prompts));
+
+  const tools = await client.request("tools/list", {});
+  const names = (tools?.tools ?? []).map((tool) => tool.name);
+  check("tools/list returns the full declared surface", names.length >= 18, `${names.length} tools`);
+  /**
+   * **The count, printed rather than only asserted.** `docs/MCP.md` used to say "45 tools" in prose, which stopped being true the moment a feature arrived; the number belongs to the server, so the gate that lists the surface says what it is. A reader
+   * asking "how big is this surface" now has a command for it.
+   */
+  const listedResources = await client.request("resources/list", {});
+  const listedPrompts = await client.request("prompts/list", {});
+  console.log(
+    `   surface      : ${names.length} tools, ${(listedResources?.resources ?? []).length} resources, ${(listedPrompts?.prompts ?? []).length} prompts`
+  );
+  for (const required of [
+    "list_genres",
+    "get_genre",
+    "search_genres",
+    "list_examples",
+    // ⭐ `get_pattern` and `apply_pattern_ops` are gone with the v1 pattern they carried.
+    "apply_gs1_patch",
+    "get_gs1_patch",
+    "compare_genres",
+    "render_arrangement",
+    "render_arrangement_stems",
+    "render_instrument_note",
+    "analyze_audio",
+    "get_loudness_report",
+  ]) {
+    check(`tool declared: ${required}`, names.includes(required));
+  }
+  const renderTool = (tools?.tools ?? []).find((tool) => tool.name === "render_arrangement");
+  check("render_audio declares its format enum", JSON.stringify(renderTool?.inputSchema ?? {}).includes('"wav"'));
+  check("tools carry a description for the model", (tools?.tools ?? []).every((tool) => (tool.description ?? "").length > 40));
+
+  /**
+   * **The budget a caller reads is the budget the code enforces.**
+   *
+   * This check reads a source file for its expected value on purpose: `mcp/render/budget.json` is what the worker's
+   * timeout is built from, so a description agreeing with a literal typed into this gate would still be free to disagree
+   * with the server. The gate asserts the JSON's own number against the descriptions the built bundle serves.
+   *
+   * It belongs here rather than only in a unit test because `tools/list` is the whole of what an LLM caller sees before
+   * it plans a timeout: a rendering tool whose description omits the budget is a caller that cannot know it must raise
+   * its own, and an eight-bar render measured at 445-511 s cannot survive a client left at 30 s.
+   */
+  {
+    const budget = JSON.parse(fs.readFileSync(path.join(ROOT, "mcp", "render", "budget.json"), "utf8"));
+    const budgetSeconds = Math.round(budget.renderBudgetMs / 1000);
+    const navSeconds = Math.round(budget.navigationBudgetMs / 1000);
+    const RENDER_TOOLS = ["render_arrangement", "render_arrangement_stems"];
+    const byName = new Map((tools?.tools ?? []).map((tool) => [tool.name, tool]));
+    for (const name of RENDER_TOOLS) {
+      const description = byName.get(name)?.description ?? "";
+      check(
+        `${name} states the ${budgetSeconds} s render budget`,
+        description.includes(`${budgetSeconds} s`),
+        description ? "the description never names the server's budget" : "not declared"
+      );
+      check(
+        `${name} says the client's timeout is the other ceiling`,
+        description.includes("client timeout must be at least as long"),
+        "a caller that reads only the server's budget can still leave its own at 30 s"
+      );
+      check(
+        `${name} gives page loading its own ${navSeconds} s allowance rather than folding it into the budget`,
+        description.includes(`${navSeconds} s`),
+        "a folded sentence would be shorter than the code's own worst case"
+      );
+    }
+    const [eightBarLow, eightBarHigh] = budget.measured.eightBarWallSec;
+    check(
+      "the tools quote the measured eight-bar cost rather than an invented one",
+      RENDER_TOOLS.filter((name) => (byName.get(name)?.description ?? "").includes(String(budget.measured.eightBarAudioSec))).length >= RENDER_TOOLS.length - 1,
+      `expected ${budget.measured.eightBarAudioSec} s of audio in ${eightBarLow}-${eightBarHigh} s (docs/RENDER_PROFILE.md) in the descriptions`
+    );
+  }
+
+  const resources = await client.request("resources/list", {});
+
+  /**
+   * Every URI the contract documents must be a URI the server declares.
+   *
+   * This is the check that would have caught `groove://changelog`: `docs/MCP.md` documented it from the day the contract was
+   * written and the registry never declared it, so a reader saw a resource that answered "not found". Comparing the two sides needs
+   * no maintenance — the contract is the list.
+   */
+  {
+    const contract = readFileSync(new URL("../docs/MCP.md", import.meta.url), "utf8");
+    const documented = [...new Set([...contract.matchAll(/(groove:\/\/[a-z-]+(?:\/[a-z-]+|\/\{[a-z]+\})*)/g)].map((match) => match[1]))];
+    const declared = new Set((resources.resources ?? []).map((resource) => resource.uri));
+    const missing = documented.filter((uri) => !declared.has(uri));
+    check(
+      "every documented resource is declared",
+      missing.length === 0,
+      missing.length ? `documented but not declared: ${missing.join(", ")}` : `${documented.length} documented URI(s)`
+    );
+  }
+
+  const uriTemplate = (resources?.resources ?? []).map((resource) => resource.uri);
+  check("resources/list returns the library resources", uriTemplate.includes("groove://genres"));
+  check("a genre document template is declared", uriTemplate.some((uri) => uri.includes("genre")), uriTemplate.join(" "));
+
+  const prompts = await client.request("prompts/list", {});
+  const promptNames = (prompts?.prompts ?? []).map((prompt) => prompt.name);
+  check("prompts/list returns the three prompts", ["compose_groove", "explain_genre", "practice_plan", "compose_with_examples"].every((name) => promptNames.includes(name)));
+
+  // ---- real calls -----------------------------------------------------------------------------------------
+  const genres = payload(await client.request("tools/call", { name: "list_genres", arguments: { limit: 5 } }));
+  check("list_genres answers with rows", Array.isArray(genres.genres) && genres.genres.length === 5, JSON.stringify(genres).slice(0, 120));
+  check("list_genres reports the library total", genres.total >= 100, String(genres.total));
+
+  /**
+   * The composition chain, as far as it is browser-free: create a song, add a section, replace a clip, read it back, export it.
+   *
+   * This is the half of the composer's workflow that the gate can check without Chromium (rendering has its own scope, because
+   * it needs a browser). Two AI composers drove the server end to end and tripped over things this would have caught: `bars`
+   * meaning **passes** rather than measures — they built arrangements four times the length they intended — and a song being
+   * limited to clip A because `set_clip` existed and no tool reached it.
+   */
+  /**
+   * Make-unique, on the chain the gate already builds: two sections sharing a slot, one of them given its own copy, and the other left alone.
+   * This is the property a composer could not get — three verses with three melodies — so the gate holds it rather than a description of it.
+   */
+  /**
+   * The vocal binding, on the chain the gate already builds. It is browser-free by nature — the tool writes notes and checks tones, it renders
+   * nothing — so unlike the loudness and preview checks this one belongs here, where it runs in seconds.
+   */
+  const lyricArrangement = payload(await client.request("tools/call", { name: "create_arrangement", arguments: { blankKind: "synth" } }));
+  /**
+   * ⭐ **The arrangement's own track id** — this read `trackIds`, which `create_arrangement` does not return, so it fell
+   * back to the literal `"track-1"`: a track that never existed. It passed because lyrics written to an unknown track were
+   * silently accepted, which is the third evaluation's F04; once that was refused, this check failed with `undefined
+   * note(s)` — the refusal reaching a fixture that had been measuring nothing. The reply carries `tracks`.
+   */
+  const lyricTrackId = String(lyricArrangement.tracks?.[0]?.id ?? "track-1");
+  const vocal = payload(
+    await client.request("tools/call", {
+      name: "set_arrangement_vocal_melody",
+      arguments: { arrangementId: lyricArrangement.arrangementId, trackId: lyricTrackId, syllables: ["能", "够"], tones: [2, 4], pitches: [60, 64] },
+    })
+  );
+  check(
+    "set_arrangement_vocal_melody binds one syllable per note and warns about the 倒字",
+    vocal.syllables?.length === 2 &&
+      vocal.syllables.every((record) => typeof record.syllable === "string" && typeof record.pitch === "number") &&
+      vocal.prosody?.warnings?.length === 1,
+    `${vocal.notes?.length} note(s), ${vocal.prosody?.warnings?.length} warning(s): ${vocal.prosody?.warnings?.[0]?.detail ?? ""}`.slice(0, 120)
+  );
+  const mismatched = await client.request("tools/call", {
+    name: "set_arrangement_vocal_melody",
+    arguments: { arrangementId: lyricArrangement.arrangementId, trackId: lyricTrackId, syllables: ["能", "够"], tones: [2], pitches: [60, 64] },
+  });
+  check(
+    "set_arrangement_vocal_melody refuses a syllable/tone mismatch rather than guessing",
+    mismatched?.isError === true || /one tone per syllable/.test(JSON.stringify(mismatched)),
+    JSON.stringify(mismatched).slice(0, 120)
+  );
+
+  /**
+   * Decision 3b's tool half, held to the two properties the report asked for: one call for a matrix, and **nothing applied** when one entry is wrong.
+   */
+  /**
+   * Decision 2b at the tool boundary: a tempo map is a **validated** write, and the reported length follows it. Browser-free by nature — nothing here renders.
+   */
+  /**
+   * Owner decision 4: the SVS stub must **say it is reserved**, so neither a human reading the tool list nor a gate watching the surface can mistake it for a
+   * capability. It also validates, so the shape a real implementation would take is exercised now.
+   */
+  /**
+   * Fifth report, P1.2: a composer guessed `"techno"`, was told only "provide either genreId or pattern", and concluded the ids had to be read from the source.
+   * `list_genres` is a tool; the error must say so, and should recognise an abbreviation.
+   */
+
+  const vocalStub = await client.request("tools/call", {
+    name: "synthesize_vocal",
+    arguments: { syllables: ["能", "够"], tones: [2, 4] },
+  });
+  const vocalStubMismatch = await client.request("tools/call", {
+    name: "synthesize_vocal",
+    arguments: { syllables: ["能", "够"], tones: [2] },
+  });
+  check(
+    "synthesize_vocal says it is reserved, and validates its arguments",
+    /reserved/.test(JSON.stringify(vocalStub)) && /one tone per syllable/.test(JSON.stringify(vocalStubMismatch)),
+    JSON.stringify(vocalStub).slice(0, 100)
+  );
+
+
+
+  /**
+   * ⭐ **A second part is a second track, and what it plays is its steps.** Placing a section and giving it a clip were the
+   * older model's two moves for one idea; the arrangement states it once, and the assertion names the older fields as
+   * absent rather than merely unused.
+   */
+  const v2Parts = payload(await client.request("tools/call", { name: "create_arrangement", arguments: { blankKind: "synth" } }));
+  const v2Part = payload(
+    await client.request("tools/call", {
+      name: "add_arrangement_track",
+      arguments: { arrangementId: v2Parts.arrangementId, kind: "sampler", name: "chorus" },
+    })
+  );
+  const v2TrackId = (v2Part.summary?.tracks ?? []).at(-1)?.id;
+  const v2Played = payload(
+    await client.request("tools/call", {
+      name: "set_arrangement_track_steps",
+      arguments: { arrangementId: v2Parts.arrangementId, trackId: v2TrackId, steps: [1, 0, 0, 0, 1, 0, 0, 0] },
+    })
+  );
+  check(
+    "a second track with its own steps is how v2 places a second part",
+    (v2Played.summary?.tracks ?? []).length === 2 && v2Played.summary?.clips === undefined && v2Played.summary?.sections === undefined,
+    `tracks=${(v2Played.summary?.tracks ?? []).length} trackId=${String(v2TrackId)}`
+  );
+
+  /**
+   * ⭐ **The reader, on the model that is staying.** This used to read the older song back through `get_song`, which is what
+   * the retirement of that tool needs replaced first: a fresh arrangement, a second track as its second part, and the reply
+   * naming tracks while the older fields are absent rather than merely unused.
+   */
+  const v2Probe = payload(await client.request("tools/call", { name: "create_arrangement", arguments: { blankKind: "synth" } }));
+  payload(
+    await client.request("tools/call", {
+      name: "add_arrangement_track",
+      arguments: { arrangementId: v2Probe.arrangementId, kind: "sampler", name: "chorus" },
+    })
+  );
+  const v2Read = payload(await client.request("tools/call", { name: "get_arrangement", arguments: { arrangementId: v2Probe.arrangementId } }));
+  check(
+    "get_arrangement reads an arrangement back, and the older fields are absent rather than unused",
+    (v2Read.tracks ?? []).length === 2 && v2Read.clips === undefined && v2Read.sections === undefined,
+    `tracks=${(v2Read.tracks ?? []).length} clips=${String(v2Read.clips)} sections=${String(v2Read.sections)}`
+  );
+
+  const grooveArrangement = payload(await client.request("tools/call", { name: "create_arrangement", arguments: { blankKind: "synth" } }));
+  const exported = payload(await client.request("tools/call", { name: "export_groove", arguments: { arrangementId: grooveArrangement.arrangementId } }));
+  check(
+    "export_groove writes a validated v2 package",
+    exported.format === "groove-arrangement" && Number.isFinite(exported.bytes) && exported.clips === undefined,
+    JSON.stringify(exported).slice(0, 160)
+  );
+
+  /**
+   * The undo acceptance line from docs/V4_REVIEW_PLAN.md: a sequence of tool calls returns to its starting arrangement.
+   */
+  /** ⭐ **Its own setup**, so this scenario no longer borrows the state the one above it builds. */
+  const undoProbe = payload(await client.request("tools/call", { name: "create_arrangement", arguments: { blankKind: "synth" } }));
+  const undoStart = payload(await client.request("tools/call", { name: "get_arrangement", arguments: { arrangementId: undoProbe.arrangementId } }));
+  for (const bars of [8, 16]) {
+    await client.request("tools/call", { name: "set_arrangement_bars", arguments: { arrangementId: undoProbe.arrangementId, bars } });
+  }
+  const undone = payload(
+    await client.request("tools/call", { name: "undo_arrangement", arguments: { arrangementId: undoProbe.arrangementId, steps: 2 } })
+  );
+  check(
+    "undo_arrangement steps back and reports the arrangement as it now stands",
+    undone.summary?.bars === undoStart.bars && undone.summary?.bars !== 16,
+    `before ${String(undoStart.bars)} bars, after ${String(undone.summary?.bars)}`
+  );
+
+  /**
+   * The round trip a composer actually needs: export the package, read it back, and find the arrangement intact. Before
+   * `import_groove`, a server restart lost the whole composition — the report's complaint — and the package could only be
+   * written, not read.
+   */
+  const imported = payload(await client.request("tools/call", { name: "import_groove", arguments: { path: exported.path } }));
+  check(
+    "import_groove restores the arrangement as an arrangement",
+    Boolean(imported.arrangementId) && imported.arrangementId !== grooveArrangement.arrangementId && (imported.tracks ?? 0) >= 1,
+    JSON.stringify({ songId: imported.songId, sections: imported.sections?.length, clips: imported.clips })
+  );
+
+
+  const found = payload(await client.request("tools/call", { name: "search_genres", arguments: { query: "chicago" } }));
+  check("search_genres finds chicago-house", (found.matches ?? []).some((match) => match.id === "chicago-house"), JSON.stringify(found.matches?.[0] ?? {}));
+
+  const genre = payload(await client.request("tools/call", { name: "get_genre", arguments: { id: "chicago-house" } }));
+  check("get_genre returns recorded metadata", genre?.id === "chicago-house" && typeof genre?.culturalContext?.en === "string", JSON.stringify(genre).slice(0, 120));
+  check("get_genre includes the mix and loudness trim", Boolean(genre?.mix) && typeof genre?.loudnessTrimDb === "number");
+
+  /**
+   * The two analysis tools the evaluation asked for and did not exist. Loudness is deliberately not one of them: every render already
+   * returns gated loudness and true peak, which `docs/MCP.md` has said since the analyser was written.
+   */
+  /**
+   * ⭐ **The key estimate reads an arrangement now.** It took a genre's pattern before; an arrangement carries the notes, so the check builds
+   * one holding a C-major triad and asks which key it is in.
+   */
+  const keyArrangement = payload(await client.request("tools/call", { name: "create_arrangement", arguments: { blankKind: "synth" } }));
+  const keyArrangementId = String(keyArrangement.arrangementId);
+  /**
+   * ⭐ **A blank arrangement has no track**, so the check makes one -- the same two calls a caller makes: create, then add a lane, then write.
+   */
+  const keyTrack = payload(
+    await client.request("tools/call", {
+      name: "add_arrangement_track",
+      arguments: { arrangementId: keyArrangementId, kind: "synth", name: "key" },
+    })
+  );
+  const keyTrackId = String(keyTrack.trackId);
+  await client.request("tools/call", {
+    name: "add_arrangement_notes",
+    arguments: {
+      arrangementId: keyArrangementId,
+      trackId: keyTrackId,
+      notes: [
+        { pitch: 60, startBeats: 0, lengthBeats: 1, velocity: 100 },
+        { pitch: 64, startBeats: 1, lengthBeats: 1, velocity: 100 },
+        { pitch: 67, startBeats: 2, lengthBeats: 1, velocity: 100 },
+      ],
+    },
+  });
+  const key = payload(
+    await client.request("tools/call", { name: "estimate_key", arguments: { arrangementId: keyArrangementId } })
+  );
+
+  /**
+   * The harmony pair, end to end and browser-free: choose a progression for a feeling, render it in a key, and check that what came
+   * back is the progression it says it is.
+   */
+  /**
+   * The melody half: deterministic for a seed, in key, and inside the range it reports.
+   */
+  /**
+   * The prosody check, held to its two promises: it catches a direction reversal, and it never throws.
+   */
+  const prosody = payload(
+    await client.request("tools/call", { name: "validate_prosody", arguments: { tones: [2, 4], pitches: [60, 64], syllables: ["能", "够"] } })
+  );
+  {
+    const clean = payload(
+      await client.request("tools/call", { name: "validate_prosody", arguments: { tones: [2, 4], pitches: [60, 58] } })
+    );
+    check(
+      "validate_prosody warns on a reversal and stays silent when the melody follows the tones",
+      (prosody.warnings ?? []).length === 1 && (clean.warnings ?? []).length === 0,
+      `warnings ${(prosody.warnings ?? []).length} / clean ${(clean.warnings ?? []).length}`
+    );
+  }
+
+  const melody = payload(
+    await client.request("tools/call", { name: "generate_melody", arguments: { tonic: 60, mode: "major", bars: 8, seed: 7 } })
+  );
+  const again = payload(
+    await client.request("tools/call", { name: "generate_melody", arguments: { tonic: 60, mode: "major", bars: 8, seed: 7 } })
+  );
+  {
+    const scale = [0, 2, 4, 5, 7, 9, 11];
+    const sounding = (melody.pitch ?? []).filter((_, index) => (melody.steps ?? [])[index] > 0);
+    check(
+      "generate_melody is seeded, in key and inside its range",
+      sounding.length > 0 &&
+        JSON.stringify(melody.pitch) === JSON.stringify(again.pitch) &&
+        sounding.every((note) => note >= melody.range[0] && note <= melody.range[1]) &&
+        sounding.every((note) => scale.includes((((note - 60) % 12) + 12) % 12)),
+      `${sounding.length} notes in ${JSON.stringify(melody.range)}, contours ${(melody.contour ?? []).join("")}`
+    );
+  }
+
+  /**
+   * ⭐ **A declared input has to reach the thing it is declared for.**
+   *
+   * `generate_melody`'s schema documents `tones` as "one tone per sounding note, in playing order", and the generator runs the 倒字 repair with it — but the handler never passed it on, so supplying tone marks changed nothing at all. Muse found it by using `generate_melody` and `validate_prosody` together: each tool looked right alone, and only the pair showed that the tones were ignored.
+   */
+  const withTones = payload(
+    await client.request("tools/call", { name: "generate_melody", arguments: { tonic: 60, mode: "major", bars: 2, seed: 7, tones: [1, 4, 1, 4, 1, 4, 1, 4] } })
+  );
+  const withoutTones = payload(
+    await client.request("tools/call", { name: "generate_melody", arguments: { tonic: 60, mode: "major", bars: 2, seed: 7 } })
+  );
+  check(
+    "generate_melody uses the tones it was given rather than composing as if there were none",
+    // Same seed, different input: if the tones are ignored the two melodies are identical, which is exactly the bug.
+    JSON.stringify(withTones.pitch) !== JSON.stringify(withoutTones.pitch),
+    `tones changed ${(withTones.pitch ?? []).length} note(s): ${JSON.stringify(withTones.pitch ?? []).slice(0, 40)} vs ${JSON.stringify(withoutTones.pitch ?? []).slice(0, 40)}`
+  );
+
+  /**
+   * The example library's acceptance line from docs/V4_REVIEW_PLAN.md: every example passes the **same gate any pattern does**.
+   *
+   * Written as a loop rather than a `map`, because `await` inside a `map` callback is a syntax error at module scope — which is how the
+   * first version of this check failed, loudly and immediately.
+   */
+  /**
+   * ⭐ **The per-parameter GS-1 surface, over the wire, on the arrangement.** `apply_gs1_patch` writes one track's own
+   * sound — 224 parameters and 8 routes individually writable — and `get_gs1_patch` reads it back. The migration moved
+   * both from a v1 pattern to `arrangementId` + `trackId`, so this builds the arrangement it names and checks the
+   * reply points at that track. It is browser-free by nature: nothing here renders, which is why it belongs in this
+   * gate rather than in the render probe.
+   */
+  const gs1Arrangement = payload(
+    await client.request("tools/call", { name: "create_arrangement", arguments: { genreId: "chicago-house" } })
+  );
+  const gs1ArrangementId = gs1Arrangement.arrangementId;
+  const gs1TrackId = "chords";
+  const gs1Before = payload(
+    await client.request("tools/call", {
+      name: "get_gs1_patch",
+      arguments: { arrangementId: gs1ArrangementId, trackId: gs1TrackId },
+    })
+  );
+  const gs1Applied = payload(
+    await client.request("tools/call", {
+      name: "apply_gs1_patch",
+      arguments: {
+        arrangementId: gs1ArrangementId,
+        trackId: gs1TrackId,
+        parameters: { FILTER_CUTOFF: 700, OSC2_PITCH: 31 },
+        routes: [{ index: 0, src: "velocity", dst: "cutoff", amount: 0.5 }],
+      },
+    })
+  );
+  const gs1After = payload(
+    await client.request("tools/call", {
+      name: "get_gs1_patch",
+      arguments: { arrangementId: gs1ArrangementId, trackId: gs1TrackId },
+    })
+  );
+  const gs1Cutoff = (gs1After.parameters ?? []).find((row) => row.id === 14) ?? {};
+  const gs1Osc2 = (gs1After.parameters ?? []).find((row) => row.name === "OSC2_PITCH") ?? {};
+  check(
+    "get_gs1_patch reads a track's instrument-table patch in named parameters, not 224 numbers",
+    gs1Before.voiced === true &&
+      gs1Before.arrangementId === gs1ArrangementId &&
+      gs1Before.trackId === gs1TrackId &&
+      typeof gs1Before.patch?.tablePatch === "string" &&
+      Array.isArray(gs1Before.parameters) &&
+      gs1Before.parameters.length > 0 &&
+      gs1Before.parameters.length < 224 &&
+      gs1Before.parameters.every((row) => typeof row.name === "string" && typeof row.display === "string"),
+    JSON.stringify({ patch: gs1Before.patch?.tablePatch, rows: (gs1Before.parameters ?? []).length })
+  );
+  check(
+    "apply_gs1_patch writes { parameter, value } and a route onto the track — 31, which PARAM_SPECS would reject",
+    gs1Applied.arrangementId === gs1ArrangementId &&
+      gs1Applied.trackId === gs1TrackId &&
+      gs1Osc2.value === 31 &&
+      gs1Osc2.from === "override",
+    JSON.stringify({ track: gs1Applied.track, osc2: gs1Osc2 }).slice(0, 160)
+  );
+  check(
+    "get_gs1_patch reads the override back in the engine's own unit, marked as an override",
+    gs1Cutoff.value === 700 && gs1Cutoff.from === "override" && gs1Cutoff.display === "700 Hz",
+    JSON.stringify(gs1Cutoff)
+  );
+  check(
+    "get_gs1_patch names a written route's source and destination",
+    (gs1After.routes ?? []).some(
+      (row) => row.index === 0 && row.source === "velocity" && row.destination === "cutoff" && row.amount === 0.5
+    ),
+    JSON.stringify((gs1After.routes ?? [])[0] ?? {})
+  );
+  const gs1Code = payload(await client.request("tools/call", { name: "get_gs1_patch", arguments: { patch: ACID_SHARE_CODE } }));
+  check(
+    "get_gs1_patch decodes a real gs1.patch.get share code, with its routes",
+    gs1Code.voiced === true &&
+      gs1Code.patch?.shareCode === ACID_SHARE_CODE &&
+      gs1Code.patch?.parametersChanged > 0 &&
+      (gs1Code.routes ?? []).length === 4,
+    JSON.stringify({ changed: gs1Code.patch?.parametersChanged, routes: (gs1Code.routes ?? []).length })
+  );
+  const gs1Refused = await client.request("tools/call", {
+    name: "apply_gs1_patch",
+    arguments: { arrangementId: gs1ArrangementId, trackId: gs1TrackId, parameters: { FILTER_CUTOF: 700 } },
+  });
+  check(
+    "apply_gs1_patch refuses an unknown parameter and names the track, rather than writing it",
+    gs1Refused?.isError === true && /FILTER_CUTOF/.test(JSON.stringify(gs1Refused)) && /chords/.test(JSON.stringify(gs1Refused)),
+    JSON.stringify(gs1Refused).slice(0, 140)
+  );
+
+  const exampleRows = payload(await client.request("tools/call", { name: "get_example", arguments: { genreId: "chicago-house" } }));
+  const rows = exampleRows.examples ?? [];
+  /**
+   * ⭐ **The rows are still checked for shape; the pattern-level validation went with `validate_pattern`.** That tool reported a v1 pattern's
+   * step counts, velocity ranges and length mismatches, and `validate_arrangement` answers the same family of questions about an arrangement
+   * rather than about this record. Validating the v1 pattern each row carries is recorded as open in `docs/FEATURE_ALIGNMENT.md`.
+   */
+  check(
+    "get_example returns examples with a recipe each",
+    rows.length >= 2 && rows.every((row) => (row.recipe ?? []).length > 0),
+    `${rows.length} example(s)`
+  );
+  const missingGenre = payload(await client.request("tools/call", { name: "get_example", arguments: { genreId: "no-such-genre" } }));
+  check(
+    "get_example refuses a genre that is not in the library and points at list_examples",
+    typeof missingGenre.raw === "string" && missingGenre.raw.includes("no worked examples") && missingGenre.raw.includes("list_examples"),
+    String(missingGenre.raw ?? "").slice(0, 120)
+  );
+
+  /**
+   * The pair has to agree. `list_examples` is the index over the same material `get_example` serves, and the two drift the moment one
+   * of them grows a filter, a limit or a cached id list the other does not have. The ids are compared rather than the row count,
+   * because a count can match while the ids do not.
+   */
+  const exampleList = payload(await client.request("tools/call", { name: "list_examples", arguments: { genreId: "chicago-house" } }));
+  const listIds = (exampleList.examples ?? []).map((row) => row.id).sort();
+  const getIds = rows.map((row) => row.id).sort();
+  check(
+    "list_examples and get_example name the same examples for a genre",
+    listIds.length > 0 && JSON.stringify(listIds) === JSON.stringify(getIds),
+    `list: ${listIds.join(", ")} vs get: ${getIds.join(", ")}`
+  );
+  const roundTrips = [];
+  for (const row of exampleList.examples ?? []) {
+    const one = payload(
+      await client.request("tools/call", { name: "get_example", arguments: { genreId: row.genreId, index: row.index } })
+    );
+    roundTrips.push(one.id === row.id);
+  }
+  check(
+    "every example list_examples returns is fetchable by get_example at the index it names",
+    roundTrips.length > 0 && roundTrips.every(Boolean),
+    `${roundTrips.filter(Boolean).length}/${roundTrips.length} round-tripped`
+  );
+
+  const suggested = payload(
+  await client.request("tools/call", { name: "suggest_progression", arguments: { tonic: 60, mode: "major", emotion: "nostalgic" } })
+  );
+  check(
+  "suggest_progression renders a committed progression in the caller's key",
+  typeof suggested.id === "string" &&
+    Array.isArray(suggested.chords) &&
+    suggested.chords.length === suggested.numerals.length &&
+    suggested.chords.every((chord) => Array.isArray(chord) && chord.length >= 3) &&
+    suggested.chords.flat().every((note) => note >= 0 && note <= 127),
+  `${suggested.id} ${suggested.roman} → ${JSON.stringify(suggested.chords ?? []).slice(0, 80)}`
+  );
+
+  check(
+  "estimate_key reports a tonic, a mode and a fit from the notes",
+  typeof key.tonic === "string" && (key.mode === "major" || key.mode === "minor") && Number.isFinite(key.fit) && key.notes > 0,
+  JSON.stringify({ tonic: key.tonic, mode: key.mode, fit: key.fit, notes: key.notes })
+  );
+
+
+  /**
+   * ⭐ **`pattern_statistics` and `share_url` are not called here any more.** Both take a v1 pattern, which the arrangement replaced; the
+   * checks that drove them were removed with it on 2026-10-07 and the pair is listed in `docs/FEATURE_ALIGNMENT.md` as waiting for the
+   * analysis surface to take an arrangement.
+   */
+
+  const loudness = payload(await client.request("tools/call", { name: "get_loudness_report", arguments: { genreId: "chicago-house" } }));
+  check("get_loudness_report returns the committed measurement", typeof loudness.arrangedLufs === "number", JSON.stringify(loudness).slice(0, 120));
+
+  /**
+  const created = payload(
+  const savedGenre = payload(
+    await client.request("tools/call", { name: "save_custom_genre", arguments: { forkFromGenreId: "chicago-house", name: "Gate Probe" } })
+  );
+  check(
+    "save_custom_genre forks a library genre with its defaults",
+    savedGenre.replaced === false && savedGenre.genre?.forkedFromId === "chicago-house" && savedGenre.genre?.isCustom === true,
+    JSON.stringify({ id: savedGenre.genre?.id, bpm: savedGenre.genre?.default_bpm }).slice(0, 120)
+  );
+  const savedFieldCount = Object.keys(savedGenre.genre ?? {}).length;
+  const resavedGenre = payload(
+    await client.request("tools/call", { name: "save_custom_genre", arguments: { genre: { ...savedGenre.genre, default_bpm: 137 } } })
+  );
+  const rereadGenre = payload(await client.request("tools/call", { name: "get_custom_genre", arguments: { id: savedGenre.genre.id } }));
+  check(
+    "save_custom_genre replaces rather than duplicating, and keeps every field of a document",
+    resavedGenre.replaced === true && rereadGenre?.default_bpm === 137 && Object.keys(rereadGenre ?? {}).length === savedFieldCount,
+    `${savedFieldCount} -> ${Object.keys(rereadGenre ?? {}).length} fields, bpm ${rereadGenre?.default_bpm}`
+  );
+  const listedGenres = payload(await client.request("tools/call", { name: "list_custom_genres", arguments: {} }));
+  const duplicatedGenre = payload(
+    await client.request("tools/call", { name: "duplicate_custom_genre", arguments: { id: savedGenre.genre.id } })
+  );
+  const deletedGenre = payload(
+    await client.request("tools/call", { name: "delete_custom_genre", arguments: { id: duplicatedGenre.copy.id } })
+  );
+  check(
+    "list, duplicate and delete reach the session's custom genres",
+    listedGenres.total === 1 && duplicatedGenre.copy?.id !== savedGenre.genre.id && deletedGenre.remaining?.length === 1,
+    JSON.stringify({ listed: listedGenres.total, copy: duplicatedGenre.copy?.name, remaining: deletedGenre.remaining }).slice(0, 140)
+  );
+
+  const resource = await client.request("resources/read", { uri: "groove://genres" });
+  const resourceText = resource?.contents?.[0]?.text ?? "";
+  check("resources/read serves the library index", resourceText.includes("chicago-house"), `${resourceText.length} chars`);
+
+  /**
+   * The MusicXML pair over the wire, and the reason this block exists at all.
+   *
+   * `import_arrangement_musicxml` reaches the reader, which used to call `new DOMParser()`. Node has no `DOMParser`, so that tool answered `{"raw":"DOMParser is not defined"}` to every real client from the day it shipped, and this gate — which is the only thing that calls tools the way a client does — never called it. The reader now parses with `saxes` through `src/data/xml.ts`, so the calls below are the proof that the capability exists in the server's own environment, not just under the unit suite's `jsdom`.
+   *
+   * **What this covers of the environment-dependent surface, and how.** The render tools are asserted as declared with their schemas and deliberately never called, because calling one starts Chromium: that is `render_audio`, `render_song`, `render_preview_clip` and `analyze_audio`, and the existing checks above already cover the first and the last. `export_groove` and `import_groove` are called for real earlier in this session, which covers the file system. The zip is covered here. **Every other tool runs on arguments alone**, so this session's calls to the library, pattern, song, harmony, melody, vocal and exporting tools are the pass over that part of the surface.
+   */
+  const xmlArrangement = payload(await client.request("tools/call", { name: "create_arrangement", arguments: { blankKind: "synth" } }));
+  const exportedScore = payload(
+    await client.request("tools/call", {
+      name: "export_arrangement_musicxml",
+      arguments: { arrangementId: xmlArrangement.arrangementId, title: "Gate", tempoBpm: 120 },
+    })
+  );
+  check(
+    "export_arrangement_musicxml returns a parseable score with the tempo it was given",
+    typeof exportedScore.xml === "string" && exportedScore.xml.includes("<score-partwise") && exportedScore.xml.includes('tempo="120"') && exportedScore.bars >= 1,
+    `${exportedScore.bytes} bytes, ${exportedScore.bars} bar(s)`
+  );
+
+  const twoParts = `<?xml version="1.0"?><score-partwise version="4.0">
+    <part-list><score-part id="P1"><part-name>Right Hand</part-name></score-part><score-part id="P2"><part-name>Left Hand</part-name></score-part></part-list>
+    <part id="P1"><measure number="1"><attributes><divisions>1</divisions><time><beats>4</beats><beat-type>4</beat-type></time></attributes>
+      <note><pitch><step>C</step><octave>5</octave></pitch><duration>2</duration></note><note><pitch><step>D</step><octave>5</octave></pitch><duration>2</duration></note></measure></part>
+    <part id="P2"><measure number="1"><attributes><divisions>1</divisions><time><beats>4</beats><beat-type>4</beat-type></time></attributes>
+      <note><pitch><step>C</step><octave>3</octave></pitch><duration>4</duration></note></measure></part>
+  </score-partwise>`;
+  const importedScore = payload(
+    await client.request("tools/call", {
+      name: "import_arrangement_musicxml",
+      arguments: { arrangementId: xmlArrangement.arrangementId, xml: twoParts, partIndex: "all" },
+    })
+  );
+  check(
+    'import_arrangement_musicxml parses XML in the server and adds one track per part with partIndex "all"',
+    (importedScore.trackIds ?? []).length === 2 &&
+      ["Right Hand", "Left Hand"].every((name) => (importedScore.summary?.tracks ?? []).some((track) => track.name === name)) &&
+      importedScore.notes === 3,
+    `${(importedScore.trackIds ?? []).length} track(s), ${importedScore.notes} note(s)`
+  );
+
+  /**
+   * The compressed path, with **the zip the criteria send**: `src/test/fixtures/mxl_zip.mjs` builds it for both, so this is evidence about the covered code rather than about a second zip builder.
+   */
+  const mxl = payload(
+    await client.request("tools/call", {
+      name: "import_arrangement_musicxml_file",
+      arguments: { arrangementId: xmlArrangement.arrangementId, bytesBase64: Buffer.from(buildMxlZip([["score.musicxml", twoParts]])).toString("base64") },
+    })
+  );
+  check(
+    "import_arrangement_musicxml_file unzips a .mxl in the server and reads the score in it",
+    mxl.format === "mxl" && mxl.notes === 2 && (mxl.summary?.tracks ?? []).some((track) => track.name === "Right Hand"),
+    `format ${mxl.format}, ${mxl.notes} note(s)`
+  );
+
+  /**
+   * ⭐ **The MIDI import, over the wire, with bytes this repository builds.**
+   *
+   * The same reasoning as the MusicXML pair above, and one more: the step-model import that existed before threw the file's note lengths away, so an agent asking for a MIDI file used to get a sixteen-step grid back with no way to tell that it had. This checks the thing that made it worth a tool — the tracks arrive named, and a note keeps the length the file gave it.
+   */
+  /**
+   * The licence and provenance of the pinned libraries, over the wire. An agent publishing something made with this material has to be able to say where it came from, and the manifest has carried that all along.
+   */
+  const libraries = payload(await client.request("tools/call", { name: "list_sample_libraries", arguments: {} }));
+  const attribution = (libraries.libraries ?? []).filter((library) => /BY/i.test(library.licence));
+  check(
+    "list_sample_libraries reports each licence and names the ones requiring attribution",
+    (libraries.libraries ?? []).length > 0 &&
+      (libraries.libraries ?? []).every((library) => typeof library.licence === "string") &&
+      attribution.length > 0 &&
+      attribution.every((library) => typeof library.sourceUrl === "string") &&
+      typeof libraries.note === "string" &&
+      attribution.every((library) => libraries.note.includes(library.id)),
+    `${(libraries.libraries ?? []).length} library(ies), ${attribution.length} requiring attribution`
+  );
+
+  const midiArrangement = payload(await client.request("tools/call", { name: "create_arrangement", arguments: { blankKind: "synth" } }));
+  const importedMidiBytes = buildMidiFile({
+    division: 480,
+    tracks: [
+      { name: "Piano", notes: [{ note: 60, startTicks: 0, durationTicks: 960 }] },
+      { nameBytes: GBK_TRACK_NAME_BYTES, notes: [{ note: 55, startTicks: 240, durationTicks: 240 }] },
+    ],
+  });
+  const importedMidi = payload(
+    await client.request("tools/call", {
+      name: "import_arrangement_midi",
+      arguments: { arrangementId: midiArrangement.arrangementId, bytesBase64: Buffer.from(importedMidiBytes).toString("base64"), partIndex: "all" },
+    })
+  );
+  const midiTrackNames = (importedMidi.summary?.tracks ?? []).map((track) => track.name);
+  check(
+    "import_arrangement_midi adds one track per MIDI track, with a GBK name decoded",
+    (importedMidi.trackIds ?? []).length === 2 && midiTrackNames.includes(GBK_TRACK_NAME) && importedMidi.notes === 2,
+    `${(importedMidi.trackIds ?? []).length} track(s) ${JSON.stringify(midiTrackNames)}, ${importedMidi.notes} note(s)`
+  );
+
+  /**
+   * ⭐ **The export half of the same pair, over the wire.** The composer's report was that an arrangement could
+   * come in from a DAW and not go back out, so this asserts the loop the way the import check above does: call the
+   * tool, read the file it wrote, and hand the bytes back to the **import tool** rather than to a parser written
+   * here. Comparing note multisets before and after is what catches a writer that loses a length or shifts a name.
+   */
+  const noteTuples = (summary, trackIds) =>
+    (summary?.tracks ?? [])
+      .filter((track) => !trackIds || trackIds.includes(track.id))
+      .flatMap((track) => track.notes ?? [])
+      .map((note) => `${note.pitch}@${note.startBeats}+${note.lengthBeats}v${note.velocity}`)
+      .sort();
+  const exportedMidi = payload(await client.request("tools/call", { name: "export_arrangement_midi", arguments: { arrangementId: midiArrangement.arrangementId } }));
+  const exportedMidiBytes = fs.readFileSync(exportedMidi.path);
+  const beforeExport = noteTuples(importedMidi.summary);
+  // A folder's blank arrangement holds no notes, so everything the re-import reports came out of the exported file.
+  const roundTripArrangement = payload(await client.request("tools/call", { name: "create_arrangement", arguments: { blankKind: "folder" } }));
+  const reimportedMidi = payload(
+    await client.request("tools/call", {
+      name: "import_arrangement_midi",
+      arguments: { arrangementId: roundTripArrangement.arrangementId, bytesBase64: exportedMidiBytes.toString("base64"), partIndex: "all" },
+    })
+  );
+  const afterExport = noteTuples(reimportedMidi.summary, reimportedMidi.trackIds);
+  check(
+    "export_arrangement_midi writes a format 1 file that re-imports to the same notes",
+    exportedMidiBytes.subarray(0, 4).toString("ascii") === "MThd" &&
+      exportedMidi.format === 1 &&
+      beforeExport.length > 0 &&
+      JSON.stringify(afterExport) === JSON.stringify(beforeExport),
+    `${exportedMidi.notes} note(s), ${exportedMidiBytes.length} bytes, re-imported ${afterExport.length} of ${beforeExport.length}`
+  );
+  {
+    /**
+     * ⭐ **Wrapped in its own scope, so no name here can collide with the file's.** The reading matters: a gzipped Live set
+     * and a text file named `.als` look alike from outside, and only unpacking tells them apart.
+     */
+    const probeArrangement = payload(
+      await client.request("tools/call", { name: "create_arrangement", arguments: { blankKind: "sampler" } })
+    );
+    const probeSet = payload(
+      await client.request("tools/call", { name: "export_arrangement_ableton", arguments: { arrangementId: probeArrangement.arrangementId } })
+    );
+    const probeXml = zlib.gunzipSync(fs.readFileSync(probeSet.path)).toString("utf8");
+    check(
+      "export_arrangement_ableton writes a gzipped Live set, not just a file with that name",
+      probeSet.format === "als" && String(probeSet.filename).endsWith(".als") && /Ableton|LiveSet/.test(probeXml),
+      JSON.stringify({ format: probeSet.format, filename: probeSet.filename, head: probeXml.slice(0, 60) })
+    );
+  }
+
+
+  /**
+   * ⭐ **The Logic import, over the wire.** The bytes are the same synthetic `ProjectData` the unit criteria read
+   * (`src/test/fixtures/logic_project.mjs`) — the format written down rather than anybody's project, because the real
+   * `.logicx` fixtures are a textbook's assets with no stated licence and are not committed. Two things are asserted
+   * here rather than in the handler: that the tool takes **two base64 files**, and that what this model cannot hold
+   * (an audio track, which this fixture writes) **comes back in `problems`** instead of vanishing.
+   */
+  const logicArrangement = payload(await client.request("tools/call", { name: "create_arrangement", arguments: { blankKind: "synth" } }));
+  const logicBytes = buildLogicProjectData({
+    bpm: 128,
+    timeSignature: { numerator: 4, denominator: 4 },
+    regions: [
+      { name: "Keys", notes: [{ startTicks: 0, pitch: 60, velocity: 100, lengthTicks: 480 }] },
+      { name: "Vocal", notes: [], audioName: "vocal.aif" },
+    ],
+  });
+  const logicMeta = buildMetaDataPlist({ bpm: 128, numerator: 4, denominator: 4 });
+  const importedLogic = payload(
+    await client.request("tools/call", {
+      name: "import_logic_project",
+      arguments: {
+        arrangementId: logicArrangement.arrangementId,
+        projectDataBase64: Buffer.from(logicBytes).toString("base64"),
+        metaDataBase64: Buffer.from(logicMeta).toString("base64"),
+        partIndex: "all",
+      },
+    })
+  );
+  const logicProblems = importedLogic.problems ?? [];
+  check(
+    "import_logic_project adds a MIDI region, returns its tempo/meter, and names the audio it could not hold",
+    (importedLogic.trackIds ?? []).length === 1 &&
+      importedLogic.notes === 1 &&
+      importedLogic.tempoBpm === 128 &&
+      importedLogic.timeSignature === "4/4" &&
+      logicProblems.some((problem) => problem.includes("audio region reference")),
+    `${(importedLogic.trackIds ?? []).length} track(s), ${importedLogic.notes} note(s), ${importedLogic.tempoBpm} BPM ${importedLogic.timeSignature}, ${logicProblems.length} problem(s)`
+  );
+
+  /**
+   * The pitch inspector, and the property the whole pitch-truth module exists for: **a display convention must
+   * not be able to reach a frequency.** Both halves are asserted, not only the working one — the name changes
+   * with the convention and the frequency does not — so wiring a label into the arithmetic turns this red.
+   */
+  const pitchC4 = payload(
+    await client.request("tools/call", { name: "get_pitch_report", arguments: { midi: [60, 69] } })
+  );
+  const pitchC3 = payload(
+    await client.request("tools/call", { name: "get_pitch_report", arguments: { midi: [60], convention: "C3" } })
+  );
+  const c4 = (pitchC4.notes ?? [])[0] ?? {};
+  const a4 = (pitchC4.notes ?? [])[1] ?? {};
+  const c3 = (pitchC3.notes ?? [])[0] ?? {};
+  check(
+    "get_pitch_report names 60 as C4 at 261.6256 Hz and 69 as A4 at 440, and renames without moving the frequency",
+    c4.name === "C4" &&
+      Math.abs(c4.frequencyHz - 261.6255653) < 1e-6 &&
+      a4.name === "A4" &&
+      a4.frequencyHz === 440 &&
+      pitchC4.convention === "C4" &&
+      pitchC3.convention === "C3" &&
+      c3.name === "C3" &&
+      Math.abs(c3.frequencyHz - c4.frequencyHz) < 1e-9,
+    `${c4.name} ${c4.frequencyHz} Hz, ${a4.name} ${a4.frequencyHz} Hz, then ${c3.name} ${c3.frequencyHz} Hz`
+  );
+
+  /**
+   * The transposition report, on a pattern the gate builds itself. The arithmetic — that a section transpose and a
+   * GS-1 parameter are counted, with the units kept apart — is pinned by the unit criteria, which carry their
+   * own red halves; what this checks is that the tool is reachable and that its reply cannot be mistaken for a
+   * complete one, since it names the sources it deliberately did not read.
+   */
+  /**
+   * ⭐ **`get_transposition_report` is retired.** It read the GS-1 overrides a v1 pattern's lane carried, and an arrangement's track has no such
+   * field -- so the tool had no data here rather than a different address. It went on 2026-10-07 with its two copy criteria.
+   */
+
+  /**
+   * The export's round trip, measured rather than asserted: the tool reads back the bytes it just wrote and
+   * compares the pitches that landed against the arrangement's own numbers, shifted by the offset it reports.
+   * An exporter that moved a pitch without saying so fails here — which is the point, since the owner asked for
+   * a comparison against the file rather than a promise about it.
+   */
+  const exportArrangement = payload(
+    await client.request("tools/call", { name: "create_arrangement", arguments: { blankKind: "synth" } })
+  );
+  const exportArrangementId = exportArrangement.arrangementId ?? exportArrangement.id;
+  const exportTracks = payload(
+    await client.request("tools/call", { name: "get_arrangement", arguments: { arrangementId: exportArrangementId } })
+  );
+  const exportTrackId = (exportTracks.arrangement?.tracks ?? exportTracks.tracks ?? [])[0]?.id;
+  await client.request("tools/call", {
+    name: "add_arrangement_notes",
+    arguments: {
+      arrangementId: exportArrangementId,
+      trackId: exportTrackId,
+      notes: [
+        { pitch: 60, startBeats: 0, lengthBeats: 1, velocity: 100 },
+        { pitch: 72, startBeats: 2, lengthBeats: 1, velocity: 100 },
+      ],
+    },
+  });
+  const exportedArrangementMidi = payload(
+    await client.request("tools/call", {
+      name: "export_arrangement_midi",
+      arguments: { arrangementId: exportArrangementId, pitchMode: "original" },
+    })
+  );
+  check(
+    "export_arrangement_midi reads its own file back and finds the numbers the arrangement stated",
+    exportedArrangementMidi.roundTrip?.matches === true &&
+      exportedArrangementMidi.roundTrip?.notesStated === 2 &&
+      exportedArrangementMidi.roundTrip?.notesWritten === 2 &&
+      exportedArrangementMidi.pitchMode === "original" &&
+      exportedArrangementMidi.transposeSemitones === 0,
+    `mode ${exportedArrangementMidi.pitchMode}, offset ${exportedArrangementMidi.transposeSemitones}, round trip ${JSON.stringify(exportedArrangementMidi.roundTrip)}`
+  );
+
+  const prompt = await client.request("prompts/get", { name: "compose_groove", arguments: { genre: "chicago-house" } });
+  const promptText = prompt?.messages?.[0]?.content?.text ?? "";
+  check("prompts/get builds a usable brief", promptText.includes("chicago-house") && promptText.includes("add_arrangement_notes"), `${promptText.length} chars`);
+} catch (error) {
+  failures.push(`❌ the client could not complete the session — ${error.message}`);
+} finally {
+  await client.close();
+}
+
+if (process.env.GROOVE_MCP_VERBOSE === "1") for (const note of notes) console.log(note);
+console.log(`\n🧩 MCP gate: ${notes.length} checks passed, ${failures.length} failed`);
+if (failures.length) {
+  for (const failure of failures) console.error(failure);
+  process.exit(1);
+}
+console.log("✅ the MCP server answers over stdio: tools, resources and prompts are all reachable");

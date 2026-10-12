@@ -1,0 +1,20 @@
+{
+  "model": "qwen-image-2.1",
+  "preset": "quality",
+  "size": "1024x1024",
+  "steps": 40,
+  "seed": 1510,
+  "skin": "comic",
+  "genre": "vaporwave",
+  "prompt": "Vintage 1970s comic book printing, four-colour press on warm newsprint cream paper (#f4e9d2), square album cover, subject: a marble bust beside an old television on a pastel pink grid floor drawn bold and heroic, expressing the sound of vaporwave \u2014 slowed nostalgic samples, hazy reverb, faded memory, drawing on early-1990s corporate computer imagery and dead mall aesthetics, pastel and hazy. Heavy black ink (#111014) keylines of varied weight, flat unshaded spot colour, large visible Ben-Day halftone dot screens, colour plates (process cyan #0b6e7f, magenta #c4006e, orange #f08a1e) deliberately offset 1-3 px out of register so edges fringe. Dynamic low-angle composition, radiating action lines and speed lines, hard zero-blur black drop shadows, ink bleed into paper fibre, slightly worn edges. Loud and energetic, limited ink palette, no rendering or gradients inside shapes. No text, no speech balloons, no lettering. Avoid the obvious stock cliche for this genre; choose a specific physical object or place instead of a floating instrument or a generic swirl. Render only the physical medium and materials named above. Vintage 1970s comic-book press on warm newsprint cream paper (#f4e9d2): heavy black ink (#111014) keylines of varied weight, flat unshaded spot plates (process cyan #0b6e7f, magenta #c4006e, orange #f08a1e), large visible Ben-Day halftone dot screens, colour plates offset 1-3 px out of register so edges fringe, hard zero-blur black drop shadows, dynamic low-angle composition with radiating action and speed lines, ink bleed into paper fibre, slightly worn edges; no gradients or rendering inside shapes, no text, no lettering, no logos. Subject: an abandoned dead-mall atrium at dusk: a dry tiled fountain, a payphone and one CRT monitor on a pastel pink tile grid floor, potted palms and a shuttered shopfront, no marble bust, drawn bold and heroic, expressing the sound of vaporwave. Origin cue: early-1990s corporate computer imagery and dead mall aesthetics, pastel and hazy.",
+  "origin": "early-1990s corporate computer imagery and dead mall aesthetics, pastel and hazy",
+  "negative_prompt": "text, letters, words, typography, logo, watermark, signature, small print, fine print, corner mark, caption, UI, screenshot, frame, border, photograph of a real person, celebrity, album cover, brand, clipart, flat vector icon, stock photo, generic corporate imagery, floating geometric shapes, plastic 3D render, oversaturated HDR, low detail, blurry, jpeg artifacts",
+  "postprocess": null,
+  "timestamp": "2026-09-25T18:39:52Z",
+  "review": {
+    "decision": "regenerated_after_reject",
+    "reasons": [
+      "R4"
+    ]
+  }
+}

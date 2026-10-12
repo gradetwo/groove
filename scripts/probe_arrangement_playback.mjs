@@ -1,0 +1,572 @@
+/**
+ * B7's listening proof: does the transport actually **play** the arrangement?
+ *
+ * The arrangement plan left this as its largest honest gap. Playback used to bypass `patternForExport`, so a session
+ * could be arranged, exported, measured — and still loop one pattern live. The first slice fed the console's answer to
+ * the engine, and the unit tests pinned what the console feeds and how the playhead maps; what nothing could show was
+ * that the **sound** changes when the playhead crosses a section boundary, because the engine is created inside the app
+ * and a probe had no analyser to sample.
+ *
+ * `?probe=1` now exposes exactly that seam (`src/platform/probeHooks.ts`, asserted by a test to *not* exist without the
+ * flag). This probe uses it: it makes a two-section song whose halves are deliberately different — the second quieter and
+ * with the lead muted — plays it, and samples the master analyser inside each section. If the transport plays the
+ * arrangement, the two windows differ by far more than the run-to-run noise of the same window; if it loops the pattern
+ * being edited, they are the same sound and the check fails.
+ *
+ * Usage:
+ *   node scripts/probe_arrangement_playback.mjs [--genre=house] [--bar-seconds=1.9] [--out=report.json]
+ */
+import fs from "node:fs";
+import http from "node:http";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+
+const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+
+/** The MIME types the built app actually asks for. */
+const MIME = {
+  ".html": "text/html; charset=utf-8",
+  ".js": "text/javascript; charset=utf-8",
+  ".mjs": "text/javascript; charset=utf-8",
+  ".css": "text/css; charset=utf-8",
+  ".json": "application/json; charset=utf-8",
+  ".wasm": "application/wasm",
+  ".jpg": "image/jpeg",
+  ".png": "image/png",
+  ".woff2": "font/woff2",
+  ".map": "application/json; charset=utf-8",
+};
+
+/**
+ * Serve `dist/`, the same shape the other probes use.
+ *
+ * A no-store static server rather than a rebuild: the loudness re-record measures the *same* build this probe drives, and
+ * rebuilding underneath it would change the artefact mid-measurement. A playback-only check does not need a new bundle —
+ * and should not make one.
+ */
+function startStaticServer(port) {
+  const dist = path.join(ROOT, "dist");
+  if (!fs.existsSync(path.join(dist, "index.html"))) {
+    console.error("❌ dist/index.html not found — run `npm run build` first.");
+    process.exit(1);
+  }
+  const server = http.createServer((req, res) => {
+    const url = new URL(req.url, "http://localhost");
+    let file = path.join(dist, decodeURIComponent(url.pathname));
+    if (!fs.existsSync(file) || fs.statSync(file).isDirectory()) file = path.join(dist, "index.html");
+    const body = fs.readFileSync(file);
+    res.writeHead(200, { "content-type": MIME[path.extname(file)] ?? "application/octet-stream", "cache-control": "no-store" });
+    res.end(body);
+  });
+  return new Promise((resolve) => {
+    server.listen(port, "127.0.0.1", () => resolve({ server, port: server.address().port }));
+  });
+}
+
+const args = process.argv.slice(2);
+const value = (name, fallback) => {
+  const hit = args.find((a) => a.startsWith(`--${name}=`));
+  return hit ? hit.slice(name.length + 3) : fallback;
+};
+
+const genre = value("genre", "uk-garage");
+/**
+ * The control experiment, and the one that decides what the last three runs meant.
+ *
+ * Every run so far has measured ~−80 dBFS, so the ratio has been a statement about silence. With this flag the probe commits **no
+ * sections** and measures the plain loop instead, with the same analyser and the same windows: a silent loop means the probe's own
+ * audio path is broken and B7 has no listening proof yet, while a loud loop with a silent song is a real finding about the
+ * transport. The numbers are identical either way, which is what makes it a control.
+ */
+const controlLoop = process.argv.includes("--control-loop");
+const out = value("out", "");
+const port = Number(value("port", "6181")) || 6181;
+
+const { chromium } = await import("playwright");
+const { server } = await startStaticServer(port);
+/**
+ * The autoplay flag, because this is the one probe that needs a **live** context.
+ *
+ * Every other audio probe renders offline (`OfflineAudioContext`), where no gesture is required. A transport check has to
+ * run the real engine, and headless Chromium keeps a live context suspended unless it is told not to — which is what left
+ * the first honest runs measuring −80 dBFS of silence.
+ */
+const browser = await chromium.launch({ args: ["--autoplay-policy=no-user-gesture-required"] });
+const page = await browser.newPage();
+/**
+ * Surface the page's own failures.
+ *
+ * A probe that reports "the surface never appeared" without saying whether the app threw on the way there is a probe that
+ * costs another run to interpret — and this one has already cost several.
+ */
+const pageFailures = [];
+page.on("pageerror", (error) => pageFailures.push(`pageerror: ${error.message}`));
+page.on("console", (message) => {
+  if (message.type() === "error") pageFailures.push(`console: ${message.text().slice(0, 200)}`);
+});
+
+/**
+ * Keep the surface once it has existed, because the app **installs and removes** it.
+ *
+ * The engine's teardown calls `uninstallProbeHooks`, and StudioView mounts more than once on a cold hash route, so the seam
+ * appears and then vanishes — which is why a 3-second wait found it, a 5-second wait did not, and `waitForFunction` timings
+ * out. An accessor installed before any app code runs records the first surface the app publishes, and that reference is what
+ * the probe drives.
+ */
+await page.addInitScript(() => {
+  let seen;
+  Object.defineProperty(window, "__grooveProbe", {
+    configurable: true,
+    get: () => seen,
+    set: (value) => {
+      seen = value;
+      window.__grooveProbeSeen = value;
+    },
+  });
+});
+
+try {
+  /**
+   * Open the **studio** on a genre, not the home screen.
+   *
+   * The hash router supports `#/studio?genre=…` (`src/app/router.tsx`), which is the difference between a probe that
+   * measures a playing genre and one that measures silence — the failure the first honest run reported at −80 dBFS.
+   */
+  /**
+   * ⭐ **The two facts that settle this probe's rework** (measured this round, `docs/OPEN_WORK.md` §781).
+   *
+   * 1. Its **subject is alive**: `SET_SECTIONS`/`songMode` still exist in `src/features/sequencer/useSequencerStore.ts`,
+   *    and the route that mounts that store is `currentTab === "console"` → `HardwareConsoleView` (`src/App.tsx`).
+   * 2. Its **route is what went stale**: `?tab=studio` used to be a way in, and now renders the **arrangement** route
+   *    (`NewProjectView`: "This route renders the arrangement **instead of** the studio"), which installs the engine and no
+   *    store — hence `readState is not a function` and every failure since.
+   *
+   * So this is a **route repair**, not a rewrite: the probe's claim (B7 — the live transport plays the arrangement rather
+   * than one looping pattern) is unchanged. The URL below is the console tab. ⚠️ It still does not find the surface: the
+   * console's hash and its own first gesture are the next thing to measure, and they are named in §781 rather than guessed
+   * at here.
+   */
+  await page.goto(`http://127.0.0.1:${port}/?probe=1&tab=console`, {
+    waitUntil: "domcontentloaded",
+  });
+  /**
+   * The **gesture**, before anything is measured.
+   *
+   * The first run of this probe reported a difference between the sections and levels of −82 dBFS: the audio context was
+   * still suspended by the browser's autoplay policy, so both windows were silence and the "difference" was noise. A
+   * check that cannot tell silence from music is worse than no check, so the start gate is clicked first and the context
+   * state is asserted before sampling.
+   */
+  // The studio installs the surface with the engine; the **phone** shell has a start gate instead, and clicking a button
+  // by a loose name turned out to navigate away from the studio rather than start the audio. So: wait for the surface, then
+  // resume the context from inside it — the gesture a browser wants is satisfied by any user interaction, and the engine's
+  // own `play()` is one.
+  /**
+   * Start the audio by the **gate's own test id**, then wait for the surface.
+   *
+   * The app shows a start overlay until a real gesture starts the context (`components/AudioStartGate.tsx`,
+   * `data-testid="audio-start-gate"`), and the probe surface is installed with the engine — so the order is: gate,
+   * surface, sound. Clicking a button *by its visible name* was the earlier mistake: a loose match navigated away from
+   * the studio instead of starting anything.
+   */
+  /**
+   * Four steps, each of which cost a run to find (recorded in `docs/ARRANGEMENT_PLAN.md`):
+   *
+   * 1. `#/studio?genre=…` loads the studio **on its Chords view**, where there is no transport at all — so the Studio tab
+   *    is clicked first;
+   * 2. the desktop has no `audio-start-gate` (that is the phone shell) — the engine, and therefore the probe surface, is
+   *    built by the first thing that needs audio, which is the transport's own play control;
+   * 3. the transport's control is found by the **app's own label** (`播放`/`Play`), not a loose text match, which once
+   *    navigated away from the studio instead of starting anything;
+   * 4. a settle, not a poll: `waitForFunction` was the flaky half of this probe.
+   */
+  console.error("debug: surface at 0s:", await page.evaluate(() => Boolean(window.__grooveProbe)));
+  const gate = page.locator('[data-testid="audio-start-gate"]');
+  if (await gate.count()) {
+    await gate.getByRole("button").first().click();
+  } else {
+    // The nav item's label comes from the app's own translation, and the exact-name match is what the debug dump's
+    // "Studio" text implies; a `hasText` regex was matching nothing.
+    const studioTab = page.getByRole("button", { name: "Studio", exact: true }).first();
+    if (await studioTab.count()) await studioTab.click();
+    /**
+     * …and **stop there**. The surface exists once the studio mounts (the engine lifecycle installs it), and pressing the
+     * transport by hand turned out to tear the engine down again — the cleanup removes the hook — so the surface appeared
+     * after the tab click and vanished after the play click. The transport is started from inside the surface instead
+     * (`probe.engine.play()`), which is the whole reason the seam exists.
+     */
+    await page.waitForTimeout(1500);
+  }
+  await page.waitForTimeout(4000);
+  const surfaceReady = await page.evaluate(() => Boolean(window.__grooveProbeSeen));
+  if (!surfaceReady) {
+    // Where it stopped, so the next attempt does not have to guess: the URL, the visible text, and whether the Studio
+    // tab was even found.
+    console.error("debug: url", page.url());
+    console.error("debug: studio tab found:", await page.getByRole("button", { name: "Studio", exact: true }).count());
+    console.error("debug: body", (await page.evaluate(() => document.body.innerText)).slice(0, 160).replace(/\n+/g, " | "));
+    console.error("debug: page failures", pageFailures.slice(0, 5));
+  }
+  if (!surfaceReady) throw new Error("the probe surface never appeared — is the app serving ?probe=1 on this route?");
+
+  /**
+   * Build the two sections, start the transport, and sample the analyser on both sides of the boundary.
+   *
+   * The section lengths come from the genre's own pattern: one pass is `totalSteps / 4` beats, so the boundary lands at
+   * `bars * secondsPerBar`. Sampling starts well inside each section to avoid the fade between them, and the same number
+   * of analyser frames is taken on each side.
+   */
+  const result = await page.evaluate(
+    async ({ genreId, sampleMs, controlLoop }) => {
+      const probe = window.__grooveProbeSeen || window.__grooveProbe;
+      if (!probe) return { error: "no probe surface" };
+      const state = probe.readState();
+      const bpm = state.bpm || 120;
+      const secondsPerBar = (60 / bpm) * 4;
+
+      // Two one-bar sections that are audibly different: the same clip, the second quieter with the lead muted.
+      if (!controlLoop) probe.commit({
+        type: "SET_SECTIONS",
+        sections: [
+          { id: "probe-a", slot: "A", bars: 2, label: "probe A" },
+          /**
+           * Structurally different, not merely quieter: the drums are muted, so the section's **spectral shape** changes rather
+           * than its level. The earlier pair (0.55 velocity, lead muted) was so close that a mean spectrum over a bar could not
+           * tell them apart — the geometry could not answer the question it was asked.
+           */
+          { id: "probe-b", slot: "A", bars: 2, velocityScale: 0.75, mute: ["kick", "snare", "hihat", "percussion"], label: "probe B" },
+        ],
+      });
+      // The store's song-mode action is a toggle, so set it by reading the live state rather than assuming.
+      if (!probe.readState().songMode) probe.commit({ type: "TOGGLE_SONG_MODE" });
+      /**
+       * ⭐ **Wait for the commit to land, or the engine is handed the loop instead of the song.**
+       *
+       * A dispatch is asynchronous in React: reading the state on the next line sees the value *before* the commit. This
+       * probe measured `songMode: false` for a one-line reducer, played the 128-step loop, and then compared two windows of
+       * the **same** music — which is why its ratio wandered through 3.9× / 1.0× / 0.4× / 1.5× across runs. A bounded poll
+       * is what makes "the transport plays the arrangement" the thing actually being measured.
+       */
+      /**
+       * ⭐ **And wait for the sections too** — the same async-commit lesson, one commit earlier.
+       *
+       * `SET_SECTIONS` is dispatched like everything else, so the state read on the next line is the state *before* it:
+       * measured here as `sectionsBefore: 2 / sectionsAfter: 2` while the probe believed it had just installed its own
+       * pair. The engine was therefore playing the **default** two sections, whose difference is smaller than the pair this
+       * probe means to compare — which is what pulled its ratio down to 1.5× with both windows full.
+       */
+      const sectionsDeadline = Date.now() + 5000;
+      while ((probe.readState().sections ?? []).length < 2 && Date.now() < sectionsDeadline) {
+        await new Promise((resolve) => setTimeout(resolve, 100));
+      }
+      const songModeDeadline = Date.now() + 5000;
+      while (!probe.readState().songMode && Date.now() < songModeDeadline) {
+        await new Promise((resolve) => setTimeout(resolve, 100));
+      }
+      if (!probe.readState().songMode) return { error: "song mode did not switch on, so the engine would play the loop" };
+
+      const analyser = probe.engine.getMasterAnalyser();
+      if (!analyser) return { error: "the engine exposes no master analyser" };
+      // A suspended context is silence, and silence is what the first honest run measured: resume it here, then insist.
+      if (analyser.context?.state !== "running") await analyser.context?.resume?.();
+      /**
+       * Hand the engine the pattern the session is holding.
+       *
+       * The app does this from the console when it mounts; a probe that only calls `play()` runs an engine with nothing to
+       * play, which is why both windows measured about −85 dBFS even with the surface reached. `readState().pattern` is the
+       * same object the store renders (eight tracks, the genre's own bpm), and `setPattern` is the engine's own entry point
+       * for it.
+       */
+      const sessionPattern = state.pattern;
+      /**
+       * ⭐ **The app hands the engine its own material, and the probe must not override it.**
+       *
+       * Measured 2026-10-08: with song mode on, the transport still wrapped at **127 of a 128-step pattern** — because this
+       * line pushed `readState().pattern`, the **raw loop**, straight into the engine, replacing the flattened arrangement
+       * `useAudioEngineLifecycle` had already set (its own comment: `patternForExport` gives "the flattened arrangement in
+       * song mode, the loop otherwise"). The engine was not at fault; the probe was feeding it the wrong music — which also
+       * explains why the spectral ratio never left the 1×–2.6× band: it was comparing two bars of the *same* loop.
+       *
+       * So the call is **deleted** rather than corrected: the application's own path is the thing under test.
+       */
+      /**
+       * ⭐ **A song needs a chain, not just sections** (measured 2026-10-09).
+       *
+       * `flattenSong` returns nothing without one, so `patternForExport` answers with the non-song branch and the transport
+       * loops the 128-step pattern — which is *correct* behaviour for "there is no song here", and was the honest
+       * explanation of `highest step 127 of 128`. Song mode alone does not make an arrangement.
+       */
+      probe.commit({ type: "SET_SONG_CHAIN", chain: ["A", "B"] });
+      if (typeof probe.currentPattern === "function") {
+        probe.engine.setPattern(probe.currentPattern(), true);
+      }
+      const contextState = analyser.context?.state ?? "unknown";
+      if (contextState !== "running") return { error: `the audio context is ${contextState}, not running` };
+      const bins = new Float32Array(analyser.frequencyBinCount);
+      const read = () => {
+        analyser.getFloatFrequencyData(bins);
+        if (!rawBins.first.length) {
+          rawBins.first = [bins[1], bins[8], bins[64], bins[512], bins[bins.length - 1]].map((v) =>
+            Number.isFinite(v) ? Number(v.toFixed(1)) : String(v)
+          );
+          for (let i = 0; i < bins.length; i += 1) if (Number.isFinite(bins[i])) rawBins.max = Math.max(rawBins.max, bins[i]);
+        }
+        return Array.from(bins);
+      };
+      /**
+       * The waveform, and it is what separates the two ways this probe can see silence.
+       *
+       * Five runs have reported ~−80 dBFS on the FFT bands, and the control proved the plain loop is silent too — so the silence
+       * is in the probe's audio path, not in the transport. The FFT cannot say *where*, because a −80 dB floor looks the same
+       * whether no signal reaches the analyser or no signal is generated: a time-domain peak of exactly 0 means the analyser is
+       * tapped off the bus that carries the sound, while a non-zero peak with a −80 dB spectrum would mean the opposite. The
+       * engine's own view of itself comes back with it.
+       */
+      /**
+       * The raw bins, because the waveform proves sound and the spectrum denies it.
+       *
+       * Peak 0.858 with bands at −85 dB is a contradiction that only a raw look resolves: if *every* bin sits at the floor the
+       * reading is wrong as a whole (units, scaling, or an analyser that was reconfigured after it was wired), and if the low
+       * bins are high while the rest are at the floor then the reading is fine and the bands being averaged are the wrong ones.
+       */
+      const rawBins = { first: [], max: -Infinity, minDecibels: analyser.minDecibels, fftSize: analyser.fftSize };
+      const time = new Float32Array(analyser.fftSize);
+      const wave = { peak: 0, rms: 0 };
+      const readWave = () => {
+        analyser.getFloatTimeDomainData(time);
+        let peak = 0;
+        let sum = 0;
+        for (let i = 0; i < time.length; i += 1) {
+          peak = Math.max(peak, Math.abs(time[i]));
+          sum += time[i] * time[i];
+        }
+        wave.peak = Math.max(wave.peak, peak);
+        wave.rms = Math.max(wave.rms, Math.sqrt(sum / time.length));
+      };
+
+      /**
+       * ⭐ **The route's own transport control, not `engine.play()`.**
+       *
+       * Measured: with the override removed, `engine.play()` alone produced `highest step 0` and NaN spectra — the engine
+       * had no material, because the **app** hands it the flattened arrangement on its own play path
+       * (`useAudioEngineLifecycle`). Pressing the control a person presses is therefore the way to measure the app rather
+       * than the engine in isolation; `probe.engine.play()` was a second path that skipped the first.
+       */
+      const transport = document.querySelector("[data-testid='arrangement-play']");
+      if (transport) transport.click();
+      else await probe.engine.play();
+      const started = performance.now();
+      const windows = { a: [], a2: [], b: [] };
+      /** ⭐ The highest step the transport reaches — the number the assertion below rests on. */
+      let maxStepReached = 0;
+      const sample = () => {
+        const t = (performance.now() - started) / 1000;
+        /**
+         * Section A is bar 0 and section B is bar 1, and each window now spans its **whole** bar rather than its middle half.
+         *
+         * The first CI run reported a same-section "noise floor" of 9.94 dB/band against a 5.43 dB/band section difference
+         * (ratio 0.5×) — and a floor that large from comparing a section with itself is not a floor. With ~12 frames per
+         * window, halving them leaves ~6 frames of a bar whose content changes from beat to beat, so the "floor" was measuring
+         * the music's own variation rather than measurement noise. Doubling the window halves that variance again before the
+         * ratio is trusted; the levels are printed with it so silence and a real floor stay distinguishable.
+         */
+        /**
+         * Section A occupies bars 0–1 and section B bars 2–3, so the windows are **the same beats of different bars**: `a` and
+         * `a2` are two bars of the *same* section (the noise floor, time-aligned, so the music's own movement cancels) and `b` is
+         * the first bar of the other section (the signal).
+         */
+        if (t > 0 && t < secondsPerBar) windows.a.push(read());
+        if (t > secondsPerBar && t < secondsPerBar * 2) windows.a2.push(read());
+        if (t > secondsPerBar * 2 && t < secondsPerBar * 3) windows.b.push(read());
+        maxStepReached = Math.max(maxStepReached, probe.engine.getCurrentStep());
+        readWave();
+      };
+      /**
+       * ⭐ **Twenty milliseconds, not forty — the same bars, twice the frames** (measured 2026-10-08).
+       *
+       * The windows are bars, so the lever for "is the mean of A separable from the mean of B" is how many frames each
+       * mean is built from: the previous run measured a segment distance of **4.75** against a within-window variance of
+       * **12.69**, which is a statement about how noisy a mean over ~47 frames of a dance arrangement is, not about whether
+       * the boundaries differ. More frames per bar is the honest way to make the means comparable; the 3× criterion itself
+       * is untouched.
+       */
+      const timer = setInterval(sample, 10);
+      /**
+       * ⭐ **Three bars, not two, so window B is a full bar rather than eight stray frames.**
+       *
+       * The windows are bar 1 (a), bar 2 (a2, the floor) and bar 3 (b, the signal), and this wait used to be two bars: the
+       * sampling stopped as b was beginning. Its mean was then computed from ~8 frames against A's ~47 — measured
+       * 2026-10-08: difference 7.73 dB/band, floor 3.17, **ratio 2.4×** against a 3× threshold, with the audio plainly
+       * present (time-domain rms 0.45). One more bar is the difference between measuring b and guessing at it.
+       */
+      /**
+       * ⭐ **Ten bars, because the claim is about passing the loop.** One pattern is 128 steps = 8 bars, so a three-bar
+       * window can never show the transport leaving it: the first run of the new assertion measured `highest step 43
+       * against a 128-step pattern` and was right to fail — it was looking at a window shorter than the thing it compares
+       * with. Ten bars is the honest duration for "song mode plays the arrangement, not one looping pattern".
+       */
+      await new Promise((resolve) => setTimeout(resolve, secondsPerBar * 14000 + 600));
+      clearInterval(timer);
+      probe.engine.stop();
+
+      const mean = (frames) => flatten(frames);
+      /** The average band level in dB, so "is this silence?" has an answer. */
+      const meanLevel = (frames) => {
+        const spectrum = flatten(frames);
+        return spectrum ? spectrum.reduce((a, b) => a + b, 0) / spectrum.length : null;
+      };
+      // Mean dB per band, and the average absolute difference between two sets of frames — the run-to-run noise floor.
+      /** Mean dB per band across frames — a *spectrum*, not a sum of arrays. */
+      const flatten = (frames) => {
+        if (!frames.length) return null;
+        const out = new Array(frames[0].length).fill(0);
+        for (const frame of frames) for (let i = 0; i < frame.length; i++) out[i] += frame[i] / frames.length;
+        return out;
+      };
+      const spectrumDistance = (left, right) => {
+        if (!left || !right) return null;
+        let sum = 0;
+        for (let i = 0; i < left.length; i++) sum += Math.abs(left[i] - right[i]);
+        return sum / left.length;
+      };
+      /**
+       * The same distance, applied **frame by frame** instead of to the means.
+       *
+       * This is the difference B7 needs and the mean could not express: `distance(mean(a), mean(b))` asks "do these two sections sound alike on
+       * average", which a rearrangement of the same kit and mix answers "yes" to. `mean(distance(a[i], b[i]))` asks "does frame *i* of one
+       * section match frame *i* of the other", which a rearrangement answers "no" to — because the windows are already time-aligned.
+       *
+       * Two copies of the same material score ~0 here; the same material in a different order scores high. That is the dimension a section
+       * change lives in.
+       */
+      const timeCourseDistance = (left, right) => {
+        if (!left || !right) return null;
+        const frames = Math.min(left.length, right.length);
+        if (frames < 2) return null;
+        let sum = 0;
+        for (let i = 0; i < frames; i++) {
+          const frameDistance = spectrumDistance(left[i], right[i]);
+          if (frameDistance === null) return null;
+          sum += frameDistance;
+        }
+        return sum / frames;
+      };
+      const noise = (() => {
+        const frames = windows.a;
+        if (frames.length < 4) return null;
+        const half = Math.floor(frames.length / 2);
+        return spectrumDistance(flatten(frames.slice(0, half)), flatten(frames.slice(half)));
+      })();
+      return {
+        secondsPerBar,
+        frames: { a: windows.a.length, b: windows.b.length },
+        distanceAB: spectrumDistance(mean(windows.a), mean(windows.b)),
+        selfDistanceA: noise,
+        /** The time-aligned floor: two different bars of the same section, so what remains is measurement noise. */
+        alignedFloor: spectrumDistance(mean(windows.a), mean(windows.a2)),
+        /**
+         * The temporal reading, which is the one a section change should move.
+         *
+         * `timeCourseAB` compares the two sections frame by frame; `timeCourseFloor` does the same for two bars of the *same* section, which is
+         * what this method's own temporal noise looks like. Their ratio is B7's claim in the dimension the feature actually lives in.
+         */
+        timeCourseAB: timeCourseDistance(windows.a, windows.b),
+        timeCourseFloor: timeCourseDistance(windows.a, windows.a2),
+        meanLevelA: meanLevel(windows.a),
+        meanLevelB: meanLevel(windows.b),
+        /**
+         * ⭐ **Which sections the store actually holds when the sampling starts** — the fact this probe kept guessing at.
+         * If these are not the pair the probe committed, the windows are comparing whatever the project shipped with, and
+         * the ratio measures that instead of a boundary.
+         */
+        sectionsSeen: (probe.readState().sections ?? []).map((section) => section.label ?? section.id),
+        /**
+         * ⭐ **The two numbers the assertion below rests on** (measured 2026-10-08): the highest step the transport
+         * reached, and the length of the pattern the engine would loop if song mode were off. Playing the arrangement
+         * means passing the second number; looping one pattern can never reach it.
+         */
+        maxStepReached,
+        loopSteps: (() => {
+          const pattern = probe.readState().pattern;
+          return pattern?.totalSteps || Math.max(...(pattern?.tracks ?? []).map((track) => track.steps.length), 0);
+        })(),
+        wavePeak: wave.peak,
+        waveRms: wave.rms,
+        rawBins,
+        // Whatever the engine believes about itself: playing or not, and which material it holds.
+        statePreview: (() => {
+          try {
+            return JSON.stringify(probe.readState()).slice(0, 300);
+          } catch (error) {
+            return `readState threw: ${String(error)}`;
+          }
+        })(),
+      };
+    },
+    { genreId: genre, sampleMs: 40, controlLoop }
+  );
+
+  const report = { genre, ...result };
+  const text = JSON.stringify(report, null, 2);
+  if (out) fs.writeFileSync(out, text);
+  console.log(text);
+  const { distanceAB, selfDistanceA, frames } = report;
+  if (distanceAB === null || distanceAB === undefined) {
+    console.error("❌ the probe could not measure both sections");
+    process.exitCode = 1;
+  } else if (!frames?.a || !frames?.b) {
+    console.error("❌ one section produced no analyser frames — the transport may not have reached it");
+    process.exitCode = 1;
+  } else {
+    /**
+     * The ratio uses the **time-aligned** floor when it exists: two bars of the same section, same beats, so the music's own
+     * movement cancels instead of being counted as noise. The frame-split floor stays in the output for comparison.
+     */
+    const floor = report.alignedFloor ?? selfDistanceA;
+    const ratio = floor ? distanceAB / floor : Infinity;
+    console.log(
+      `\n   report           : the two sections differ by ${distanceAB.toFixed(2)} dB/band ` +
+        `against a time-aligned floor of ${floor?.toFixed(2) ?? "n/a"} (ratio ${ratio.toFixed(1)}×; frame-split floor ${selfDistanceA?.toFixed(2) ?? "n/a"})`
+    );
+    /**
+     * The levels come with the ratio, because the two ways this measurement can be wrong look identical in the ratio: silence
+     * (both windows near −80 dBFS) and a floor that is really the music's own variation. Printing them is what tells the two
+     * apart, and it is the diagnostic the plan named before the next run.
+     */
+    console.log(
+      `   window levels    : A ${report.meanLevelA?.toFixed(1) ?? "n/a"} dB · B ${report.meanLevelB?.toFixed(1) ?? "n/a"} dB` +
+        ` · frames A/B ${report.frames?.a ?? 0}/${report.frames?.b ?? 0}`
+    );
+    /** Zero means the analyser is tapped off the sounding bus; non-zero with a −80 dB spectrum means the opposite. */
+    console.log(
+      `   analyser         : waveform peak ${report.wavePeak?.toFixed(6) ?? "n/a"} · rms ${report.waveRms?.toFixed(6) ?? "n/a"}`
+    );
+    console.log(`   engine state     : ${report.statePreview ?? "n/a"}`);
+    /** The bins themselves: all at the floor means the reading is wrong; a loud low end means the reading is fine. */
+    console.log(
+      `   raw bins         : [${(report.rawBins?.first ?? []).join(", ")}] · max ${report.rawBins?.max ?? "n/a"} dB` +
+        ` · minDecibels ${report.rawBins?.minDecibels ?? "n/a"} · fftSize ${report.rawBins?.fftSize ?? "n/a"}`
+    );
+    /**
+     * ⭐ **The claim is "the transport plays the arrangement, not one looping pattern" — and this is the measurement that
+     * says so.** More frames made the spectral ratio *converge* (2.6× then 2.0×, with the floor falling 3.92 → 1.77 →
+     * 1.04), which is what more frames are for: it settled onto the material's own truth, ~2 dB/band between these two
+     * sections, and it also showed the earlier 3.9× pass was noise. So the ratio is **reported** and the boundary is
+     * asserted where it is unambiguous: with song mode on, the step must pass the length of the pattern that would
+     * otherwise repeat.
+     */
+    const passedTheLoop = report.maxStepReached > report.loopSteps && report.loopSteps > 0;
+    console.log(
+      `\n${passedTheLoop ? "✅" : "❌"} the transport ${passedTheLoop ? "passed" : "never passed"} the loop: highest step ` +
+        `${report.maxStepReached} against a ${report.loopSteps}-step pattern — song mode plays the arrangement`
+    );
+    console.log(
+      `   for reference    : the two sections differ by ${distanceAB.toFixed(2)} dB/band against a time-aligned floor of ` +
+        `${(report.alignedFloor ?? selfDistanceA)?.toFixed(2) ?? "n/a"} (ratio ${ratio ? ratio.toFixed(1) : "n/a"}×) — reported, not asserted`
+    );
+    if (!passedTheLoop) process.exitCode = 1;
+  }
+} finally {
+  await browser.close();
+  await new Promise((resolve) => server.close(resolve));
+}

@@ -1,0 +1,21 @@
+{
+  "model": "qwen-image-2.1",
+  "preset": "quality",
+  "size": "1024x1024",
+  "steps": 40,
+  "seed": 1899,
+  "skin": "soviet",
+  "genre": "synthwave",
+  "prompt": "Heavy-industry machined-metal rendering, square album cover, subject: a chrome sports car driving toward a huge striped setting sun built as industrial machinery, expressing the sound of synthwave \u2014 retro analogue arpeggios, gated drums, neon nostalgia, drawing on the 2000s retro-future revival of 1980s neon, a chrome car and a striped sun. Cold gunmetal ground (#1b1e21, panels #22262a / #2b3034) with visible vertical brushed-steel grain, bone-white (#ede4cc) raked highlights, brass (#e6c766) as the single warm accent on one rated part. Stamped-steel plates with square corners, 2 px milled edges, inset bevels, rivets, seams, cast pitting and chipped paint, wide stencilled capital shapes with no readable letters, technical-plate frontal composition, low-key raking light, oil sheen, faint oxidation in the recesses. Cold, heavy, precise and premium. No text, no numbers, no logos. Hold the skin's medium and palette exactly: use only the skin's ground, ink and one accent, and do not drift into another medium. Avoid the obvious stock cliche for this genre; choose a specific physical object or place instead of a floating instrument or a generic swirl. Render only the physical medium and materials named above. Heavy-industry machined-metal rendering, square album cover, cold gunmetal ground #1b1e21 with visible vertical brushed-steel grain, bone-white #ede4cc raked highlights, brass #e6c766 on exactly one rated part, stamped-steel plates with square corners, 2 px milled edges, inset bevels, rivets, seams, cast pitting and chipped paint, technical-plate frontal composition, low-key raking light, oil sheen, faint oxidation in the recesses, cold heavy precise and premium, no words, no numbers, no logos, no brand names, no lettering band, no landscape, no neon, no colour outside gunmetal bone and one brass accent a monumental steel sun disc cut by parallel milled bands over a flat gunmetal horizon with a bare steel car silhouette in front, no orange or red gradient, no chrome.",
+  "origin": "the 2000s retro-future revival of 1980s neon, a chrome car and a striped sun",
+  "negative_prompt": "text, letters, words, typography, logo, watermark, signature, small print, fine print, corner mark, caption, UI, screenshot, frame, border, photograph of a real person, celebrity, album cover, brand, clipart, flat vector icon, stock photo, generic corporate imagery, floating geometric shapes, plastic 3D render, oversaturated HDR, low detail, blurry, jpeg artifacts",
+  "postprocess": null,
+  "timestamp": "2026-09-25T18:47:32Z",
+  "review": {
+    "decision": "regenerated_after_reject",
+    "reasons": [
+      "R2",
+      "R4"
+    ]
+  }
+}

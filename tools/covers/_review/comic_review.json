@@ -1,0 +1,86 @@
+{
+  "skin": "comic",
+  "reviewed": 159,
+  "rejected": 10,
+  "regen_ok": 0,
+  "reasons": {
+    "R1": 3,
+    "R2": 0,
+    "R3": 4,
+    "R4": 4
+  },
+  "r5_count": 120,
+  "rejects": [
+    {
+      "genre": "alternative-rnb",
+      "reasons": [
+        "R4",
+        "R1"
+      ],
+      "hint": "Replace the lone stock ribbon mic with a working Toronto/LA 2010s vocal booth: condenser mic on a boom, treated wall, one warm practical and the edge of a sparse console."
+    },
+    {
+      "genre": "chicago-blues",
+      "reasons": [
+        "R1"
+      ],
+      "hint": "'Harp' was drawn as a full concert pedal harp; regenerate with a small chromatic harmonica and a bullet mic so it reads as Chicago blues."
+    },
+    {
+      "genre": "chicago-house",
+      "reasons": [
+        "R3"
+      ],
+      "hint": "The kick-drum head carries garbled lettering; regenerate with a plain black drum head and no lettering anywhere."
+    },
+    {
+      "genre": "chillstep",
+      "reasons": [
+        "R1"
+      ],
+      "hint": "The lone figure holds a firearm, so the tile reads as noir/thriller; regenerate the same rain cloud with a hooded figure and headphones, no weapon."
+    },
+    {
+      "genre": "electro",
+      "reasons": [
+        "R3"
+      ],
+      "hint": "The drum machine carries garbled '809J' lettering; regenerate with an unlabelled pad panel and no numerals or wordmarks."
+    },
+    {
+      "genre": "jungle",
+      "reasons": [
+        "R3"
+      ],
+      "hint": "The rave flyers carry large garbled lettering; regenerate with blank colour-block flyers (no type) and keep the turntables and sub-bass bin."
+    },
+    {
+      "genre": "nu-disco-house",
+      "reasons": [
+        "R4"
+      ],
+      "hint": "It is the bare stock mirror ball (and duplicates disco's ball); regenerate as a 2000s filter-house floor with live bass and strings, ball only partial and off-centre."
+    },
+    {
+      "genre": "soul",
+      "reasons": [
+        "R3"
+      ],
+      "hint": "The organ front carries garbled 'HOMOMP' lettering; regenerate with a plain unlabelled organ panel and keep the mic and wood panelling."
+    },
+    {
+      "genre": "traditional-pop",
+      "reasons": [
+        "R4"
+      ],
+      "hint": "Another lone vintage mic with no era anchor; regenerate as a 1950s studio standards session with sheet music, music stand and a small orchestra behind."
+    },
+    {
+      "genre": "vaporwave",
+      "reasons": [
+        "R4"
+      ],
+      "hint": "Marble bust plus CRT plus pink grid is the vaporwave meme template; regenerate the dead-mall version so it is a place, not a template."
+    }
+  ]
+}

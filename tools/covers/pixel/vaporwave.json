@@ -1,0 +1,20 @@
+{
+  "model": "qwen-image-2.1",
+  "preset": "quality",
+  "size": "1024x1024",
+  "steps": 40,
+  "seed": 1921,
+  "skin": "pixel",
+  "genre": "vaporwave",
+  "prompt": "Authentic 16-bit pixel art, low-resolution console graphics, square album cover, scene: a marble bust beside an old television on a pastel pink grid floor, expressing the sound of vaporwave \u2014 slowed nostalgic samples, hazy reverb, faded memory, drawing on early-1990s corporate computer imagery and dead mall aesthetics, pastel and hazy. Strict pixel grid with hard aliased edges and no anti-aliasing, limited palette of about twenty colours drawn from deep indigo (#10121c), panel indigo (#1a1d2e, #262a44), pale ink (#e8e8f0), mint accent (#4ce0b3) with cyan (#5bc8ff), pink (#ff6b97) and violet (#b06bff) incident light. Ordered dithering for all shading, flat chunky clusters of pixels, a single-pixel rim light, strong readable silhouette, flat-shaded scene with a clear horizon or floor line, CRT scanline veil over the whole image, soft phosphor bloom on the brightest pixels only, faint vignette. Nostalgic, crisp, deliberately low-resolution. No anti-aliasing, no smooth curves, no lettering, no HUD text, no UI. Hold the skin's medium and palette exactly: use only the skin's ground, ink and one accent, and do not drift into another medium. Render only the physical medium and materials named above. Authentic 16-bit pixel art, low-resolution console graphics, square album cover, hard aliased edges and no anti-aliasing anywhere, a strictly limited palette of about twenty colours on deep indigo ground #10121c with panels #1a1d2e/#262a44, pale ink #e8e8f0, mint #4ce0b3 accent with cyan #5bc8ff, pink #ff6b97 and violet #b06bff, flat chunky pixel clusters and ordered dithering for every shade: a vaporwave seafront at dusk - a broken marble column standing in shallow water, a low 1980s mall block with lit windows at the right, a large striped sun sitting on the horizon, dithered water reflection beneath. Every curve must be visibly stepped and blocky with no soft edges and no glow. MANDATORY POST-PROCESS: after generation downsample to 160x160 with a point filter and upscale back to 1024x1024 with a point filter before JPEG export, so the whole image is unambiguously 160px blocky. No smooth airbrushed gradients, no soft bloom, no anti-aliasing, no smooth curves, no text, no lettering, no UI, no HUD.",
+  "origin": "early-1990s corporate computer imagery and dead mall aesthetics, pastel and hazy",
+  "negative_prompt": "text, letters, words, typography, logo, watermark, signature, small print, fine print, corner mark, caption, UI, screenshot, frame, border, photograph of a real person, celebrity, album cover, brand, clipart, flat vector icon, stock photo, generic corporate imagery, floating geometric shapes, plastic 3D render, oversaturated HDR, low detail, blurry, jpeg artifacts",
+  "postprocess": "pixelate_160_nearest",
+  "timestamp": "2026-09-25T18:43:06Z",
+  "review": {
+    "decision": "regenerated_after_reject",
+    "reasons": [
+      "R2"
+    ]
+  }
+}

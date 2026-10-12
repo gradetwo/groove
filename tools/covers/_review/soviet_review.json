@@ -1,0 +1,228 @@
+{
+  "skin": "soviet",
+  "reviewed": 159,
+  "rejected": 29,
+  "regen_ok": 0,
+  "reasons": {
+    "R1": 9,
+    "R2": 12,
+    "R3": 15,
+    "R4": 3
+  },
+  "r5_count": 102,
+  "rejects": [
+    {
+      "genre": "afro-house",
+      "reasons": [
+        "R2",
+        "R3"
+      ],
+      "hint": "The red-earth dusk terrace is the loudest element and off-palette, and 'ARED HOUSE' is legible English; keep the djembe and turntable but set them on cold steel."
+    },
+    {
+      "genre": "alternative-rnb",
+      "reasons": [
+        "R1",
+        "R4"
+      ],
+      "hint": "A lone vintage 1950s pill microphone is both the stock cliche and the wrong era for 2010s alt-R&B."
+    },
+    {
+      "genre": "ambient-techno",
+      "reasons": [
+        "R1"
+      ],
+      "hint": "A flat plate wall with one small lamp reads as a door, not a vast hall with a suspended sphere; nothing here says techno."
+    },
+    {
+      "genre": "big-beat",
+      "reasons": [
+        "R3"
+      ],
+      "hint": "'BEAT' is legible English on the hero face of the stack; the cover is carrying its own word."
+    },
+    {
+      "genre": "black-metal",
+      "reasons": [
+        "R2",
+        "R3"
+      ],
+      "hint": "A photographic forest landscape mounted in a frame is off-medium, and the giant stencil word owns the lower half."
+    },
+    {
+      "genre": "chicago-blues",
+      "reasons": [
+        "R1",
+        "R3"
+      ],
+      "hint": "It drew a concert harp instead of a harmonica, and a three-line word block fills the wall."
+    },
+    {
+      "genre": "chicago-drill",
+      "reasons": [
+        "R3"
+      ],
+      "hint": "A two-line stencil word block is the subject; the fence and streetlight are only a border."
+    },
+    {
+      "genre": "death-metal",
+      "reasons": [
+        "R2"
+      ],
+      "hint": "The amp wall glows saturated red - red is the sovietYears accent and this palette has none."
+    },
+    {
+      "genre": "detroit-techno",
+      "reasons": [
+        "R1"
+      ],
+      "hint": "It is a typographic plate grid, not a machine; no drum machine or assembly line is legible."
+    },
+    {
+      "genre": "dream-trance",
+      "reasons": [
+        "R2"
+      ],
+      "hint": "A violet cloudscape fills the upper half - off-palette and off-medium."
+    },
+    {
+      "genre": "drift-phonk",
+      "reasons": [
+        "R1"
+      ],
+      "hint": "An unreadable bank of discs and smoke says nothing about phonk; no car, no cowbell, no 808."
+    },
+    {
+      "genre": "emo-rap",
+      "reasons": [
+        "R3"
+      ],
+      "hint": "'SOUND AL D FOONT' is legible English on a framed plaque, and the frame itself is banned."
+    },
+    {
+      "genre": "euro-trance",
+      "reasons": [
+        "R2",
+        "R3"
+      ],
+      "hint": "A warm orange sunrise photograph plus a full-width centre word band; both the palette and the craft fail."
+    },
+    {
+      "genre": "free-jazz",
+      "reasons": [
+        "R3"
+      ],
+      "hint": "'CEL SIMON' reads as an artist name or signature across the top - exactly the mark rule 2 bans."
+    },
+    {
+      "genre": "goa-trance",
+      "reasons": [
+        "R3"
+      ],
+      "hint": "Four stencil text bands dominate the frame while the fractal tunnel is confined to the middle."
+    },
+    {
+      "genre": "happy-hardcore",
+      "reasons": [
+        "R2"
+      ],
+      "hint": "Rainbow laser beams are the loudest thing on the tile - pink, orange and violet are all outside the palette."
+    },
+    {
+      "genre": "hard-rock",
+      "reasons": [
+        "R3"
+      ],
+      "hint": "'MARSHALL' is a real brand rendered in readable type, twice, on the hero cabinets."
+    },
+    {
+      "genre": "hard-trance",
+      "reasons": [
+        "R3"
+      ],
+      "hint": "The bottom third is one giant stencil word and it is the focal point of the tile."
+    },
+    {
+      "genre": "hardstyle",
+      "reasons": [
+        "R2"
+      ],
+      "hint": "A saturated red wedge is the hero - this palette has no red at all, only steel bone and brass."
+    },
+    {
+      "genre": "j-pop",
+      "reasons": [
+        "R1",
+        "R3"
+      ],
+      "hint": "The tile is a wall of letter plates plus confetti; there is no stage, no mirrors and no music."
+    },
+    {
+      "genre": "k-pop",
+      "reasons": [
+        "R1"
+      ],
+      "hint": "An empty steel floor with one faint stencil - no mirrored stage, no spotlights, nothing that says K-pop."
+    },
+    {
+      "genre": "kawaii-future-bass",
+      "reasons": [
+        "R2"
+      ],
+      "hint": "A pastel pink and blue candy cloud is the most colourful and cheerful tile in the skin - both banned."
+    },
+    {
+      "genre": "microhouse",
+      "reasons": [
+        "R3"
+      ],
+      "hint": "'COINS' is a real English word and it is the entire cover."
+    },
+    {
+      "genre": "ragga-jungle",
+      "reasons": [
+        "R1",
+        "R3"
+      ],
+      "hint": "It is a box of letter plates; no soundsystem stack is visible."
+    },
+    {
+      "genre": "southern-hip-hop",
+      "reasons": [
+        "R2"
+      ],
+      "hint": "Candy paint in pink blue and yellow over the whole car is off-palette for this skin."
+    },
+    {
+      "genre": "synthwave",
+      "reasons": [
+        "R2",
+        "R4"
+      ],
+      "hint": "A huge orange striped sun plus a chrome car is the single most cliched synthwave image and it breaks the palette twice."
+    },
+    {
+      "genre": "thrash-metal",
+      "reasons": [
+        "R1",
+        "R3"
+      ],
+      "hint": "It is flying letter plates with sparks, not a collapsing wall of amplifiers."
+    },
+    {
+      "genre": "vaporwave",
+      "reasons": [
+        "R2"
+      ],
+      "hint": "The pastel pink grid floor is the genre signature and it is off-palette here."
+    },
+    {
+      "genre": "west-coast-hip-hop",
+      "reasons": [
+        "R2",
+        "R4"
+      ],
+      "hint": "A sunlit palm boulevard is off-palette and the plainest possible west-coast cliche."
+    }
+  ]
+}

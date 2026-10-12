@@ -1,0 +1,161 @@
+/**
+ * ⭐ **The arrangement preview tool exists and says what it defaults to** (owner: "针对 arrangement 这些功能都要补齐").
+ *
+ * The measured gap was that `render_arrangement` takes a bar span but no track, and the cheap preview tool served songs
+ * and genres rather than arrangements, so an agent that had changed one lane had no cheap way to hear that lane.
+ *
+ * ⚠️ This holds the **shape**: the keys are present, the cheap defaults are the documented ones, and the tool renders
+ * once. The **behaviour** — that only the named track reaches the mix, and that notes outside the span stay out — is
+ * owed as a rendering criterion in the harness `mcpRenderArrangementBars.test.ts` already uses, and is recorded in
+ * docs/OPEN_WORK.md rather than implied by this file.
+ */
+import { beforeEach, describe, expect, it } from "vitest";
+import { TOOLS } from "../../mcp/registry";
+import {
+  addMcpTrackNotes,
+  clearMcpArrangements,
+  createMcpArrangement,
+  flattenMcpArrangement,
+  getMcpArrangement,
+  summariseArrangement,
+} from "../../mcp/arrangement";
+
+const preview = TOOLS.find((t) => t.name === "render_arrangement_preview");
+const schemaOf = (tool: unknown) =>
+  ((tool as { inputSchema: Record<string, { description?: string }> }).inputSchema ?? {}) as Record<
+    string,
+    { description?: string }
+  >;
+
+describe("the arrangement preview tool", () => {
+  it("⭐ exists beside render_arrangement and takes a span and a track scope", () => {
+    expect(preview, "render_arrangement_preview is gone").toBeDefined();
+    const schema = schemaOf(preview);
+    for (const key of ["arrangementId", "trackId", "trackIds", "startBar", "endBar", "sampleRate", "channels"])
+      expect({ key, present: key in schema }).toEqual({ key, present: true });
+  });
+
+  it("⭐ documents the cheap defaults rather than leaving them to be guessed", () => {
+    const schema = schemaOf(preview);
+    expect(schema.sampleRate?.description ?? "").toContain("8000");
+    expect(schema.channels?.description ?? "").toContain("1");
+    // The span's end is exclusive, which is the detail a caller gets wrong when it is not said.
+    expect(schema.endBar?.description ?? "").toContain("exclusive");
+    /**
+     * ⭐ Where the file lands, measured rather than copied from a sibling: `mcp/render/worker.ts` writes to `outputDir`,
+     * then `GROOVE_MCP_OUT`, then a fresh temp directory, and this tool passes no `outputDir`.
+     */
+    expect((preview as unknown as { description: string }).description).toContain("GROOVE_MCP_OUT");
+    /**
+     * ⭐ The A/B recipe belongs in the description, because the comparison is not a tool: two calls on one span are the
+     * comparison, and what makes them comparable is that each reply names its own file, span, tracks and levels. The
+     * sentence also says the honest limit — nothing is mixed together here.
+     */
+    const described = (preview as unknown as { description: string }).description;
+    expect(described).toContain("A/B");
+    expect(described.toLowerCase()).toContain("call it twice");
+    expect(described).toContain("self-describing");
+  });
+});
+
+/**
+ * ⭐ **The behaviour, not the shape** (the half the file above says it owes).
+ *
+ * Both properties are decided by the notes map the flatten narrows, so they are held here without rendering anything:
+ * a scope that is asked for must actually narrow, and a span must actually cut. Each fails if the filter stops working.
+ */
+const lanesPlaying = (flattened: { pattern: { tracks: Array<{ steps?: number[] }> } }) =>
+  flattened.pattern.tracks.filter((row) => (row.steps ?? []).some((step) => step !== 0)).length;
+
+describe("the preview scope really narrows", () => {
+  beforeEach(() => clearMcpArrangements());
+
+  /** One synth lane with one note, at bar 0. */
+  const oneLane = () => {
+    const { arrangementId } = createMcpArrangement({ blankKind: "synth" });
+    const track = summariseArrangement(arrangementId, getMcpArrangement(arrangementId)!).tracks[0]!;
+    addMcpTrackNotes(arrangementId, track.id, [{ pitch: 60, startBeats: 0, lengthBeats: 1, velocity: 100 }]);
+    return { arrangementId, trackId: track.id };
+  };
+
+  it("plays the lane with no scope, and nothing at all when the scope names no lane", () => {
+    const { arrangementId } = oneLane();
+    expect(lanesPlaying(flattenMcpArrangement(arrangementId).flattened)).toBeGreaterThan(0);
+    // An unknown id contributes nothing: a filter that quietly rendered everything would answer a question nobody asked.
+    expect(lanesPlaying(flattenMcpArrangement(arrangementId, undefined, ["not-a-track"]).flattened)).toBe(0);
+    expect(lanesPlaying(flattenMcpArrangement(arrangementId, undefined, [trackIdOf(arrangementId)]).flattened)).toBeGreaterThan(0);
+  });
+
+  /**
+   * ⭐ **A span render starts where the span starts and is as long as the span** (owner's decision, 2026-10-05).
+   *
+   * The deep-test report measured `durationSec` disagreeing with `span`: the span narrowed the notes but the audio
+   * kept the arrangement's own length, so a one-bar span of a long piece came back as a long file with the span
+   * buried in it. The flatten now moves the span to zero, clips a note that began before it, and compiles a section
+   * `endBar - startBar` bars long. Both halves are asserted here without rendering: the first sounding step is zero
+   * (it used to be step 64 for a note in bar 4), and the pattern is exactly one bar of sixteenths.
+   */
+  it("⭐ moves the span to zero and makes the render as long as the span", () => {
+    const { arrangementId, trackId } = oneLane();
+    // Bar 4 begins at beat 16; four beats to the bar, so that is step 64 at a sixteenth per step.
+    addMcpTrackNotes(arrangementId, trackId, [
+      { pitch: 62, startBeats: 16, lengthBeats: 1, velocity: 100 },
+      { pitch: 64, startBeats: 16, lengthBeats: 8, velocity: 100 },
+    ]);
+
+    const { flattened, bars } = flattenMcpArrangement(arrangementId, { startBar: 4, endBar: 5 });
+    expect(bars).toBe(1);
+
+    const rows = flattened.pattern.tracks;
+    const firstSounding = Math.min(
+      ...rows.flatMap((row) => (row.steps ?? []).map((step, index) => (step !== 0 ? index : Number.POSITIVE_INFINITY)))
+    );
+    expect(firstSounding).toBe(0);
+    expect(flattened.pattern.totalSteps).toBe(16);
+  });
+
+  it("⭐ keeps the note out when the span starts after it", () => {
+    const { arrangementId } = oneLane();
+    expect(lanesPlaying(flattenMcpArrangement(arrangementId, { startBar: 2, endBar: 3 }).flattened)).toBe(0);
+    expect(lanesPlaying(flattenMcpArrangement(arrangementId, { startBar: 0, endBar: 1 }).flattened)).toBeGreaterThan(0);
+  });
+});
+
+/** The one lane's id, read from the model rather than assumed. */
+function trackIdOf(arrangementId: string): string {
+  return summariseArrangement(arrangementId, getMcpArrangement(arrangementId)!).tracks[0]!.id;
+}
+
+/**
+ * ⭐ **The whole render family says where the file goes** (owner's question: is the preview documentation complete?).
+ *
+ * It was not: `render_arrangement` and the exports named the location, `render_arrangement` did not, and the preview said only
+ * that it returns a file. One shared sentence now carries it, and this fails if any tool loses it — including if the
+ * shared sentence itself is dropped, which takes `render_arrangement` red.
+ */
+describe("the render family names where the audio is written", () => {
+  it("⭐ every render tool that hands back a file says where it lands", () => {
+    for (const name of ["render_arrangement", "render_arrangement_preview", "render_arrangement"]) {
+      const tool = TOOLS.find((t) => t.name === name);
+      expect({ name, found: tool !== undefined }).toEqual({ name, found: true });
+      const described = (tool as unknown as { description: string }).description;
+      expect({ name, names: described.includes("GROOVE_MCP_OUT") }).toEqual({ name, names: true });
+    }
+  });
+});
+
+/**
+ * ⭐ **The stems renderer takes the same span** (owner: "针对 arrangement 这些功能都要补齐").
+ *
+ * It used to take four parameters and neither a span nor a track scope, so a part could only be judged over the whole
+ * piece. The span travels through the same notes-map seam the other two tools use, so the behaviour is already held by
+ * the criteria above; what is held here is that the tool **exposes** it, and `endBar` says it is exclusive.
+ */
+describe("the stems renderer takes a span", () => {
+  it("⭐ declares the span, exclusive at its end", () => {
+    const schema = schemaOf(TOOLS.find((t) => t.name === "render_arrangement_stems"));
+    for (const key of ["startBar", "endBar"])
+      expect({ key, present: key in schema }).toEqual({ key, present: true });
+    expect(schema.endBar?.description ?? "").toContain("exclusive");
+  });
+});
