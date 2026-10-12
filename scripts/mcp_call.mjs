@@ -76,14 +76,26 @@ child.stderr.on("data", (chunk) => process.stderr.write(`  [server] ${chunk}`));
 const request = (method, params) =>
   new Promise((resolve, reject) => {
     const id = nextId++;
-    pending.set(id, resolve);
-    child.stdin.write(`${JSON.stringify({ jsonrpc: "2.0", id, method, params })}\n`);
-    setTimeout(() => {
+    /**
+     * ⭐ **The watchdog must be cleared when the reply arrives, or it holds the process open.**
+     *
+     * Measured: the single-tool path printed its answer and then took **180.4 s** to exit
+     * (`real 3m0.434s` against `user 0m0.433s` + `sys 0m0.050s` — the process was idle, not working),
+     * because this timer stayed pending and kept the event loop alive. Every wall-clock reading taken
+     * that way measured the harness, not the tool. The script and `--list` paths happen to call
+     * `process.exit(0)`, which is why the artifact only showed up on single calls.
+     */
+    const watchdog = setTimeout(() => {
       if (pending.has(id)) {
         pending.delete(id);
         reject(new Error(`${method} did not answer within 180s`));
       }
     }, 180_000);
+    pending.set(id, (message) => {
+      clearTimeout(watchdog);
+      resolve(message);
+    });
+    child.stdin.write(`${JSON.stringify({ jsonrpc: "2.0", id, method, params })}\n`);
   });
 
 /** The server wraps a reply in `content[0].text`; the gate unwraps it the same way, so a caller sees the payload rather than the envelope. */
