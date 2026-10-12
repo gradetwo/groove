@@ -86,10 +86,31 @@ function loadManifest(): { text: string; manifest: { entries?: { id: string }[] 
   return { text: cachedManifestText, manifest: cachedManifestJson! };
 }
 
+/**
+ * ⭐ **The parsed shipped manifest, memoised on the manifest text.**
+ *
+ * `parseManifest` runs `JSON.parse` over the whole 4.0 MB text and then validates all 16,691 file records — measured
+ * at 25.0 ms — and `list_sample_libraries` was paying for it twice per call: once for the library listing itself and
+ * once inside `catalogueFromManifestText`. With this memo and the `prepared` result threaded through, the first call
+ * parses once and every later call parses nothing.
+ *
+ * The key is the text's **identity**, not its content: `loadManifest` reads the file once per process and returns
+ * that same string object for as long as it is not re-read, so an identity comparison is exact and O(1) — the same
+ * reason `getBuiltCatalogue` above keys on the parsed object rather than the 4 MB text.
+ */
+let cachedParsedManifest: { text: string; result: ReturnType<typeof parseManifest> } | null = null;
+function parsedManifest(): ReturnType<typeof parseManifest> {
+  const { text } = loadManifest();
+  if (!cachedParsedManifest || cachedParsedManifest.text !== text) {
+    cachedParsedManifest = { text, result: parseManifest(text) };
+  }
+  return cachedParsedManifest.result;
+}
+
 function getBaseCatalogue(root: string): { assets: SampleAsset[]; problems: string[] } {
   if (!cachedBaseCatalogue || cachedBaseCatalogue.root !== root) {
     const { text } = loadManifest();
-    const result = catalogueFromManifestText(text, root);
+    const result = catalogueFromManifestText(text, root, [], parsedManifest());
     cachedBaseCatalogue = { root, assets: [...result.assets], problems: [...result.problems] };
   }
   return { assets: [...cachedBaseCatalogue.assets], problems: [...cachedBaseCatalogue.problems] };
@@ -513,7 +534,7 @@ export function listSampleLibraries(): { libraries: SampleLibrary[]; root: strin
    * whether the file or the entry is at fault.
    */
   const stored = readUserLibraries();
-  const parsed = parseManifest(text);
+  const parsed = parsedManifest();
   /** Which ids the shipped manifest itself states, so a library can be reported as the caller's own when it is not. */
   const builtInIds = new Set((parsed.ok && parsed.manifest ? parsed.manifest.entries : []).map((entry) => entry.id));
   const merged =
@@ -524,8 +545,19 @@ export function listSampleLibraries(): { libraries: SampleLibrary[]; root: strin
    * The libraries go to the catalogue as well as to the merge, so a registered library's instruments are
    * counted: `list_sample_libraries` is where a caller finds out what is reachable, and a library listed with
    * zero instruments would read as broken when it is merely not registered with a duration yet.
+   *
+   * ⭐ **Neither branch re-parses the manifest.** With nothing registered the base catalogue is exactly what
+   * `getBaseCatalogue` already caches — the same `catalogueFromManifestText(text, root, [])` this call used to
+   * run, so reusing it is an identity change, not a behavioural one. With user libraries the parsed manifest
+   * above is handed to `catalogueFromManifestText` as `prepared`, which keeps the merge-before-`withProgramIds`
+   * order and the parse-failure problems exactly where they were; only the second `JSON.parse` disappears.
+   * `readUserLibraries()` is still called every time, so a library registered between two calls takes effect
+   * on the next one.
    */
-  const { assets, problems: catalogueProblems } = catalogueFromManifestText(text, root, stored.libraries);
+  const { assets, problems: catalogueProblems } =
+    stored.libraries.length === 0
+      ? getBaseCatalogue(root)
+      : catalogueFromManifestText(text, root, stored.libraries, parsed);
 
   const counts = new Map<string, number>();
   for (const asset of assets) {

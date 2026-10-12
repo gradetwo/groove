@@ -11,7 +11,7 @@
  * The catalogue is a **parameter** everywhere it is read, so the shipped-empty case and a populated case are both testable, and so that adding real assets later is
  * an edit to one array rather than a change to the rule.
  */
-import { parseManifest, sampleAssetsFromManifest } from "./sampleManifest";
+import { parseManifest, sampleAssetsFromManifest, type ManifestResult } from "./sampleManifest";
 import { mergeUserLibraries, type UserSoundLibrary } from "./userLibraries";
 import { sampledAssetForLane } from "./sampledInstruments";
 
@@ -133,13 +133,21 @@ export function sampleReferenceProblem(
  *
  * A manifest that does not parse yields **no catalogue and its errors**, rather than an empty catalogue: those are different facts, and conflating them is how "the library
  * failed to load" becomes "the library has no instruments".
+ *
+ * `prepared` is an already-parsed result for `text`, supplied when the caller has just parsed it (the manifest
+ * is 4.0 MB and `parseManifest` walks all 16,691 file records, so `list_sample_libraries` was paying for it twice
+ * per call). It is a **precondition, not a convenience**: a result for a different `text` would answer for the
+ * wrong manifest, so callers pass the parse of the same string they pass here. The behaviour is unchanged when it
+ * is absent, and the parse-failure branch is identical either way — which is why the caller reuses this function
+ * rather than calling `sampleAssetsFromManifest` itself.
  */
 export function catalogueFromManifestText(
   text: string,
   root: string,
-  libraries: readonly UserSoundLibrary[] = []
+  libraries: readonly UserSoundLibrary[] = [],
+  prepared?: ManifestResult
 ): { assets: SampleAsset[]; problems: string[] } {
-  const parsed = parseManifest(text);
+  const parsed = prepared ?? parseManifest(text);
   if (!parsed.ok || !parsed.manifest) {
     return { assets: [], problems: parsed.errors.map((error) => `manifest: ${error}`) };
   }
