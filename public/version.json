@@ -1,23 +1,23 @@
 {
-  "version": "2.37.5",
+  "version": "2.37.6",
   "releaseDate": "2026-10-12",
   "changelogCount": 10,
   "latest": {
-    "version": "2.37.5",
+    "version": "2.37.6",
     "date": "2026-10-12",
     "category": "refactor",
     "title": {
-      "zh": "可视化循环节流并在空闲停帧",
-      "en": "Throttle the visualiser loops and stop them when idle"
+      "zh": "手机片段：预取并缓存，重播不再重复下载",
+      "en": "Phone clips: prefetch and cache, so a replay is not a second download"
     },
     "highlights": [
       {
-        "zh": "5 处可视化循环（VinylCanvas、两个示波器、PhosphorOscilloscope、ConsolePanel 电平表）在移动/触屏节流到约 40 FPS，Header 可视化空闲时彻底停帧。",
-        "en": "Five visualiser loops (VinylCanvas, both scopes, PhosphorOscilloscope, the ConsolePanel meters) are throttled to about 40 FPS on mobile/touch, and the Header visualiser stops entirely when idle."
+        "zh": "手机片段播放器改为空闲时用自己的 fetch 预取即将播放的那一条并按 URL 缓存；实测片段约 400 KB，R2 无 cache-control，重播不再重复下载。",
+        "en": "The phone clip player now prefetches the clip about to play on its own fetch while idle and caches it by URL; clips are ~400 KB and the mirror sends no cache-control, so a replay no longer re-downloads."
       },
       {
-        "zh": "新增确定性判据：播放时每帧仍排队（节流而非冻死）、空闲时从不排队；把排队移到节流检查之后即变红。120Hz 帧率本机未测。",
-        "en": "A deterministic gate now pins that the loop is re-armed every frame while playing (throttled, not dead) and never while idle; moving the re-arm after the throttle check turns it red. No 120 Hz frame rate was measured here."
+        "zh": "新增单元判据：并发两次取同一 URL 只发一次请求，已缓存再播零请求。未取得真机耗电读数。",
+        "en": "A unit criterion pins it: two concurrent loads of one URL fetch once, and a cached URL issues no further fetch. No on-device battery reading was taken."
       }
     ],
     "truncated": false
