@@ -36,9 +36,21 @@ const RATES = [0.75, 1, 1.25] as const;
  * Keyed by URL, and **revoked on unmount** — an object URL's backing store lives until it is revoked, which is the leak
  * this guards against.
  */
+export interface ClipPrefetchOptions {
+  /**
+   * The media element that may already be fetching the clip. When it is, the prefetch must stand down rather than pull
+   * the same bytes a second time.
+   */
+  element?: HTMLMediaElement | null;
+  /** The URL the element is playing. `element.src` is compared against it, because a relative URL resolves differently. */
+  url?: string;
+}
+
 export class ClipPrefetch {
   private readonly blobs = new Map<string, string>();
   private pending?: Promise<string | undefined>;
+  /** Set by `dispose`, so a fetch still in flight cannot pin a blob after unmount. */
+  private disposed = false;
 
   /** The cached blob URL for `url`, or undefined rather than a guess. */
   cached(url: string): string | undefined {
@@ -46,12 +58,42 @@ export class ClipPrefetch {
   }
 
   /**
+   * ⭐ **Is the element already asking for this URL?** `NETWORK_LOADING` is the precise reading: the element has
+   * `preload="none"`, so it only enters that state when a gesture starts the load. `paused` alone would answer for a
+   * paused *mid-download* element too, which is not the same thing.
+   */
+  private isLoading(element: HTMLMediaElement | null | undefined, clipUrl: string | undefined): boolean {
+    if (!element || !clipUrl) return false;
+    return element.src === clipUrl && element.networkState === HTMLMediaElement.NETWORK_LOADING;
+  }
+
+  /**
+   * ⭐ **Release a prefetch that arrived too late**, i.e. one the element began loading `clip.url` past. `keep` is the
+   * object URL the caller did use (if any) or the one the element has already been handed; revoking it would break
+   * playback.
+   */
+  release(url: string, keep?: string): void {
+    const objectUrl = this.blobs.get(url);
+    if (!objectUrl || objectUrl === keep) return;
+    URL.revokeObjectURL(objectUrl);
+    this.blobs.delete(url);
+  }
+
+  /**
    * Fetch the clip and hold it as an object URL. At most **one** request is in flight, and never a second for a URL that
    * has already arrived: both are what makes "one prefetch, one download" true rather than likely.
+   *
+   * ⭐ **But never a second request for a URL the element is already loading.** Measured on the live phone path
+   * (`scratch/verify-live-phone.mjs`): a quick press beat the idle prefetch, so the element fetched `clip.url` and the
+   * prefetch then fetched it again — two downloads of ~400 KB for one clip. When the element is already loading the
+   * URL there is nothing left for the prefetch to win, so the fetch is **skipped** and `undefined` is returned; the
+   * element's own request is the download. A skip is deliberately **not** cached, so a later call can still prefetch.
    */
-  load(url: string): Promise<string | undefined> {
+  load(url: string, options: ClipPrefetchOptions = {}): Promise<string | undefined> {
     const cached = this.cached(url);
     if (cached) return Promise.resolve(cached);
+    if (this.disposed) return Promise.resolve(undefined);
+    if (this.isLoading(options.element, options.url ?? url)) return Promise.resolve(undefined);
     if (!this.pending) {
       this.pending = this.fetchAsObjectUrl(url).finally(() => {
         this.pending = undefined;
@@ -71,6 +113,14 @@ export class ClipPrefetch {
        */
       if (typeof URL.createObjectURL !== "function") return undefined;
       const objectUrl = URL.createObjectURL(blob);
+      /**
+       * The unmount may land while the bytes are in flight; an object URL created after `dispose` would never be
+       * revoked, so it is released here instead of being handed to a component that no longer exists.
+       */
+      if (this.disposed) {
+        URL.revokeObjectURL(objectUrl);
+        return undefined;
+      }
       this.blobs.set(url, objectUrl);
       return objectUrl;
     } catch {
@@ -80,6 +130,7 @@ export class ClipPrefetch {
 
   /** Release everything: unmount must not leave a blob pinned for the life of the document. */
   dispose(): void {
+    this.disposed = true;
     for (const objectUrl of this.blobs.values()) URL.revokeObjectURL(objectUrl);
     this.blobs.clear();
   }
@@ -176,13 +227,30 @@ export function MobileClipPlayer({
    * The prefetch is scheduled in an idle callback (a macrotask where there is none) and the element keeps `preload="none"`:
    * the media element is not what pays for this, and if the fetch fails or arrives late, the component plays the clip's
    * own URL exactly as before.
+   *
+   * ⭐ **The double download this closes** (measured 2026-10-12, `scratch/verify-live-phone.mjs`: the same clip requested
+   * twice): press play quickly and the element starts its own fetch of `clip.url` before the prefetch has. Then the
+   * prefetch is skipped outright, and if it was already in flight when the element's load began, its blob is released
+   * rather than swapped in — swapping `src` mid-load restarts the media pipeline for bytes the element is already
+   * fetching, and the download has been paid for either way.
    */
   useEffect(() => {
     if (!clip) return;
     let cancelled = false;
     const cancelIdle = whenIdle(() => {
-      void prefetch.load(clip.url).then((objectUrl) => {
-        if (!cancelled && objectUrl) setCachedUrl(objectUrl);
+      const element = audioRef.current;
+      void prefetch.load(clip.url, { element, url: clip.url }).then((objectUrl) => {
+        if (!objectUrl) return; // skipped because the element is already loading it, or the fetch failed
+        if (cancelled) {
+          prefetch.release(clip.url);
+          return;
+        }
+        const current = audioRef.current;
+        if (current && current.networkState === HTMLMediaElement.NETWORK_LOADING) {
+          prefetch.release(clip.url, current.src);
+          return;
+        }
+        setCachedUrl(objectUrl);
       });
     });
     return () => {
