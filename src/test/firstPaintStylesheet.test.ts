@@ -9,7 +9,17 @@
  * **2012–2458 ms** across two probe runs, and FCP landed just behind it (2828 / 3604 ms), while the first
  * long task sat at 2387 ms: the stylesheet gates the **first paint**. In an A/B cut where the request was
  * blocked, total long tasks fell 8471 → 5343 ms while `Layout` stayed at 4272 ms — so it is not the
- * (separately diagnosed) forced-layout cost. `npm run perf:check` before/after is in the commit message.
+ * (separately diagnosed) forced-layout cost.
+ *
+ * `npm run perf:check` (the same command, twice per side) says: the pre-fix build at load 15.3/16.3 gave
+ * desktop FCP 2804/1236 ms and mobile FCP 4064/4220 ms; this change, measured at load 23.3/25.1, gave desktop
+ * FCP 9032/11876 ms and mobile 5208/5412 ms. The box drifted between the two builds — DCL on the same command
+ * moved 1051 → 2920 ms, a milestone the font link cannot touch — so **that pair attributes nothing** and is
+ * recorded because it was run, not because it supports the change. The comparison that isolates the change is
+ * an interleaved A/B on one set of hashed assets, the served document differing only in whether the font link
+ * carries `media="print" onload="this.media='all'"`: over 7 runs per side the first paint preceded the
+ * stylesheet's `responseEnd` in **0/7** blocking runs and **5/7** with this change (the two exceptions ran at
+ * load ≥27), median FCP 3536 ms blocking vs 2448 ms async, load 19.9–28.8 throughout.
  *
  * Those readings are **probes, not gates** (`scripts/probe_import_playback_jank.mjs` says why: the box is
  * shared, so a threshold on a wall-clock number fails for reasons the author does not control). What *is*
