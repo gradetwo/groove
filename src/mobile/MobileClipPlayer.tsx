@@ -219,6 +219,32 @@ export function MobileClipPlayer({
   const [cachedUrl, setCachedUrl] = useState<string | undefined>(undefined);
 
   /**
+   * The rail reports the element's own position, and a reading only counts for the clip it came from — so selecting
+   * another clip shows zero without an effect to reset it (an effect on the render path would clobber a position the
+   * element has just reported).
+   */
+  const [position, setPosition] = useState<{ url: string; current: number; duration: number }>({
+    url: "",
+    current: 0,
+    duration: 0,
+  });
+  const railUrl = clip?.url ?? "";
+  const railCurrent = position.url === railUrl ? position.current : 0;
+  const railDuration =
+    position.url === railUrl && position.duration > 0 && Number.isFinite(position.duration) ? position.duration : 0;
+  const railRatio = railDuration ? Math.min(1, Math.max(0, railCurrent / railDuration)) : 0;
+  const readPosition = useCallback((audio: HTMLAudioElement, url: string) => {
+    setPosition({ url, current: audio.currentTime, duration: audio.duration });
+  }, []);
+  const seekToRatio = useCallback((audio: HTMLAudioElement, next: number, url: string) => {
+    const total = audio.duration > 0 && Number.isFinite(audio.duration) ? audio.duration : 0;
+    if (!total) return;
+    audio.currentTime = Math.min(total, Math.max(0, next * total));
+    // Read the element straight back: a press on the rail applies now, not when `seeked` arrives.
+    setPosition({ url, current: audio.currentTime, duration: total });
+  }, []);
+
+  /**
    * ⭐ **Prefetch the clip that is next to play, off the critical path.** This is the natural hook point: the selected clip
    * changes, so the bytes it will need are known before the gesture that asks for them. Only this one clip is fetched —
    * never the manifest's whole list, and never every mounted element, which is how 400 KB per genre would become 400 KB
@@ -300,6 +326,8 @@ export function MobileClipPlayer({
     if (!audio) return;
     audio.pause();
     audio.currentTime = 0;
+    // Starting from the top is itself a position: show it now, without waiting for the element to report one.
+    setPosition({ url: clip?.url ?? "", current: 0, duration: audio.duration });
     void audio.play().then(() => setPlaying(true)).catch(() => setPlaying(false));
   }, [autoPlay, clip]);
 
@@ -340,6 +368,8 @@ export function MobileClipPlayer({
   return (
     <div data-testid="mobile-clip-player" className="flex items-center gap-2 px-1 py-2">
       <audio
+        onTimeUpdate={(event) => readPosition(event.currentTarget, railUrl)}
+        onLoadedMetadata={(event) => readPosition(event.currentTarget, railUrl)}
         ref={audioRef}
         src={cachedUrl ?? clip.url}
         preload="none"
@@ -382,6 +412,38 @@ export function MobileClipPlayer({
           {t("mobile_clip_compare")}
         </button>
       )}
+      <div
+        role="progressbar"
+        aria-label="clip position"
+        aria-valuemin={0}
+        aria-valuemax={100}
+        aria-valuenow={Math.round(railRatio * 100)}
+        data-testid="mobile-clip-progress"
+        tabIndex={0}
+        className="relative h-11 min-w-[72px] flex-1 cursor-pointer"
+        onClick={(event) => {
+          const audio = audioRef.current;
+          if (!audio) return;
+          const rect = event.currentTarget.getBoundingClientRect();
+          if (!rect.width) return;
+          seekToRatio(audio, (event.clientX - rect.left) / rect.width, railUrl);
+        }}
+        onKeyDown={(event) => {
+          const audio = audioRef.current;
+          if (!audio) return;
+          if (event.key === "ArrowLeft") { event.preventDefault(); seekToRatio(audio, railRatio - 0.05, railUrl); }
+          else if (event.key === "ArrowRight") { event.preventDefault(); seekToRatio(audio, railRatio + 0.05, railUrl); }
+          else if (event.key === "Home") { event.preventDefault(); seekToRatio(audio, 0, railUrl); }
+          else if (event.key === "End") { event.preventDefault(); seekToRatio(audio, 1, railUrl); }
+        }}
+      >
+        <div className="pointer-events-none absolute inset-x-0 top-1/2 h-[3px] -translate-y-1/2 rounded bg-[rgb(var(--m-line-2))]" />
+        <div
+          data-testid="mobile-clip-progress-fill"
+          className="pointer-events-none absolute left-0 top-1/2 h-[3px] w-full origin-left -translate-y-1/2 rounded bg-[rgb(var(--m-gold))]"
+          style={{ transform: `scaleX(${railRatio})` }}
+        />
+      </div>
       <span data-testid="mobile-clip-status" className="truncate text-[11px] opacity-70">
         {label} · {rate}× · {t("mobile_clip_pitch_note")}
       </span>
