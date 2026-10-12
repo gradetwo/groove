@@ -1,23 +1,23 @@
 {
-  "version": "2.38.0",
+  "version": "2.38.1",
   "releaseDate": "2026-10-12",
   "changelogCount": 10,
   "latest": {
-    "version": "2.38.0",
+    "version": "2.38.1",
     "date": "2026-10-13",
-    "category": "feature",
+    "category": "fix",
     "title": {
-      "zh": "手机片段：可点击可键盘操作的进度条",
-      "en": "Phone clips: a position rail you can seek with"
+      "zh": "排列视图：改一个音符不再重画整片缩略图",
+      "en": "Arrangement: one note edit no longer redraws every miniature"
     },
     "highlights": [
       {
-        "zh": "手机片段播放器新增由真实音频驱动的进度条：点击或左右键 seek、两端自动 clamp、切片段与从零重播自动归零。",
-        "en": "The phone clip player gains a rail driven by the element's own audio: press or arrow keys to seek, both ends clamp, and it returns to zero on a clip switch and on a restart from the top."
+        "zh": "修复轨道缩略图的 key 含数组下标导致的整片重挂：真实作品实测，一次编辑的迷你节点被替换数由 816 降到 0，新增变更由 817 降到 27。",
+        "en": "Fixes an index-bearing React key on track miniatures that made one note edit remount them all: measured on a real piece, replaced miniature nodes fell from 816 to 0 and churn from 817 to 27."
       },
       {
-        "zh": "8 条判据覆盖映射、NaN/0 时长守卫、两端 clamp、点击 seek、键盘步进、切片段与重播归零。typecheck 0 错。",
-        "en": "Eight criteria cover the mapping, the NaN/zero-duration guard, both clamps, press-to-seek, keyboard steps, and the resets on clip switch and restart. Typecheck is clean."
+        "zh": "key 改用音符自身身份。typecheck 0 错、排列相关判据 37/37；该修复的自动化判据仍待补（已如实标注）。",
+        "en": "The key now uses the note's own identity. Typecheck is clean and the arrangement criteria are 37/37; an automated criterion for this fix is still to be written, and is stated as such."
       }
     ],
     "truncated": false
