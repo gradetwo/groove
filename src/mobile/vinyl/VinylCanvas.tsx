@@ -1148,7 +1148,14 @@ export function VinylCanvas({
       /** The gap between paints: this is what includes the browser's own raster, which a synchronous
           measurement inside the callback cannot see (it ends when the callback returns). */
       const gapMs = lastPaintedAt ? now - lastPaintedAt : 16.7;
-      if (!dirty && lastPaintedAt && gapMs < minFrameMs) return;
+      // Cap at 40 FPS on mobile / touch (min 25ms gap) to prevent 120Hz ProMotion thermal throttling
+      const touchFloorMs =
+        typeof window !== "undefined" &&
+        ((window.matchMedia?.("(pointer: coarse)").matches ?? false) || (navigator.maxTouchPoints ?? 0) > 0)
+          ? 25
+          : 16;
+      const effectiveFloorMs = Math.max(minFrameMs, touchFloorMs);
+      if (!dirty && lastPaintedAt && gapMs < effectiveFloorMs) return;
 
       const paintStart = now;
       const shine = Math.min(1, Math.abs(scrubRef.current.velocity) / 16 + Math.min(1, Math.abs(dragVelocity) * 1.1));

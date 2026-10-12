@@ -228,7 +228,13 @@ export const ConsolePanel: React.FC<ConsolePanelProps> = ({
       element.style.height = `${(linearToMeterPosition(linear) * 100).toFixed(2)}%`;
     };
 
-    const frame = (_now: number) => {
+    let lastNow = 0;
+    const frame = (now: number) => {
+      rafId = requestAnimationFrame(frame);
+      // Throttle metering writes to ~38 FPS (min 26ms gap) to prevent 120Hz ProMotion style write storms
+      if (now - lastNow < 26) return;
+      lastNow = now;
+
       const stereo = engine.getStereoAnalysers();
       const peakLeft = readAnalyser(stereo?.left, "left");
       const peakRight = readAnalyser(stereo?.right, "right");

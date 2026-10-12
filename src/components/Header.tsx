@@ -266,12 +266,26 @@ export const Header: React.FC<HeaderProps> = ({
 
     // A-07: allocate once per effect instead of ~60 times per second.
     let frequencyData: Uint8Array<ArrayBuffer> | null = null;
+    let lastRender = 0;
 
-    const render = () => {
+    const render = (now: number) => {
+      if (!isPlaying) {
+        // Draw static idle ambient bars once, then stop requesting frames
+        ctx.clearRect(0, 0, 192, 60);
+        for (let i = 0; i < 32; i++) {
+          ctx.fillStyle = "rgba(139, 143, 153, 0.15)";
+          ctx.fillRect(i * 6, 56, 4, 3);
+        }
+        return;
+      }
+
       animationFrameId = requestAnimationFrame(render);
-      ctx.clearRect(0, 0, 192, 60);
+      // Throttle to ~40 FPS (min 25ms gap) to prevent 120Hz ProMotion overheating
+      if (now - lastRender < 25) return;
+      lastRender = now;
 
-      if (analyser && isPlaying) {
+      ctx.clearRect(0, 0, 192, 60);
+      if (analyser) {
         if (!frequencyData || frequencyData.length !== analyser.frequencyBinCount) {
           frequencyData = new Uint8Array(new ArrayBuffer(analyser.frequencyBinCount));
         }
@@ -283,16 +297,10 @@ export const Header: React.FC<HeaderProps> = ({
           ctx.fillStyle = `rgba(245, 183, 61, ${alpha})`;
           ctx.fillRect(i * 6, 60 - h, 4, h);
         }
-      } else {
-        // Idle ambient bars
-        for (let i = 0; i < 32; i++) {
-          ctx.fillStyle = "rgba(139, 143, 153, 0.15)";
-          ctx.fillRect(i * 6, 56, 4, 3);
-        }
       }
     };
 
-    render();
+    animationFrameId = requestAnimationFrame(render);
     return () => cancelAnimationFrame(animationFrameId);
   }, [analyser, isPlaying]);
 

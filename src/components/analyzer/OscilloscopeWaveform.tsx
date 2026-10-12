@@ -67,9 +67,12 @@ export const OscilloscopeWaveform: React.FC<OscilloscopeWaveformProps> = ({
     const dataL = new Float32Array(bufLen);
     const dataR = new Float32Array(bufLen);
 
-    const render = () => {
+    let lastRender = 0;
+    const render = (now: number) => {
       if (!active) return;
       animFrameRef.current = requestAnimationFrame(render);
+      if (now - lastRender < 25) return;
+      lastRender = now;
 
       const canvas = canvasRef.current;
       if (!canvas) return;

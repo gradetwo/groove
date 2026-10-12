@@ -75,8 +75,11 @@ export const PhosphorOscilloscope: React.FC<PhosphorOscilloscopeProps> = ({
     }
     const dataArray = new Float32Array(bufferLength);
 
-    const render = () => {
+    let lastRender = 0;
+    const render = (now: number) => {
       animationFrameId = requestAnimationFrame(render);
+      if (now - lastRender < 25) return;
+      lastRender = now;
       const width = canvas.width;
       const height = canvas.height;
       /** The palette resolved for this skin; read per frame but *resolved* only on mount / skin / resize. */
@@ -166,8 +169,13 @@ export const PhosphorOscilloscope: React.FC<PhosphorOscilloscopeProps> = ({
       ctx.save();
       const beamGlow = currentShock > 0.05 ? colours.peak : colours.signal;
       ctx.strokeStyle = canvasRgba(beamGlow);
-      ctx.shadowBlur = 8 + currentShock * 12;
-      ctx.shadowColor = canvasRgba(colours.signal);
+      const isTouch =
+        typeof window !== "undefined" &&
+        ((window.matchMedia?.("(pointer: coarse)").matches ?? false) || (navigator.maxTouchPoints ?? 0) > 0);
+      if (!isTouch) {
+        ctx.shadowBlur = 8 + currentShock * 12;
+        ctx.shadowColor = canvasRgba(colours.signal);
+      }
       ctx.lineWidth = 2 + currentShock * 1.5;
 
       if (!hasSignal) {
