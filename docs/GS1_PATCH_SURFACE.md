@@ -364,7 +364,7 @@ npx vite-node scripts/report_gs1_params.ts   # 读 vendor/gs1/src/audio/params.t
 
 **为什么本次仍然只记录、不实现（理由，以及第一步）** —— **已被 §10 取代：路线 ②（覆盖层）已实施，本节保留为决策记录。**
 
-* **写侧的第一步不是加工具，是决定编码器归谁。** 唯一诚实的编码器是 synth 自己的 `buildPayload`（`/home/crow/music/synth/src/state/share.ts`），它**没有被 vendored**，而且 import `persist.ts`（`SCHEMA_VERSION`）与 `midi/takes.ts`——§2 记过，把这半棵子树拖进来会破坏"一文件一哈希"的 pin。**在这里手写一个编码器，就是给同一个格式写第二份实现**：本仓库自己的读+写会互相自洽，却可能和 synth 不一致——正是 `gs1PatchPassthrough.test.ts` 用 synth 自己的编码器产物做 fixture 要防的那件事。所以第一步是一次**决定**：(a) 把上游 `share.ts` 的编码器按哈希 pin 进 `vendor/gs1/`，或 (b) 不加编码器，改为在 `SequencerTrack` 上放一个独立的逐参数覆盖字段，并把它并进**唯一**解析缝 `resolveGs1Lane`（`src/audio/gs1/gs1Tracks.ts:368`），同时保证导出、实时、`validate_pattern` 三处读同一个决议。
+* **写侧的第一步不是加工具，是决定编码器归谁。** 唯一诚实的编码器是 synth 自己的 `buildPayload`（上游 `gradetwo/synth` 的 `src/state/share.ts`），它**没有被 vendored**，而且 import `persist.ts`（`SCHEMA_VERSION`）与 `midi/takes.ts`——§2 记过，把这半棵子树拖进来会破坏"一文件一哈希"的 pin。**在这里手写一个编码器，就是给同一个格式写第二份实现**：本仓库自己的读+写会互相自洽，却可能和 synth 不一致——正是 `gs1PatchPassthrough.test.ts` 用 synth 自己的编码器产物做 fixture 要防的那件事。所以第一步是一次**决定**：(a) 把上游 `share.ts` 的编码器按哈希 pin 进 `vendor/gs1/`，或 (b) 不加编码器，改为在 `SequencerTrack` 上放一个独立的逐参数覆盖字段，并把它并进**唯一**解析缝 `resolveGs1Lane`（`src/audio/gs1/gs1Tracks.ts:368`），同时保证导出、实时、`validate_pattern` 三处读同一个决议。
 * **读侧的第一步可以立刻做，且不需要编码器**：一个 `get_gs1_patch`，把某条轨道 code 里的 224 个值（84 个带标签/范围）与路由读回来。它只用已存在的 `decodeGs1PatchCode`，能让调用者先看见"我的码到底设了什么"，是加写侧之前该有的那半。判据两个方向：对一个已知 code 断言读回的已知值；把解码器对 `v` 的读取去掉即红。
 * **范围校验不能照抄 `PARAM_SPECS`**，理由与测量已在 §4：它只覆盖 84 个，且在重叠处比 worklet 实际服务的范围更窄（`phonk` 的 `osc2Pitch = 31` 会被它拒掉）。逐参数工具必须先决定"按什么校验"，否则就是把一个工厂预设拒之门外。
 
@@ -372,7 +372,8 @@ npx vite-node scripts/report_gs1_params.ts   # 读 vendor/gs1/src/audio/params.t
 
 ```bash
 # 生成测试用的真实 share code（fixture 的来源，synth 自己的编码器）
-cd /home/crow/music/synth
+git clone --depth 1 --branch v2.1.9 https://github.com/gradetwo/synth /tmp/synth
+cd /tmp/synth
 node -e "import('./mcp/lib/data.mjs').then(async ({loadData}) => {
   const d = await loadData();
   const { presetShareCode } = await import('./mcp/lib/patch.mjs');

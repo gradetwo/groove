@@ -88,8 +88,8 @@ const manifest: Manifest | null = existsSync(MANIFEST_PATH)
 if (!manifest) {
   console.warn(
     "[gs1Contract] SKIP: vendor/gs1/UPSTREAM.json not found — the GS-1 core is not vendored. " +
-      "Build it upstream (`cd <gs1> && npm run build:wasm`) then run " +
-      "`node scripts/sync-gs1.mjs --from <gs1>`.",
+      "Build it from the upstream source (`git clone https://github.com/gradetwo/synth`) then run " +
+      "`node scripts/sync-gs1.mjs` (or `--from <checkout>` for an already-built local tree).",
   );
 }
 

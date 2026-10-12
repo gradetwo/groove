@@ -1,14 +1,19 @@
 # vendor/gs1 — pinned GROOVE SYNTH GS-1 core
 
-This directory is a **one-directional vendored copy** of the parts of the sibling
-project [`/home/crow/music/synth`](https://example.invalid) ("GROOVE SYNTH GS-1",
-MIT licensed, ABI version 8) that Groove Lab needs to run the polyphonic
+This directory is a **one-directional vendored copy** of the parts of the upstream
+project [`gradetwo/synth`](https://github.com/gradetwo/synth) ("GROOVE SYNTH GS-1",
+MIT licensed, ABI version 9) that Groove Lab needs to run the polyphonic
 instrument engine for the `chords` and `lead` track roles.
 
-It is **not** a git submodule (neither repo has a git remote to point at), **not**
-a subtree (it would splice GS-1's unrelated history into this repo), and **not**
-an npm dependency (GS-1 is `private: true` and publishes no package). It is a
-pinned file copy, refreshed by a script.
+`scripts/sync-gs1.mjs` reads that repository by default (`--ref <tag|commit>`,
+default: the newest `v*` tag) and pins the bytes here. A local checkout passed via
+`--from <path>` is a documented, optional override for when one is already built.
+
+It is **not** a git submodule (a submodule would track a moving ref, and the cores
+this repo needs are build artifacts upstream does not commit), **not** a subtree
+(it would splice GS-1's unrelated history into this repo), and **not** an npm
+dependency (GS-1 is `private: true` and publishes no package). It is a pinned file
+copy, refreshed by a script.
 
 ## Provenance
 
@@ -50,7 +55,9 @@ typecheck on its own; that is a known, tracked gap, not an accident.
 ## The `.wasm` files are committed on purpose
 
 The two cores are build artifacts and are **gitignored upstream**
-(`src/generated/*.wasm`), so a fresh GS-1 clone does not contain them. They are
+(`src/generated/*.wasm`), so a fresh GS-1 clone does not contain them. The default
+GitHub sync builds them from the clone's own Rust sources (with `CARGO_TARGET_DIR`
+pointed outside the clone, so the checkout it reads stays read-only). They are
 committed *here* because this repository's CI has no Rust toolchain: a vendored
 artifact CI cannot rebuild is the only option. `vendor/` is **not** excluded by
 this repo's `.gitignore`, so the binaries are committed like any other source.
@@ -58,14 +65,16 @@ this repo's `.gitignore`, so the binaries are committed like any other source.
 ## Refreshing the pin ("a new GS-1 release came out")
 
 ```sh
-# 1. Build the upstream artifacts (Rust + wasm32 target required).
-cd /home/crow/music/synth && npm run build:wasm
+# 1. Re-vendor from GitHub. Clones the newest v* tag, builds the .wasm cores from
+#    its Rust sources, and copies the pinned subset. Needs git + Rust (wasm32);
+#    pin a different release with --ref <tag|commit>.
+node scripts/sync-gs1.mjs
 
-# 2. Re-vendor. Refuses to run if either .wasm is missing.
-cd /home/crow/music/groove
-node scripts/sync-gs1.mjs --from /home/crow/music/synth
+#    ...or read a local checkout that already has the built artifacts (optional
+#    override, needs `npm run build:wasm` there first):
+#      node scripts/sync-gs1.mjs --from /path/to/synth
 
-# 3. Verify the pin (hashes, wasm validation, ABI values, render, param ids).
+# 2. Verify the pin (hashes, wasm validation, ABI values, render, param ids).
 node scripts/check-gs1.mjs
 ```
 

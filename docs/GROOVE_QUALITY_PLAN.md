@@ -736,7 +736,7 @@ by the order they appear in the table above. The evidence for that order:
 whose host API was `noteOnAt(note, velocity, atFrame, pan)` — with the pool enabled the shipping render was
 *identical* with and without the nudge (Δ0), so the claim was measured on the native path and labelled as such. The
 upstream core had the per-note `bends`/`tuning` tables and the per-voice read of them all along and was missing only
-two `extern "C"` entry points, so `~/music/synth` gained `gs_note_bend` / `gs_set_tuning_note` and **ABI 9**, Groove
+two `extern "C"` entry points, so the upstream synth repo (`gradetwo/synth`) gained `gs_note_bend` / `gs_set_tuning_note` and **ABI 9**, Groove
 re-pinned (`check:gs1`, 25 checks) and `Gs1Host` exposes both. The variation now travels as per-note **tuning** —
 GS-1 has no per-note cutoff — offline before each `noteOnAt` and live through `PoolNote.cents`, with the escape hatch
 posting nothing at all. Measured on the gate's own genre afterwards: lead **0.164 dB vs 0.069 control (×2.38)**,

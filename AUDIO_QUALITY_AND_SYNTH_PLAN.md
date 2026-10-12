@@ -564,7 +564,7 @@ vendor/gs1/
 
 **适配层要手写一个 9 方法的窄接口**，而不是直接复用 GS-1 的 `AudioEngine`（它有 40+ 公开方法，其中 `noteBend`/`setTuning` 在 ABI 8 下是死的）：`init / noteOn / noteOff / allNotesOff / setPatch / setParam / onAnalysis / onPolyphony / dispose`。冻结窄面意味着上游重构其余 31 个方法不会波及我们。
 
-**「上游发了新版本」标准流程**：读上游 changelog 并**先看 ABI 是否变了**（变了就停，这属于契约破坏）→ 在上游构建并跑它的 5 道门禁（`test:wasm` / `verify:presets` / `verify:presets:2x` / `test:dsp` / `verify:dsp:2x`）确保拿到的是被上游认可的那个产物 → `node scripts/sync-gs1.mjs --from ../synth --commit <sha>` 单向同步（**永不写入 synth 目录**）→ 重点 review `params.ts` 与 `worklet-processor.js` 的 diff → `version:sync` + 补一行 changelog（`GS-1 engine: 2.1.3 → 2.1.4 (ABI 8)`）→ 本地 `verify`。
+**「上游发了新版本」标准流程**：读上游 changelog 并**先看 ABI 是否变了**（变了就停，这属于契约破坏）→ 在上游构建并跑它的 5 道门禁（`test:wasm` / `verify:presets` / `verify:presets:2x` / `test:dsp` / `verify:dsp:2x`）确保拿到的是被上游认可的那个产物 → `node scripts/sync-gs1.mjs --ref <tag|sha>` 单向同步（默认 source 就是 `https://github.com/gradetwo/synth`，脚本自己 clone 并按上游的 cargo 调用构建 wasm，**永不写入上游目录**）→ 重点 review `params.ts` 与 `worklet-processor.js` 的 diff → `version:sync` + 补一行 changelog（`GS-1 engine: 2.1.3 → 2.1.4 (ABI 8)`）→ 本地 `verify`。
 
 ### 5.5 需要新增的门禁
 
@@ -783,7 +783,7 @@ trim 仍在限幅器**之前**（限幅器保持绝对天花板）；总线返�
 ### P6 第一步 · GS-1 vendor 管线与契约门禁
 
 - **vendor 子集已落地**并钉死：`groove-synth-gs1 v2.1.4 @ 2b5b3550`、**ABI 8**，含 worklet processor、参数表、host engine、两个 wasm（SIMD 217,049 B / scalar 203,046 B）与 MIT LICENSE。**wasm 必须提交**——本仓 CI 没有 Rust 工具链，无法重建。
-- `scripts/sync-gs1.mjs` 是**单向**的：上游字节只经 `readUpstream()` 读，所有写入经 `writeVendored()`，后者拒绝 `vendor/gs1` 之外的目标、也拒绝把目标放在上游树内。上游缺 wasm 时**不做任何 vendoring**，只打印确切的 `npm run build:wasm` 指令。
+- `scripts/sync-gs1.mjs` 是**单向**的：默认 source 是 `https://github.com/gradetwo/synth`（`--ref <tag|commit>` 钉住版本，默认最新 `v*` tag），克隆到临时目录；上游字节只经 `readUpstream()` 读，所有写入经 `writeVendored()`，后者拒绝 `vendor/gs1` 之外的目标、也拒绝把目标放在上游树内。wasm 是上游 gitignore 的构建产物：默认路径从 clone 的 Rust 源码构建，`CARGO_TARGET_DIR` 指在 clone 之外，因此 clone 始终只读；`--from` 的本地 checkout 缺 wasm 时**不做任何 vendoring**，只打印确切的 `npm run build:wasm` 指令。
 - `scripts/check-gs1.mjs` **22 项断言**：6 个哈希、两个核 validate + 实例化、**从模块里读** `gs_abi_version()=8`/`max_voices=32`/`max_block_size=1024`/`spectrum_bins=36`、224 个参数 id 无重复、渲染非静音、`gs_alloc_violations()=0`。无清单时明确 SKIP；有清单则严格失败（清单只在全部文件成功后写出，所以"有清单缺文件"正是要抓的坏状态）。已接入 `check:budget` 与 `verify`。
 - **包体门禁补上 wasm 行**：此前 `check_budgets.js` 只看 `.js`，几百 KB 的 wasm 对它**完全不可见**。新增单件 96 KB / 合计 170 KB 上限，实测 74.98 + 72.22 = **147.2 KB**（40% 增长会失败，已用合成的 195 KB 验证）。
 

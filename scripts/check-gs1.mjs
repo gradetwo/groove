@@ -142,10 +142,13 @@ function skip(reason) {
   console.log(
     "      valid state (its .wasm artifacts are build outputs), so this gate does",
   );
-  console.log("      not fail the build. To vendor it:");
-  console.log("\n        node scripts/sync-gs1.mjs --from /path/to/gs1-checkout");
+  console.log("      not fail the build. To vendor it from the upstream GitHub repo:");
+  console.log("\n        node scripts/sync-gs1.mjs");
   console.log(
-    "\n      ...after building the upstream artifacts there with `npm run build:wasm`.",
+    "\n      (it clones https://github.com/gradetwo/synth and builds the .wasm cores;",
+  );
+  console.log(
+    "      `--from <checkout>` reads an already-built local tree instead — optional override.)",
   );
   console.log("\n      Once vendor/gs1/UPSTREAM.json exists, this gate becomes strict.\n");
   process.exit(0);
@@ -414,7 +417,7 @@ function finish() {
     for (const failure of failures) console.error(`   • ${failure}`);
     console.error(
       "\n   vendor/gs1 no longer matches its pin. Re-run " +
-        "`node scripts/sync-gs1.mjs --from <gs1-checkout>` and review the diff.",
+        "`node scripts/sync-gs1.mjs` (or `--from <checkout>`) and review the diff.",
     );
     console.error("===============================================================\n");
     process.exit(1);

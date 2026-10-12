@@ -19,7 +19,8 @@
  *
  * `ACID_CODE` was produced by the synthesizer project's own encoder, from its own factory preset:
  *
- *   cd /home/crow/music/synth
+ *   git clone --depth 1 --branch v2.1.9 https://github.com/gradetwo/synth /tmp/synth
+ *   cd /tmp/synth
  *   node -e "import('./mcp/lib/data.mjs').then(async ({loadData}) => {
  *     const d = await loadData();
  *     const { presetShareCode } = await import('./mcp/lib/patch.mjs');

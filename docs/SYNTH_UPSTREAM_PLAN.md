@@ -2,14 +2,16 @@
 
 > **Historical record (investigation closed 2026-09-26), plus a live upstream queue — §2–§4 only.** §1's GS-1 note-event pop was fixed at its source in `d0237a7` (release v2.34.0): the worklet's split-block copy in `public/gs1/workletProcessor.js` ('Copy each chunk to its own offset'), outliers 181.6×/153.6×/134.5× → none. §1's "next experiment" bisection and its `organStab` release 1.3→0.6 s note are dead — the shipped release is still 1.3 s (`src/data/gs1Patches.ts:483`). §2, §3 (done, ABI 9) and §4 remain the correct upstream queue.
 
-Groove vendors `gs1` from the sibling `synth` project (`vendor/gs1` + `public/gs1/*.wasm`, pinned by
-`scripts/sync-gs1.mjs` and checked by `node scripts/check-gs1.mjs`). This file is the **queue of changes that belong
+Groove vendors `gs1` from the upstream `synth` project ([`gradetwo/synth`](https://github.com/gradetwo/synth))
+(`vendor/gs1` + `public/gs1/*.wasm`, pinned by `scripts/sync-gs1.mjs` and checked by
+`node scripts/check-gs1.mjs`). This file is the **queue of changes that belong
 upstream**, with the measurement that asked for each one. The rule from the owner: if something needs an upstream change,
 write the plan first and then make it — and keep the ABI contract honest while doing it.
 
 ## How a change here is made
 
-1. Change the upstream source in `~/music/synth` (never the vendored copy — `sync-gs1` would overwrite it).
+1. Change the upstream source in a clone of `https://github.com/gradetwo/synth` — or a local checkout (optional
+   override) — never the vendored copy, because `sync-gs1` would overwrite it.
 2. Add the test that fails against the old behaviour, in the upstream suite, and run the upstream gates
    (`npm test`, `npm run verify:worklet-protocol`, `npm run test:wasm` when the Rust changed).
 3. Re-pin in Groove with `node scripts/sync-gs1.mjs`, then `node scripts/check-gs1.mjs`.

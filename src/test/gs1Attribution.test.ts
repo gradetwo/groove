@@ -29,8 +29,8 @@ const HOST_SOURCE = path.join(SRC_DIR, "audio", "gs1", "Gs1Host.ts");
 /**
  * Copyright holders that must appear.
  *
- * Taken verbatim from the LICENSE files under `crates/synth-core/vendor/` in the sibling GS-1
- * repository, not from memory.
+ * Taken verbatim from the LICENSE files under `crates/synth-core/vendor/` in the upstream GS-1
+ * repository (`https://github.com/gradetwo/synth`), not from memory.
  */
 const REQUIRED_NOTICES = [
   { label: "GS-1 itself", needle: "Copyright (c) 2025 GROOVE SYNTH GS-1 contributors" },

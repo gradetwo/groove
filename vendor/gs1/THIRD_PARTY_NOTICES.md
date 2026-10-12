@@ -15,7 +15,7 @@ therefore a redistribution obligation we carry, not an optional courtesy.
 
 | Component | Version / pin | License | Where it ends up |
 | :--- | :--- | :--- | :--- |
-| GROOVE SYNTH GS-1 | `2.1.4` @ commit `2b5b3550` (ABI 8) | MIT | `vendor/gs1/` → bundled as hashed assets (`synth_core*.wasm`, `worklet-processor*.js`) |
+| [GROOVE SYNTH GS-1](https://github.com/gradetwo/synth) | `2.1.9` @ commit `4103960` (ABI 9) | MIT | `vendor/gs1/` → bundled as hashed assets (`synth_core*.wasm`, `worklet-processor*.js`) |
 | [DaisySP](https://github.com/electro-smith/DaisySP) | `599511b7` | MIT (Electrosmith, Corp.) | compiled **into** `synth_core*.wasm` |
 | [Plaits](https://github.com/pichenettes/eurorack) sources used by DaisySP | 2016 | MIT (Emilie Gillet) | compiled **into** `synth_core*.wasm` |
 | [Soundpipe](https://github.com/PaulBatchelor/Soundpipe) | 1.8.1 | MIT (Paul Batchelor) | compiled **into** `synth_core*.wasm` |

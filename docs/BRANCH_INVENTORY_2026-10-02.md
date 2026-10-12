@@ -360,6 +360,8 @@ git diff --name-only $DEV...<branch> -- src/mobile
 git diff --name-only $DEV...<branch> -- .github/workflows/ci.yml
 
 # 6) 同级目录
+# （快照时 synth 是本机 /home/crow/music/synth 这个 local checkout；它现在已有 remote
+#   origin = https://github.com/gradetwo/synth —— 本行仍是当时可复现的命令）
 git -C /home/crow/music/synth  remote -v ; git -C /home/crow/music/void remote -v
 git -C /home/crow/music/release/groove-github rev-parse --git-dir HEAD
 ```
