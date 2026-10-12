@@ -1,0 +1,14 @@
+{
+  "_note": "7 minimal tiles rejected on 2026-09-25 (R2 medium/palette, R3 near-blank). Regen with these tightened geometry prompts when a GPU session exists again. Originals preserved in _rejected/minimal/.",
+  "skin": "minimal",
+  "specs": [
+    "minimal:vaporwave:R2:flat two-ink Swiss geometry on paper white: a black hairline grid with one solid black rectangle and exactly one ultramarine bar, no shading, no gradient, no illustration",
+    "minimal:afro-house:R2:flat two-ink Swiss geometry: one solid black circle and three black bars, paper white, exactly one ultramarine hairline, no photographic rendering, no shading",
+    "minimal:soul:R2:flat two-ink Swiss geometry: a solid black rectangle with one black arc above it and a single ultramarine hairline, no gradient, no shading",
+    "minimal:death-metal:R2:flat two-ink Swiss geometry: a heavy solid black bar structure on paper white with one ultramarine hairline, no gradient, no illustration",
+    "minimal:old-school-hip-hop:R2:flat two-ink Swiss geometry: two concentric black circles and one solid black disc with a single ultramarine tick, no shading",
+    "minimal:city-pop:R2:flat two-ink Swiss geometry: a black horizon bar with a solid black disc above it and one ultramarine hairline, no sunset gradient",
+    "minimal:microhouse:R3,R2:flat two-ink Swiss geometry filling at least half the sheet: one large solid black shape, three to five black hairlines and one ultramarine tick, no empty white squares"
+  ],
+  "rejects": ["vaporwave","afro-house","soul","death-metal","old-school-hip-hop","city-pop","microhouse"]
+}

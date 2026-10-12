@@ -1,0 +1,21 @@
+{
+  "model": "qwen-image-2.1",
+  "preset": "quality",
+  "size": "1024x1024",
+  "steps": 40,
+  "seed": 1924,
+  "skin": "pixel",
+  "genre": "ghetto-house",
+  "prompt": "Authentic 16-bit pixel art, low-resolution console graphics, square album cover, scene: a bare bulb swinging over a stripped concrete dance floor, expressing the sound of ghetto house \u2014 raw fast jacking drums, crude bass, sweat, drawing on Chicago and Detroit in the late 1980s, raw fast jacking drums and a bare floor. Strict pixel grid with hard aliased edges and no anti-aliasing, limited palette of about twenty colours drawn from deep indigo (#10121c), panel indigo (#1a1d2e, #262a44), pale ink (#e8e8f0), mint accent (#4ce0b3) with cyan (#5bc8ff), pink (#ff6b97) and violet (#b06bff) incident light. Ordered dithering for all shading, flat chunky clusters of pixels, a single-pixel rim light, strong readable silhouette, flat-shaded scene with a clear horizon or floor line, CRT scanline veil over the whole image, soft phosphor bloom on the brightest pixels only, faint vignette. Nostalgic, crisp, deliberately low-resolution. No anti-aliasing, no smooth curves, no lettering, no HUD text, no UI. The genre's own instruments, venue and era must be unmistakable: it must read as this specific music to a listener of it, not as generic music imagery. One dominant silhouette, clean deliberate framing, no lettering of any kind, no watermark or fine print, no melted or impossible geometry; the tile must read at 120px. Render only the physical medium and materials named above. Authentic 16-bit pixel art, hard aliased edges, no anti-aliasing, deep indigo ground #10121c with panels #1a1d2e/#262a44, pale ink #e8e8f0, mint #4ce0b3 accent with pink #ff6b97, ordered dithering, CRT scanlines: a raw 1980s Chicago basement - a battered TR-style drum machine with its step LEDs lit, sitting on an upturned wooden crate, a pair of headphones and a jack lead beside it, one bare bulb swinging above and throwing a hard shadow on a cinder-block wall. The drum machine and crate are the focal object in the lower centre; the room reads as a room, not a void. No empty floor filling the frame, no lone bulb over nothing, no near-blank tile, no anti-aliasing, no text, no lettering.",
+  "origin": "Chicago and Detroit in the late 1980s, raw fast jacking drums and a bare floor",
+  "negative_prompt": "text, letters, words, typography, logo, watermark, signature, small print, fine print, corner mark, caption, UI, screenshot, frame, border, photograph of a real person, celebrity, album cover, brand, clipart, flat vector icon, stock photo, generic corporate imagery, floating geometric shapes, plastic 3D render, oversaturated HDR, low detail, blurry, jpeg artifacts",
+  "postprocess": "pixelate_160_nearest",
+  "timestamp": "2026-09-25T18:41:34Z",
+  "review": {
+    "decision": "regenerated_after_reject",
+    "reasons": [
+      "R1",
+      "R3"
+    ]
+  }
+}

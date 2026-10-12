@@ -1,0 +1,15 @@
+{
+  "renderBudgetMs": 900000,
+  "navigationBudgetMs": 120000,
+  "progressHeartbeatMs": 15000,
+  "measured": {
+    "fullRateRatio": 0.7,
+    "oneBarAudioSec": 17.18,
+    "oneBarWallSec": [17.95, 24.25],
+    "eightBarAudioSec": 125.56,
+    "eightBarWallSec": [445.71, 511.28],
+    "previewAudioSec": 14.4,
+    "previewWallSec": 1.45
+  },
+  "provenance": "docs/RENDER_PROFILE.md, end-to-end section: 1 bar = 17.18 s of audio in 17.95-24.25 s; 8 bars = 125.56 s in 445.71-511.28 s; docs/MCP.md's budget table: render_preview_clip = 14.4 s of audio in 1.45 s. Re-read the documents before changing a number here."
+}

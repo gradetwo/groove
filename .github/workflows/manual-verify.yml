@@ -1,0 +1,416 @@
+# Manual verify — the slow checks, on demand.
+#
+# WHY THIS EXISTS
+# ---------------
+# Three kinds of check are too slow or too environment-sensitive to run on every push: the desktop
+# browser matrix (`test:e2e:all`), the coverage run, and the audio measurement gates (timbre, loudness
+# freshness, the GS-1 ABI). `ci.yml`'s nightly job owns them on a schedule, but a *targeted* run — "just
+# one browser engine", "just the timbre gate" — used to mean pushing a commit or editing the schedule.
+#
+# This workflow is the manual switch: pick a scope in the GitHub UI, run it, and the artifacts are a
+# single directory you can hand over. It writes a summary to the run page as well, because reading a
+# result should not require downloading a zip.
+#
+#   profile  all | pc           which Playwright targets to run (no mobile: the shell is cut, 2026-10-02)
+#   only     a target-name substring (e.g. "Firefox"), empty means all of the profile
+#   scope    e2e | verify | audio | skins | sfizz | mirror | all
+#
+# Every scope except `audio` needs a production build: `e2e` and `verify` build in their own step, and `skins`
+# is handed one by the explicit Build step above it.
+#
+# `verify` runs the whole gate chain (`npm run verify`), which rebuilds and therefore re-runs the E2E
+# steps itself; `e2e` skips the other gates and goes straight at the browser matrix, which is the common
+# case when a browser leg is what failed.
+name: Manual verify
+
+on:
+  workflow_dispatch:
+    inputs:
+      scope:
+        description: "What to run"
+        type: choice
+        default: e2e
+        options:
+          - e2e
+          - verify
+          - audio
+          - trim
+          - skins
+          - sfizz
+          - mirror
+          - profile
+          - all
+      profile:
+        description: "Playwright profile (e2e scope)"
+        type: choice
+        default: all
+        options:
+          - all
+          - pc
+      only:
+        description: "Target-name substring, e.g. Firefox — empty for the whole profile"
+        type: string
+        default: ""
+
+jobs:
+  verify:
+    name: Manual verify (${{ inputs.scope }} / ${{ inputs.profile }})
+    runs-on: ubuntu-latest
+    # The full chain plus a browser install is the worst case; 150 minutes is the ceiling, not the norm.
+    timeout-minutes: 150
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v5
+        with:
+          # The project's own floor, the same one the push-time jobs use (`.nvmrc` + `engines`).
+          node-version-file: ".nvmrc"
+          cache: "npm"
+
+      - name: Node & npm versions
+        run: node -v && npm -v
+
+      - name: Install dependencies
+        run: npm ci
+
+      # `audio` is **not** pure Node, which the old comment here claimed and its `if:` acted on.
+      #
+      # `check:loudness:fresh` (and `scope=trim`) render through `measure_genre_loudness.mjs`, which launches
+      # Chromium: measured 2026-09-23, `scope=audio` failed with
+      #   browserType.launch: Executable doesn't exist at …/chromium_headless_shell-1243/…
+      # while `scope=trim` passed, because only the audio scope skipped this step. Chromium is installed for every
+      # scope now; the other two engines are only needed by the device matrix.
+      - name: Install Playwright Chromium
+        run: npx playwright install --with-deps chromium
+
+      # `verify` needs them too: `npm run verify` ends in `test:e2e`, which drives all three browsers
+      # engines. Measured 2026-09-24: narrowing this to `e2e`/`all` made `scope=verify` fail with
+      #   Fatal test runner error: browserType.launch: Executable doesn't exist at …/firefox-1543/firefox/firefox
+      # — the same class of mistake as the audio scope's Chromium, made while fixing it.
+      - name: Install Playwright Firefox & WebKit
+        if: inputs.scope == 'e2e' || inputs.scope == 'verify' || inputs.scope == 'all'
+        run: npx playwright install --with-deps firefox webkit
+
+      # `probe:skins` measures a *built* application: it serves `dist/` itself, so this step hands it one.
+      # `verify` builds on its own (and runs the probe after its own build); `audio` never needs one.
+      - name: Build
+        if: inputs.scope == 'skins' || inputs.scope == 'all'
+        run: npm run build
+
+      # Every skin × every main view: the full sweep (the gate in `verify` samples three skins and five
+      # views to stay quick).
+      # The full sweep is diagnostic: it reports every skin x view so the work items are visible, and does not
+      # fail the run (the sampled sweep inside `verify` is the gate, with budgets that only go down).
+      - name: Skin readability sweep (report only)
+        if: inputs.scope == 'skins' || inputs.scope == 'all'
+        run: npm run probe:skins:full -- --report
+
+      # The render profile belongs here for the reason the probes above do: it renders for minutes on a real browser,
+      # which is not work for a laptop. `docs/RENDER_PROFILE.md` holds the readings this step reproduces, including the
+      # phase split that says `startRendering()` is 96-99.9% of the wall clock and the ablation that splits its inside.
+      - name: Render profile (phase split, then the ablation)
+        if: inputs.scope == 'profile' || inputs.scope == 'all'
+        run: |
+          node scripts/profile_offline_render.mjs --bars=1 --runs=3
+          node scripts/profile_offline_render.mjs --bars=1 --runs=3 --mode=ablate --arms=baseline,silent,reverb-convolution,silent-reverb,drums-only
+
+      - name: Audio measurement gates
+        if: inputs.scope == 'audio' || inputs.scope == 'all'
+        run: |
+          npm run check:gs1
+          # ⏸ `check:timbre` and `check:loudness:fresh` are switched off by the owner's decision of
+          # 2026-10-02: both hold baselines recorded from a render that is never given
+          # `audioLaneCatalogue`, so every lane mapped to a recording falls back to the synthesiser and
+          # neither gate can see the sampling path. They still run here, print why they are off and exit
+          # 0; `scripts/disabledGates.mjs` is the list (with the return condition),
+          # `docs/DISABLED_GATES.md` is the long form, and `npm run check:disabled-gates` fails if this
+          # wiring and that list disagree.
+          npm run check:timbre
+          npm run check:loudness:fresh
+
+      # Stage 3 of `docs/DAW_MCP_REFACTOR.md`: does a fade at the arrangement's section boundaries move the discontinuity
+      # count `analyze_audio` reports, and does it leave a song with no jumps alone? The probe drives a browser and renders the
+      # club form several times, which is minutes of work and the reason it belongs here rather than on a laptop — the club form
+      # alone took the browser down when it was run with a smaller budget.
+      # B7 — is the arrangement actually *played*? The transport feeds the engine the flattened song (the first slice landed),
+      # but nothing had produced the listening proof: the probe samples the master analyser inside two deliberately different
+      # sections and compares that distance against the same-section noise floor. It needs a browser and real time, so it runs
+      # here, and its ratio is the number that closes the item — or says plainly that it does not.
+      - name: Build (the playback probe serves dist)
+        if: inputs.scope == 'audio' || inputs.scope == 'verify' || inputs.scope == 'all'
+        run: npm run build
+
+      # A4's last question, measured where the analyser's own loudness and 13-band shape are available: one song rendered twice,
+      # as written and with the `fx` lane cleared. A mix that moves means the lane is audible.
+      # The probe speaks to the MCP server over stdio, so the server has to be built — the audio scope builds the **web app**,
+      # which is a different artifact.
+      - name: Build the MCP server (the texture probe uses it)
+        if: inputs.scope == 'audio' || inputs.scope == 'verify' || inputs.scope == 'all'
+        run: npm run mcp:build
+
+      # Workstream 6's prerequisite, and the one the loudness re-record has been waiting on: the same genre must render the same way twice,
+      # and must not depend on how many genres the page has already rendered. Every other audio number in this project assumes it.
+      # Workstream 6's second prerequisite: the FX rack's latency, measured as the difference between two renders of the same song in
+      # `probe_arrangement_audio`, which the step below already runs. No separate step, because a second probe measuring the same graph
+      # is how two numbers start disagreeing.
+
+      - name: Render determinism (workstream 6's prerequisite)
+        if: inputs.scope == 'audio' || inputs.scope == 'verify' || inputs.scope == 'all'
+        continue-on-error: true
+        run: node scripts/probe_render_determinism.mjs --genre=chicago-house
+
+      - name: Texture-lane contribution (A4)
+        if: inputs.scope == 'audio' || inputs.scope == 'verify' || inputs.scope == 'all'
+        continue-on-error: true
+        run: node scripts/probe_texture_contribution.mjs --genre=hard-techno --out=loudness-report/texture.json
+
+      - name: Arrangement playback (B7)
+        if: inputs.scope == 'audio' || inputs.scope == 'verify' || inputs.scope == 'all'
+        # The control below is the step that decides what this one's number means, so it must run even when this one fails —
+        # which it does, honestly, on every run so far.
+        continue-on-error: true
+        run: node scripts/probe_arrangement_playback.mjs --genre=uk-garage --out=/tmp/b7-arrangement.json
+
+      # The control: the same probe and analyser measuring a **plain loop**. If this is silent too, the probe's audio path is what
+      # is broken and B7 has no listening proof yet; if it is loud while the song above is silent, that is a finding about the
+      # transport rather than about the measurement.
+      - name: Arrangement playback control (B7, plain loop)
+        if: inputs.scope == 'audio' || inputs.scope == 'verify' || inputs.scope == 'all'
+        continue-on-error: true
+        run: node scripts/probe_arrangement_playback.mjs --genre=uk-garage --control-loop --out=/tmp/b7-control.json
+
+      # B7's criterion, as a **paired comparison** rather than an absolute threshold: the arrangement's self-difference against the
+      # control's, where both numbers exist. The control decides what the arrangement's number means — which the step comments above
+      # already said, without the arithmetic to match.
+      - name: B7 paired criterion (arrangement vs control)
+        if: inputs.scope == 'audio' || inputs.scope == 'verify' || inputs.scope == 'all'
+        continue-on-error: true
+        run: node scripts/check_b7_pair.mjs /tmp/b7-arrangement.json /tmp/b7-control.json
+
+      # ⭐ The half of recording that CI *can* judge: with no microphone, the refusal must be **named** and nothing may be created. The other half — record, store, play back — has no microphone here and
+      # is therefore not claimed; it stays a thing a person checks.
+      - name: Recording without a microphone (the refusal path)
+        if: inputs.scope == 'audio' || inputs.scope == 'all'
+        run: node scripts/probe_recording_refusal.mjs
+
+      # ⭐ The end-to-end criterion for real instruments: live manifest → catalogue → source-first SFZ → 126 includes over the network → 1676 regions → a sample address → a decoded buffer with
+      # non-zero peak. It exists because every layer of this path had its own criteria and the **path between them** had none — five separate bugs lived in the seams and each was found by running the
+      # whole thing, not by reading any part of it. Heavy (a browser, a dev server, the network) and therefore here rather than on a laptop.
+      - name: Real instrument, end to end (fetch, expand, decode)
+        if: inputs.scope == 'audio' || inputs.scope == 'all'
+        run: node scripts/probe_sfz_end_to_end.mjs
+
+      - name: Section-boundary fade (stage 3 measurement)
+        if: inputs.scope == 'audio' || inputs.scope == 'all'
+        run: node scripts/probe_arrangement_audio.mjs --genre=chicago-house
+
+      # ⭐ The lane cost curve, and the reason it is its own step: **one lane count per process**. A single browser process here does not survive a series of renders — the probe's runs ended in `[browser] disconnected` with no crash
+      # event and no page error, and one render of a two-bar song was enough to kill one, while an idle browser in the same environment lived past eight minutes. The same shape the loudness sweep above already works around.
+      - name: Lane cost curve (1, 4, 16, 64 lanes, one process each)
+        if: inputs.scope == 'audio' || inputs.scope == 'all'
+        # ⭐ A bound on the step as well as on each lane count inside it. The first run of this step had neither and sat for the better part of an hour: GitHub's default is six hours, which is not a bound anybody notices until it is too late.
+        timeout-minutes: 30
+        run: node scripts/measure_lane_curve.mjs --genre=chicago-house
+
+
+      # P0.9 — the 159-genre trim re-record. It runs **chunked, across processes**: a single browser process exhausts the
+      # WASM budget after roughly forty renders and the run aborts on its own sentinel (which is why it never completed on a
+      # laptop either). `record:loudness` is `run_loudness_sweep.mjs`, which measures eight genres per fresh process.
+      #
+      # `check:loudness:fresh` was red. It belongs here rather than on a laptop for the usual reason, and here
+      # specifically because it is the one job whose *output* is the deliverable.
+      #
+      # It writes to a scratch directory and uploads it: a measurement run must never commit a baseline by itself
+      # (the loudness numbers decide what ships, and an auto-committed re-record is how a bad run becomes the
+      # truth). A human downloads the artifact, applies it with `node scripts/apply_loudness_trims.mjs` and
+      # commits the diff.
+      - name: Loudness trim re-record (159 genres, artifact only)
+        if: inputs.scope == 'trim' || inputs.scope == 'all'
+        run: npm run record:loudness -- --out=loudness-report/loudness.baseline.json --chunk=8
+
+      - name: Upload the loudness report
+        if: (inputs.scope == 'trim' || inputs.scope == 'all') && always()
+        uses: actions/upload-artifact@v5
+        with:
+          name: loudness-report
+          path: loudness-report/
+          if-no-files-found: warn
+          retention-days: 14
+
+      - name: Full gate chain
+        if: inputs.scope == 'verify' || inputs.scope == 'all'
+        run: npm run verify
+
+      # A build is needed before the matrix: it serves `dist/`, and the matrix refuses to run against a
+      # stale bundle. `verify` builds on its own, so this only covers the `e2e` scope.
+      - name: Build (matrix scope)
+        if: inputs.scope == 'e2e'
+        run: npm run build
+
+      - name: Browser & device matrix
+        if: inputs.scope == 'e2e'
+        env:
+          E2E_PROFILE: ${{ inputs.profile }}
+          E2E_ONLY: ${{ inputs.only }}
+        # `E2E_ONLY` is read by the matrix, so an empty value means "the whole profile"; the `env:`
+        # block above passes it through whether or not it was filled in.
+        run: node scripts/test_matrix.js
+
+      # Always, so a failure still produces the thing worth reading.
+      - name: Upload E2E artifacts
+        if: always()
+        uses: actions/upload-artifact@v5
+        with:
+          name: manual-verify-e2e
+          path: e2e-out/
+          if-no-files-found: ignore
+          retention-days: 14
+
+      # The sfizz oracle: sfizz publishes no Linux binary and no image, so the reference renderer has to be compiled here. `sfizz_render` is a client of the **library**
+      # repository (`sfztools/sfizz`), not of the UI project — a distinction that cost three CI runs and is written here so it costs none.
+      #
+      # It is a **scope of its own** rather than part of `audio`, because it is slow (a recursive clone and a full compile) and because it answers a different
+      # question. `audio` asks whether this project renders correctly; this asks whether the **reference** it is judged against in this environment is the one the
+      # numbers were read from. `scripts/sfizz_oracle.mjs` pins those numbers, so a different sfizz turns the job red instead of quietly changing what "agreement"
+      # means.
+      #
+      # The build tree is cached per **tag**: a warm run is a no-op rather than a second code path, so a cache miss costs time and never changes the result.
+      #
+      # It is pinned to **tag `1.2.3`** of `sfztools/sfizz` — the **library** repository, because that is where the render client lives (`sfizz-ui` has no `clients/`
+      # directory at all). The tag has **no `v`**: an earlier version asked for `v1.2.3`, which does not exist, and the clone said so.
+      #
+      # **Measured 2026-09-28**: the client lands at `sfizz/build/library/bin/sfizz_render`, not at `clients/sfizz_render`. That is why the build step discovers it
+      # with `find` rather than trusting a path: the first version hard-coded a plausible one and died with `ENOENT` after a successful build — a failure that says
+      # nothing about the build and everything about the assumption.
+      - name: Cache the sfizz build
+        if: inputs.scope == 'sfizz' || inputs.scope == 'all'
+        uses: actions/cache@v5
+        with:
+          path: sfizz
+          key: sfizz-1.2.3-ubuntu-24.04
+
+      # The duration tool is needed by **two** scopes: `sfizz` (for the A4 criteria) and `mirror` (for the survey). The first version installed it only for `sfizz`, and the
+      # mirror run then failed on `spawnSync metaflac ENOENT` **after** fetching 1659 files — the right error with the right reason, caught by a gate that did not cover the run
+      # that needed it.
+      - name: Install measurement dependencies
+        if: inputs.scope == 'sfizz' || inputs.scope == 'mirror' || inputs.scope == 'all'
+        run: |
+          sudo apt-get update
+          # `ffmpeg` provides `ffprobe`, which is how a sample's duration is measured — and it reads **both** FLAC and WAV, which this library ships.
+          #
+          # Three iterations of one mistake are recorded here so a fourth is less likely: `metaflac` worked on the two FLAC samples the chain was tested with; it is not
+          # installed on the runner at all until asked for; and `ffprobe` — which is on every development machine — is not either. **A tool that exists locally is not a tool
+          # that exists in CI**, and the mirror run is what found out, twice.
+          sudo apt-get install -y ffmpeg
+          if [ "${{ inputs.scope }}" = "sfizz" ] || [ "${{ inputs.scope }}" = "all" ]; then
+            sudo apt-get install -y cmake build-essential libsndfile1-dev libjack-jackd2-dev
+          fi
+
+      - name: Build sfizz_render
+        if: inputs.scope == 'sfizz' || inputs.scope == 'all'
+        run: |
+          if [ ! -d sfizz/.git ]; then
+            # A cache can restore the build tree without the repository, and `git clone` into a non-empty directory fails with exit 128 — which is
+            # exactly what the first warm-cache run did. So the repository, not just its build output, is what gets cached, and this clears any partial state.
+            rm -rf sfizz
+            # `sfizz_render` lives in the **library** repository, not in `sfizz`: the UI project has no `clients/` directory at all, which is why the first
+            # attempts to build it there could not have worked. The tag is `1.2.3`, with no `v` — an earlier attempt asked for `v1.2.3` and the clone failed.
+            git clone --recursive --branch 1.2.3 --depth 1 https://github.com/sfztools/sfizz.git sfizz
+          fi
+          cmake -S sfizz -B sfizz/build -DCMAKE_BUILD_TYPE=Release -DSFIZZ_RENDER=ON
+          cmake --build sfizz/build --target sfizz_render -j"$(nproc)"
+          # The client's path is **discovered, not assumed**. An earlier version hard-coded `build/clients/sfizz_render` and the job died with
+          # `spawnSync ... ENOENT` *after a successful build* — a failure that says nothing about the build and everything about the assumption. If it is genuinely
+          # absent, the tree is printed so the next failure explains itself instead of sending someone to read the logs of a green step.
+          found="$(find sfizz/build -type f -name sfizz_render -print -quit)"
+          if [ -z "$found" ]; then
+            echo "sfizz_render was not produced; what the build did leave behind:"
+            find sfizz/build -maxdepth 4 -type f -name "*sfizz*" | head -20
+            exit 1
+          fi
+          echo "sfizz_render: $PWD/$found"
+          echo "SFIZZ_RENDER=$PWD/$found" >> "$GITHUB_ENV"
+
+      - name: Prove the sfizz oracle reads like the known one
+        if: inputs.scope == 'sfizz' || inputs.scope == 'all'
+        # SFIZZ_RENDER arrives through GITHUB_ENV from the build step, which located the binary rather than trusting a path.
+        run: node scripts/sfizz_oracle.mjs
+
+      # A4 needs `node_modules`, and this scope never installed them — the other scopes get them from their build steps. Without this the step fails on a missing
+      # `vitest` rather than on anything to do with the oracle, which is the least useful kind of red.
+      # The **mirror run**: a migration rather than a verification, so it is its own scope and never part of a release gate.
+      #
+      # It downloads a whole library — 1.2 GB across 1660 files for the one this was built against — which is exactly the kind of work that belongs in CI and **not** in a
+      # local session, and exactly the kind that must not run on every push. It is the operation the whole mirror chain exists for: derive the file plan from the SFZ, fetch and
+      # hash every file, measure every duration, and print the **manifest entry** — the one artifact of a mirror that belongs in the repository.
+      - name: Fetch the pinned library
+        if: inputs.scope == 'mirror' || inputs.scope == 'all'
+        run: |
+          git clone --depth 1 --branch develop https://github.com/sfzinstruments/virtuosity_drums.git library || true
+          if [ ! -d library/.git ]; then
+            git clone https://github.com/sfzinstruments/virtuosity_drums.git library
+          fi
+          git -C library checkout 9f04cf9a7345 2>/dev/null || git -C library fetch --depth 1 origin 9f04cf9a7345 && git -C library checkout 9f04cf9a7345
+          du -sh library | cut -f1
+
+      - name: Run the mirror and print the manifest entry
+        if: inputs.scope == 'mirror' || inputs.scope == 'all'
+        env:
+          SFZ_MIRROR_RUN: "1"
+          SFZ_MIRROR_ROOT: library
+          SFZ_MIRROR_OUT: library-mirror
+          SFZ_MIRROR_ENTRY: manifest-entry.json
+        run: npx vitest run src/test/mirrorRun.test.ts
+
+      # The entry is **uploaded**, not merely printed: it runs to well over a hundred kilobytes for 1659 files, and a log line that size is truncated. The first successful run
+      # produced the number that matters (`longest 14.529542s`) and lost the artifact, which is the wrong way round.
+      - name: Upload the manifest entry
+        if: (inputs.scope == 'mirror' || inputs.scope == 'all') && always()
+        uses: actions/upload-artifact@v5
+        with:
+          name: sample-manifest-entry
+          path: manifest-entry.json
+          if-no-files-found: warn
+          retention-days: 30
+
+      - name: Install dependencies for the A4 test
+        if: inputs.scope == 'sfizz' || inputs.scope == 'all'
+        run: npm ci
+
+      # A4, enforced rather than described: sfizz's own output judges this project's mapping — the same region chosen, the same pitch produced. The test skips when the
+      # binary is absent, which is why it is safe in the ordinary suite and meaningful here, where the binary has just been built.
+      - name: A4 — this project's mapping against sfizz's render
+        if: inputs.scope == 'sfizz' || inputs.scope == 'all'
+        run: npx vitest run src/test/sfizzAgreement.test.ts
+
+      - name: Upload coverage
+        if: always()
+        uses: actions/upload-artifact@v5
+        with:
+          name: manual-verify-coverage
+          path: coverage/
+          if-no-files-found: ignore
+          retention-days: 14
+
+      # A summary on the run page, so the result can be read (and pasted) without downloading anything.
+      - name: Summarise the matrix
+        if: always()
+        run: |
+          {
+            echo "## Manual verify — scope \`${{ inputs.scope }}\`, profile \`${{ inputs.profile }}\`"
+            echo
+            if [ -n "${{ inputs.only }}" ]; then echo "Target filter: \`${{ inputs.only }}\`"; echo; fi
+            found=0
+            for summary in e2e-out/*/summary.md; do
+              [ -f "$summary" ] || continue
+              found=1
+              echo "### $(basename "$(dirname "$summary")")"
+              echo
+              cat "$summary"
+              echo
+            done
+            if [ "$found" -eq 0 ]; then echo "No matrix summary was produced (scope may not have run it)."; fi
+          } >> "$GITHUB_STEP_SUMMARY"

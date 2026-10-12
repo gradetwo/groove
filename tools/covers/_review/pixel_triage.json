@@ -1,0 +1,131 @@
+{
+  "_header": {
+    "generated": "2026-09-25T13:13:12Z",
+    "skin": "pixel",
+    "images": 3,
+    "thresholds": {
+      "min_file_bytes": 20000,
+      "min_std_luma": 12.0,
+      "max_unique_colors_blank": 4000,
+      "palette_distance_warn": 0.42,
+      "palette_distance_flag": 0.6,
+      "phash_hamming_dup": 6,
+      "pixdiff_dup": 12.0,
+      "pixel_max_unique_smooth": 23000,
+      "pixel_min_edge_hardness": 0.55,
+      "text_edge_density": 0.3,
+      "text_small_components": 12
+    },
+    "palette": {
+      "ground": "#10121c",
+      "ink": "#e8e8f0",
+      "accent": "#4ce0b3"
+    },
+    "flag_meanings": {
+      "invalid": "unreadable / not 1024x1024 / under min_file_bytes",
+      "near_blank": "luma_std < min_std_luma AND unique_colors_256 < max_unique_colors_blank",
+      "palette_drift": "mean colour >= palette_distance_flag from nearest skin colour (hue+lightness)",
+      "palette_drift_warn": ">= palette_distance_warn but below flag",
+      "duplicate": "mean |RGB| difference on a 16x16 grid <= pixdiff_dup vs another genre in this skin (aHash hamming also reported as a secondary signal)",
+      "not_pixelated": "pixel skin only: unique_colors_full > pixel_max_unique_smooth AND edge_hardness < pixel_min_edge_hardness",
+      "smooth_suspect": "pixel skin only: edge_hardness < pixel_min_edge_hardness",
+      "text_or_signature_suspect": "bottom-band edge density > text_edge_density (weak heuristic)"
+    },
+    "calibration": "thresholds tuned against the 18 approved pilot images so none are flagged",
+    "note": "flags are evidence, not verdicts; the verdict is the visual contact-sheet review"
+  },
+  "flag_counts": {},
+  "flagged": {},
+  "images": {
+    "chiptune": {
+      "flags": [],
+      "metrics": {
+        "bytes": 179046,
+        "luma_mean": 37.63,
+        "luma_std": 49.22,
+        "unique_colors_256": 28070,
+        "palette_distance": 0.1102,
+        "mean_rgb": [
+          31,
+          31,
+          92
+        ],
+        "ahash": 263879521206272,
+        "dhash": 5234084034395648320,
+        "unique_colors_160": 12923,
+        "pixel_roundtrip_mad": 0.4,
+        "text_band_edge_density": 0.0,
+        "pixdiff_nearest": [
+          [
+            "lofi-hip-hop",
+            31.6
+          ],
+          [
+            "vaporwave",
+            58.29
+          ]
+        ]
+      }
+    },
+    "lofi-hip-hop": {
+      "flags": [],
+      "metrics": {
+        "bytes": 169926,
+        "luma_mean": 21.79,
+        "luma_std": 27.19,
+        "unique_colors_256": 21036,
+        "palette_distance": 0.0769,
+        "mean_rgb": [
+          22,
+          16,
+          54
+        ],
+        "ahash": 288451371386040320,
+        "dhash": 1398769294260247169,
+        "unique_colors_160": 10611,
+        "pixel_roundtrip_mad": 0.355,
+        "text_band_edge_density": 0.0,
+        "pixdiff_nearest": [
+          [
+            "chiptune",
+            31.6
+          ],
+          [
+            "vaporwave",
+            71.89
+          ]
+        ]
+      }
+    },
+    "vaporwave": {
+      "flags": [],
+      "metrics": {
+        "bytes": 186076,
+        "luma_mean": 78.99,
+        "luma_std": 54.98,
+        "unique_colors_256": 36096,
+        "palette_distance": 0.2655,
+        "mean_rgb": [
+          97,
+          56,
+          151
+        ],
+        "ahash": 7036324661755904,
+        "dhash": 10272305090619386250,
+        "unique_colors_160": 16899,
+        "pixel_roundtrip_mad": 0.366,
+        "text_band_edge_density": 0.0036,
+        "pixdiff_nearest": [
+          [
+            "chiptune",
+            58.29
+          ],
+          [
+            "lofi-hip-hop",
+            71.89
+          ]
+        ]
+      }
+    }
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "model": "qwen-image-2.1",
+  "preset": "quality",
+  "size": "1024x1024",
+  "steps": 40,
+  "seed": 1210,
+  "skin": "minimal",
+  "genre": "hybrid-trap",
+  "prompt": "Swiss editorial graphic design, minimal offset print on uncoated white paper, square album cover, subject: a shattered orchestral timpani bleeding into an 808 drum machine reduced to pure geometry, expressing the sound of hybrid trap \u2014 orchestral stabs, trap drums, cinematic drops, drawing on the mid-2010s festival circuit, orchestral stabs over trap drums. Flat paper-white ground (#fafafa), ink-black (#141414) hairline geometry, strict invisible modular grid, very generous empty space, asymmetric and deliberate placement. Exactly one element in ultramarine blue (#2358e6); everything else black on white. No gradients, no shadows, no glow, no blur, no 3D, no texture beyond uncoated paper tooth. One continuous hairline abstraction of the music. No text. CRITICAL \u2014 minimum structure: the composition must fill at least half the sheet and contain 3 to 6 distinct black elements, including one large solid black shape occupying roughly a third of the frame. White space frames the subject; it is not the whole image. No empty white squares.",
+  "origin": "the mid-2010s festival circuit, orchestral stabs over trap drums",
+  "negative_prompt": "text, letters, words, typography, logo, watermark, signature, small print, fine print, corner mark, caption, UI, screenshot, frame, border, photograph of a real person, celebrity, album cover, brand, clipart, flat vector icon, stock photo, generic corporate imagery, floating geometric shapes, plastic 3D render, oversaturated HDR, low detail, blurry, jpeg artifacts",
+  "postprocess": null,
+  "timestamp": "2026-09-25T16:02:03Z"
+}

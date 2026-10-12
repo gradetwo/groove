@@ -1,0 +1,881 @@
+/**
+ * GS-1 patch set and the `chords` / `lead` routing table (P6 / requirement 11, Phase 2).
+ *
+ * ## What this file decides
+ *
+ * Two things, and they are separate questions:
+ *
+ *  1. **Which instrument names GS-1 voices at all.** GS-1 is a *subtractive* synth with FM,
+ *     wavetables and a mod matrix. For a warm pad, an electric piano, a saw lead or a 303 it is
+ *     the right tool; for a piano, a vibraphone, a sax or a sitar the character *is* the acoustic
+ *     body and the attack noise, which a subtractive engine cannot produce. Those stay on the
+ *     native engine, each with its reason recorded here so the decision is reviewable rather
+ *     than implied by omission.
+ *  2. **Which patch voices them.** Ten patches, each a sparse `Record<paramId, value>` in GS-1's
+ *     own preset format, built from the vendored parameter table (ids and ranges come from
+ *     `vendor/gs1/src/audio/params.ts` + the worklet's `PARAMS` table, not from guesses).
+ *
+ * The coverage is **exhaustive and enforced**: `gs1Patches.test.ts` reads every `chords` and
+ * `lead` instrument name out of `ALL_GENRES` and fails if one is neither routed nor explicitly
+ * kept native. A new genre cannot arrive with an unmapped instrument.
+ *
+ * ## Why the patches are hand-written instead of vendored presets
+ *
+ * GS-1 publishes 91 factory presets, but they are not part of the vendored subset: they are
+ * authored for GS-1's own UI, they are the largest single file in its tree, and every one of
+ * them would become another thing to re-review on each upstream sync. Ten purpose-built patches
+ * that we can read in one screen, each justified by the role it serves, are a smaller and more
+ * honest dependency. The parameters are the same wire format either way.
+ *
+ * ## Honest limits
+ *
+ * These patches are **authored from parameter semantics, not from listening tests**. Cross-engine
+ * timbre judgement ("does this pad sound better than the native preset?") is not something this
+ * repository can currently measure, and `scripts/timbre.baseline.json` fingerprints the native
+ * chain, not GS-1. The Phase 2 wiring therefore ships behind a per-role switch with the native
+ * engine as the fallback, so reverting is a constant, not a revert.
+ */
+import { Param, PARAM_SPECS, type ParamId } from "../../vendor/gs1/src/audio/params";
+
+/** One patch: a sparse map of parameter id → value, exactly GS-1's preset format. */
+export type Gs1Patch = Record<number, number>;
+
+/**
+ * A patch's velocity response, in **octaves of cutoff per unit of velocity** — the native engine's own unit.
+ *
+ * Every native preset carries `velocityToCutoff` (1.0–2.2 octaves across the routed instruments) and neither of the two
+ * GS-1 patches' oscillators had anything equivalent: the core reads velocity as amplitude alone. Measured, the gap shows
+ * up in exactly one cell of the grid — a **quiet and short** note, where the native voice is a slow soft swell that the
+ * genre's gate cuts and a GS-1 voice is immediate and full. A held note catches up within the window either way, which is
+ * why four rounds of calibration missed it.
+ *
+ * The core's cutoff modulation is `cutoff *= exp2(mod * 4)`, so the route amount is this value divided by four — the
+ * conversion lives in `gs1VelocityRoute` below, in one place.
+ */
+export interface Gs1PatchVoice {
+  params: Gs1Patch;
+  velToCutoff?: number;
+}
+
+/** The route amount the core wants for a given velocity response, and `null` when there is nothing to send. */
+export function gs1VelocityRoute(velToCutoff: number | undefined): { src: number; dst: number; amount: number } | null {
+  if (!velToCutoff || !Number.isFinite(velToCutoff)) return null;
+  // ModSrc::Velocity = 3, ModDst::Cutoff = 0 (see the core's `params.rs`), and `exp2(mod * 4)` is the sweep.
+  return { src: 3, dst: 0, amount: Number((velToCutoff / 4).toFixed(4)) };
+}
+
+export type Gs1PatchName =
+  | "warmPad"
+  | "electricPiano"
+  | "sustainedStrings"
+  | "cleanPluck"
+  | "supersawStack"
+  | "drivenGuitar"
+  | "analogLead"
+  | "squareLead"
+  | "acidLead"
+  | "bellMallet"
+  | "organStack"
+  /** The organ as a UK-garage lead plays it — see the patch body and `GENRE_GS1_PATCH_OVERRIDES`. */
+  | "organStab"
+  /** Quieter strings for a genre whose own part sits under the mix (`disco`). */
+  | "discoStrings"
+  /** A brass lead that carries (`reggaeton`). */
+  | "brassLead"
+  /** Dub techno's own hollow lead stab. */
+  | "dubStab"
+  /** Ambient techno's wide strings wash — see the patch body for the trade it records. */
+  | "ambientStrings"
+  /** A plain sine lead, for the instruments that name one. */
+  | "sineLead"
+  | "sampleTexture"
+  | "sampleSurface";
+
+/**
+ * The patches.
+ *
+ * Each entry states the *character* it is going for, because that is what a future reader needs
+ * in order to decide whether a value change is a bug or an improvement.
+ */
+export const GS1_PATCHES: Record<Gs1PatchName, Gs1Patch> = {
+  /**
+   * P2.5's voice: an **imported sample**, not an oscillator.
+   *
+   * `OSC1_WAVE: 9` is the core's sample selection (8 is the single-cycle wavetable), `SMP_ROOT` says which key plays
+   * the recording at its own pitch, and `SMP_MODE: 0` plays it once — a found sound or a vocal chop is a one-shot, and
+   * a loop point is the caller's business when it is not. `PATCH_GAIN` stays at the measured ceiling (0.6) because
+   * the sample arrives normalised: the patch seats it rather than adding level.
+   */
+  /**
+   * The same voice with a **surface-noise** envelope: short, quiet, no sustain.
+   *
+   * `vinyl_crackle` is what 26 genres already ask for ("surface noise / needle hiss", per the native preset's own
+   * note), and a recording of surface noise is the right source for it — but a crackle is a *tick*, not a chord. The
+   * native voice is filtered noise with a 0.12 s decay; this is the same intent played from a sample, so the envelope
+   * is short and the tail does not ring into the next onset.
+   */
+  sampleSurface: {
+    [Param.OSC1_ON]: 1,
+    [Param.OSC1_WAVE]: 9, // sample
+    [Param.OSC1_LEVEL]: 0.85,
+    [Param.SMP_ROOT]: 60,
+    [Param.SMP_MODE]: 0,
+    [Param.FILTER_TYPE]: 1,
+    [Param.FILTER_CUTOFF]: 7000,
+    [Param.FILTER_RES]: 0.8,
+    [Param.FILTER_ENV_AMT]: 0.2,
+    [Param.ENV_ATTACK]: 0.004,
+    [Param.ENV_DECAY]: 0.12,
+    [Param.ENV_SUSTAIN]: 0.05,
+    [Param.ENV_RELEASE]: 0.25,
+    [Param.PATCH_GAIN]: 2.4,
+  },
+  sampleTexture: {
+    [Param.OSC1_ON]: 1,
+    [Param.OSC1_WAVE]: 9, // sample
+    [Param.OSC1_LEVEL]: 0.9,
+    [Param.SMP_ROOT]: 60,
+    [Param.SMP_MODE]: 0,
+    [Param.FILTER_TYPE]: 1,
+    [Param.FILTER_CUTOFF]: 9000,
+    [Param.FILTER_RES]: 0.1,
+    [Param.FILTER_ENV_AMT]: 0.15,
+    [Param.ENV_ATTACK]: 0.002,
+    [Param.ENV_DECAY]: 0.6,
+    [Param.ENV_SUSTAIN]: 0.6,
+    [Param.ENV_RELEASE]: 0.25,
+    [Param.PATCH_GAIN]: 0.6,
+  },
+  /** Slow, wide and soft: the workhorse chord pad behind most of the library. */
+  warmPad: {
+    [Param.OSC1_ON]: 1,
+    [Param.OSC1_WAVE]: 2, // saw
+    [Param.OSC1_LEVEL]: 0.6,
+    [Param.OSC1_DETUNE]: 7,
+    [Param.OSC1_UNISON]: 3,
+    [Param.OSC1_SPREAD]: 0.5,
+    [Param.OSC2_ON]: 1,
+    [Param.OSC2_WAVE]: 2,
+    [Param.OSC2_LEVEL]: 0.5,
+    [Param.OSC2_DETUNE]: -8,
+    [Param.FILTER_TYPE]: 0, // ladder — the round one, not the surgical one
+    [Param.FILTER_CUTOFF]: 1500,
+    [Param.FILTER_RES]: 0.18,
+    [Param.FILTER_ENV_AMT]: 0.3,
+    [Param.FILTER_KBD]: 0.25,
+    /**
+     * The attack is the native preset's, and that is a measurement rather than a preference.
+     *
+     * A held note calibrated this patch at ±0.0 dB against its native reference, so nothing looked wrong — but the
+     * lanes that use it play **stabs**: on `tech-house`'s chords the GS-1 note took **360 ms** to reach 90 % of its
+     * peak where the native part took **80 ms**, and, cut at the genre's own gate, it measured 13 dB quieter. A slow
+     * attack is invisible to a sustained calibration and expensive in the music. `warmPad`'s native preset attacks in
+     * **0.15 s**; this patch now does too.
+     */
+    [Param.ENV_ATTACK]: 0.15,
+    [Param.ENV_DECAY]: 1.2,
+    [Param.ENV_SUSTAIN]: 0.85,
+    [Param.ENV_RELEASE]: 1.6,
+    [Param.PATCH_GAIN]: 0.5,
+  },
+  /** Rhodes-ish: sine/triangle pair, bell-like attack, no sustain ringing. */
+  electricPiano: {
+    [Param.OSC1_ON]: 1,
+    [Param.OSC1_WAVE]: 1, // triangle
+    [Param.OSC1_LEVEL]: 0.7,
+    [Param.OSC2_ON]: 1,
+    [Param.OSC2_WAVE]: 0,
+    [Param.OSC2_PITCH]: 12,
+    [Param.OSC2_LEVEL]: 0.28,
+    [Param.OSC_FM]: 0.18,
+    [Param.FILTER_TYPE]: 0,
+    [Param.FILTER_CUTOFF]: 3200,
+    [Param.FILTER_RES]: 0.1,
+    [Param.FILTER_ENV_AMT]: 0.45,
+    [Param.FILTER_KBD]: 0.5,
+    [Param.ENV_ATTACK]: 0.004,
+    [Param.ENV_DECAY]: 1.4,
+    [Param.ENV_SUSTAIN]: 0.32,
+    [Param.ENV_RELEASE]: 0.5,
+    // −5.9 dB under the native Rhodes over six genres.
+    [Param.PATCH_GAIN]: 1.1,
+  },
+  /** Bowed ensemble: the slow swell that chords tracks use instead of a pad. */
+  /**
+   * Measured in `ambient` (×4.75 brightness, −5.4 dB) and `disco` (×5.97, **+15.2 dB**): nearly six times the
+   * high-frequency activity of the native strings, and the two genres disagree about level, so the correction targets
+   * the middle rather than either reading.
+   */
+  sustainedStrings: {
+    [Param.OSC1_ON]: 1,
+    [Param.OSC1_WAVE]: 2,
+    [Param.OSC1_LEVEL]: 0.62,
+    // Five detuned saws is a bright chorus: closing the filter to 700 Hz barely moved the measured brightness
+    // (×5.97 → ×4.93), and the stack itself is what carries it. Two voices is still a string section.
+    [Param.OSC1_UNISON]: 2,
+    [Param.OSC1_SPREAD]: 0.3,
+    [Param.OSC2_ON]: 1,
+    [Param.OSC2_WAVE]: 2,
+    [Param.OSC2_LEVEL]: 0.2,
+    [Param.OSC2_DETUNE]: -11,
+    [Param.FILTER_TYPE]: 0,
+    [Param.FILTER_CUTOFF]: 3400,
+    [Param.FILTER_RES]: 0.12,
+    [Param.FILTER_ENV_AMT]: 0.12,
+    [Param.FILTER_KBD]: 0.35,
+    [Param.ENV_ATTACK]: 0.32,
+    [Param.ENV_DECAY]: 0.9,
+    [Param.ENV_SUSTAIN]: 0.9,
+    [Param.ENV_RELEASE]: 1.1,
+    [Param.LFO_ON]: 1,
+    [Param.LFO_WAVE]: 0,
+    [Param.LFO_RATE]: 5.2,
+    [Param.LFO_DEPTH]: 0.12,
+    [Param.LFO_TARGET]: Param.OSC1_PITCH,
+    /**
+     * Back up to 0.45: with 0.22 this shared registration served `ambient` at −7.5 dB, and a shared patch should serve
+     * the typical part — the genre that genuinely sits under the mix has `discoStrings` of its own.
+     */
+    [Param.PATCH_GAIN]: 0.45,
+  },
+  /** Picked/plucked: a real attack transient, then out of the way. */
+  /**
+   * Measured in `liquid-dnb` (×3.14 brightness, −7 dB) and `minimal-techno` (×1.95, −8.8 dB): three times the
+   * high-frequency activity and markedly quieter than the native pluck. Cutoff, filter envelope and the saw's level come
+   * down together; the gain comes up.
+   */
+  cleanPluck: {
+    [Param.OSC1_ON]: 1,
+    [Param.OSC1_WAVE]: 1,
+    // The level the measurement asked for comes from the oscillator levels rather than `PATCH_GAIN`, because the core's
+    // own headroom rule caps that at 0.6 (the eight-voice E3 measurement) and the range guard enforces it.
+    [Param.OSC1_LEVEL]: 1,
+    [Param.OSC2_ON]: 1,
+    [Param.OSC2_WAVE]: 2,
+    [Param.OSC2_LEVEL]: 0.3,
+    [Param.OSC2_DETUNE]: 4,
+    [Param.FILTER_TYPE]: 0,
+    [Param.FILTER_CUTOFF]: 2700,
+    [Param.FILTER_RES]: 0.22,
+    [Param.FILTER_ENV_AMT]: 0.3,
+    [Param.FILTER_KBD]: 0.45,
+    [Param.ENV_ATTACK]: 0.002,
+    [Param.ENV_DECAY]: 0.35,
+    [Param.ENV_SUSTAIN]: 0.1,
+    [Param.ENV_RELEASE]: 0.28,
+    [Param.PATCH_GAIN]: 0.6,
+  },
+  /** The trance/chords wall: seven detuned saws. */
+  supersawStack: {
+    [Param.OSC1_ON]: 1,
+    [Param.OSC1_WAVE]: 2,
+    [Param.OSC1_LEVEL]: 0.55,
+    [Param.OSC1_UNISON]: 7,
+    /**
+     * **0.78 → 0.45**, and the measurement is why. The owner reported the uplifting-trance lead and chords as harsher with
+     * GS-1 on than off, and on the lead stem that is 6.6× the native render's zero-crossing rate (10.7 kHz against 1.6 kHz)
+     * with an 8× share of energy above 6 kHz. A seven-voice stack spread that far is mostly beating sidebands, which is
+     * brightness nobody asked for; the stack keeps its width at 0.45 without the top-octave spray.
+     */
+    [Param.OSC1_SPREAD]: 0.45,
+    [Param.OSC2_ON]: 1,
+    [Param.OSC2_WAVE]: 2,
+    [Param.OSC2_LEVEL]: 0.45,
+    [Param.OSC2_UNISON]: 5,
+    [Param.OSC2_SPREAD]: 0.4,
+    [Param.OSC2_DETUNE]: -14,
+    /**
+     * **SVF → ladder, cutoff to the native preset's own 6500.** The owner's report was that the uplifting-trance lead and
+     * chords are harsher with GS-1 than without, and the lead stem made that concrete: a zero-crossing rate of 10.7 kHz
+     * against the native render's 1.6 kHz, with eight times the share of energy above 6 kHz. Neither the spread nor the
+     * cutoff was the cause; the filter *model* was, so this now matches the shape the native `Supersaw` preset uses (a
+     * gentle ladder at 6.5 kHz) rather than a state-variable one closed to 3.2 kHz.
+     */
+    [Param.FILTER_TYPE]: 0,
+    [Param.FILTER_CUTOFF]: 6500,
+    [Param.FILTER_RES]: 0.1,
+    [Param.FILTER_ENV_AMT]: 0.2,
+    [Param.ENV_ATTACK]: 0.02,
+    [Param.ENV_DECAY]: 0.6,
+    [Param.ENV_SUSTAIN]: 0.9,
+    [Param.ENV_RELEASE]: 0.7,
+    /**
+     * Measured **−22.5 dB** under the native part on the chords lane (future-house, progressive-house) and −12.5 dB on
+     * the lead (uplifting-trance, euro-trance): a seven-voice saw stack through a 6.5 kHz filter reads bright and thin
+     * against a native supersaw that is dense and loud. The gain comes up to meet the level and the filter closes to
+     * meet the brightness; the eight-voice headroom rule allows up to 8.
+     */
+    [Param.PATCH_GAIN]: 2.4,
+  },
+  /** High-gain rhythm guitar: the drive lives in the filter, as on the real thing. */
+  drivenGuitar: {
+    [Param.OSC1_ON]: 1,
+    [Param.OSC1_WAVE]: 2,
+    [Param.OSC1_LEVEL]: 0.7,
+    [Param.OSC1_UNISON]: 2,
+    [Param.OSC1_SPREAD]: 0.3,
+    [Param.OSC2_ON]: 1,
+    [Param.OSC2_WAVE]: 3, // square
+    [Param.OSC2_LEVEL]: 0.3,
+    [Param.OSC2_PITCH]: -12,
+    [Param.FILTER_TYPE]: 0,
+    [Param.FILTER_CUTOFF]: 2100,
+    [Param.FILTER_RES]: 0.3,
+    [Param.FILTER_DRIVE]: 0.62,
+    [Param.FILTER_ENV_AMT]: 0.35,
+    [Param.FILTER_KBD]: 0.3,
+    [Param.ENV_ATTACK]: 0.003,
+    [Param.ENV_DECAY]: 0.5,
+    [Param.ENV_SUSTAIN]: 0.7,
+    [Param.ENV_RELEASE]: 0.25,
+    [Param.PATCH_GAIN]: 0.5,
+  },
+  /** Lead that glides: one saw, resonant filter, a little portamento. */
+  /**
+   * Measured against the native lead in three genres that route here (`chicago-house` ×1.66/+4.1 dB, `detroit-techno`
+   * ×1.5/+3.5, `synthwave` ×1.58/+5.2): the shared patch was brighter and louder than the part it replaces, in every
+   * one of them. The cutoff, the filter envelope and the detuned second saw carry the brightness; the gain carries the
+   * level. The correction is arithmetic — halving the cutoff and pulling ~4 dB out — not taste.
+   */
+  analogLead: {
+    [Param.OSC1_ON]: 1,
+    [Param.OSC1_WAVE]: 2,
+    [Param.OSC1_LEVEL]: 0.8,
+    [Param.OSC1_UNISON]: 2,
+    [Param.OSC1_SPREAD]: 0.25,
+    [Param.OSC2_ON]: 1,
+    [Param.OSC2_WAVE]: 2,
+    [Param.OSC2_DETUNE]: 9,
+    [Param.OSC2_LEVEL]: 0.22,
+    [Param.FILTER_TYPE]: 0,
+    [Param.FILTER_CUTOFF]: 1900,
+    [Param.FILTER_RES]: 0.35,
+    [Param.FILTER_ENV_AMT]: 0.25,
+    [Param.FILTER_KBD]: 0.4,
+    [Param.ENV_ATTACK]: 0.006,
+    [Param.ENV_DECAY]: 0.4,
+    [Param.ENV_SUSTAIN]: 0.8,
+    [Param.ENV_RELEASE]: 0.3,
+    [Param.GLIDE]: 0.18,
+    [Param.PATCH_GAIN]: 0.35,
+  },
+  /** Hollow and steady: squares, no glide, that 80s topline. */
+  squareLead: {
+    [Param.OSC1_ON]: 1,
+    [Param.OSC1_WAVE]: 3,
+    [Param.OSC1_LEVEL]: 0.72,
+    [Param.OSC1_PW]: 0.42,
+    [Param.OSC2_ON]: 1,
+    [Param.OSC2_WAVE]: 3,
+    [Param.OSC2_LEVEL]: 0.4,
+    [Param.OSC2_DETUNE]: -7,
+    [Param.OSC2_PW]: 0.58,
+    [Param.FILTER_TYPE]: 0,
+    [Param.FILTER_CUTOFF]: 3000,
+    [Param.FILTER_RES]: 0.2,
+    [Param.FILTER_ENV_AMT]: 0.4,
+    [Param.ENV_ATTACK]: 0.01,
+    [Param.ENV_DECAY]: 0.5,
+    [Param.ENV_SUSTAIN]: 0.78,
+    [Param.ENV_RELEASE]: 0.35,
+    [Param.PATCH_GAIN]: 0.5,
+  },
+  /** The 303: resonance, envelope sweep and glide are the whole instrument. */
+  acidLead: {
+    [Param.OSC1_ON]: 1,
+    [Param.OSC1_WAVE]: 2,
+    [Param.OSC1_LEVEL]: 0.85,
+    [Param.OSC2_ON]: 0,
+    [Param.FILTER_TYPE]: 0,
+    [Param.FILTER_CUTOFF]: 900,
+    [Param.FILTER_RES]: 0.82,
+    [Param.FILTER_DRIVE]: 0.35,
+    [Param.FILTER_ENV_AMT]: 0.75,
+    [Param.FILTER_KBD]: 0.55,
+    [Param.ENV_ATTACK]: 0.002,
+    [Param.ENV_DECAY]: 0.28,
+    [Param.ENV_SUSTAIN]: 0.15,
+    [Param.ENV_RELEASE]: 0.15,
+    [Param.GLIDE]: 0.3,
+    [Param.PATCH_GAIN]: 0.5,
+  },
+  /** Struck metal: sine carrier through FM, long ring, no sustain. */
+  /**
+   * Measured in `trap-rap` at **×6.62 brightness** (−3.6 dB) against the native lead. A bell is bright by nature, and
+   * this patch's FM index plus its octave-and-a-fifth partial put it six times above the part it replaces: both come
+   * down, the filter closes, and the gain comes up to meet the level.
+   */
+  bellMallet: {
+    [Param.OSC1_ON]: 1,
+    [Param.OSC1_WAVE]: 0, // sine
+    [Param.OSC1_LEVEL]: 0.95,
+    [Param.OSC2_ON]: 1,
+    [Param.OSC2_WAVE]: 0,
+    [Param.OSC2_PITCH]: 12,
+    [Param.OSC2_LEVEL]: 0.16,
+    [Param.OSC_FM]: 0.12,
+    [Param.FILTER_TYPE]: 0,
+    [Param.FILTER_CUTOFF]: 6000,
+    [Param.FILTER_RES]: 0.05,
+    [Param.ENV_ATTACK]: 0.002,
+    [Param.ENV_DECAY]: 1.6,
+    [Param.ENV_SUSTAIN]: 0.02,
+    [Param.ENV_RELEASE]: 1.8,
+    [Param.PATCH_GAIN]: 0.6,
+  },
+  /** Drawbar-ish organ: steady, hollow, a touch of sub. */
+  /**
+   * The drawbar organ, voiced to sit where the **native** `m1Organ` preset sits.
+   *
+   * The first version was a pulse-plus-sub stack with a wide-open filter, and the owner heard exactly what the numbers
+   * said: "harsher than GS-1 off, and short". Measured on the same lane of `uk-garage`, its zero-crossing rate was
+   * **7.9 kHz against the native render's 2.0 kHz** — four times the high-frequency activity, which is what brightness
+   * sounds like — and its release was 0.12 s against the native preset's 0.16 s with a fuller body behind it.
+   *
+   * The native preset is the reference because it is the sound this lane was written for: a drawbar registration of
+   * pure partials (8′ + 5⅓′ + 2′ + 2⅔′ + 1′ + ½′), a gentle ladder filter at 5.2 kHz, and a fast attack into a full
+   * sustain. Nothing here invents a new organ; it stops fighting the one the part was written for.
+   */
+  /**
+   * The drawbar organ **as a UK-garage lead plays it**: the same registration as the native `m1Organ` preset, with the
+   * body shortened and the tail left wet.
+   *
+   * This is the first patch that exists because a *genre* asked for it rather than because an instrument did (see
+   * `GENRE_GS1_PATCH_OVERRIDES`). The shared `organStack` was measured on this lane at 7.9 kHz zero-crossing against
+   * the native part's 2.0 kHz — four times the high-frequency activity, heard as "harsher than GS-1 off" — with a
+   * 0.12 s release behind it. Here the oscillator is a triangle at a ladder filter's gentle Q, the octave-up sine is
+   * quiet, the decay is short enough to read as a stab, and the release is long enough that the tail is the reverb
+   * rather than a click.
+   */
+  organStab: {
+    [Param.OSC1_ON]: 1,
+    [Param.OSC1_WAVE]: 1, // triangle — a drawbar registration's steeply falling partials, not a pulse's 1/n series
+    [Param.OSC1_LEVEL]: 0.6,
+    [Param.OSC1_SUB]: 1,
+    [Param.OSC1_SUB_LEVEL]: 0.22,
+    [Param.OSC2_ON]: 1,
+    [Param.OSC2_WAVE]: 0, // sine — a drawbar partial, not a second voice
+    // An octave **and a fifth** above: the upper drawbars the native registration carries (5⅓′ + 2′), which is where a
+    // triangle's own partials are too steep to reach. This is what takes the voice from dull (measured 1.0 kHz
+    // zero-crossing) back toward the native part's 2.0 kHz without a pulse's buzz.
+    [Param.OSC2_PITCH]: 19,
+    [Param.OSC2_LEVEL]: 0.34,
+    [Param.FILTER_TYPE]: 0, // ladder
+    [Param.FILTER_CUTOFF]: 5200,
+    [Param.FILTER_RES]: 0.14,
+    /**
+     * A gentle filter envelope and a slightly longer attack than the shared patch: the owner heard "a popping sound
+     * on the last two beats", which is a transient — the filter envelope opening at 0.35 over 5 ms is a *chiff* at the
+     * front of every note. Measured as sample-to-sample jumps, this lane read 0.186 against the native lane's 0.107;
+     * the target is the native number, because a click is a discontinuity and nothing else in this voice is.
+     */
+    [Param.FILTER_ENV_AMT]: 0.12,
+    [Param.FILTER_KBD]: 0.3,
+    [Param.ENV_ATTACK]: 0.014,
+    [Param.ENV_DECAY]: 0.22,
+    [Param.ENV_SUSTAIN]: 0.7,
+    /**
+     * Long release, chosen against a measurement rather than a taste: the owner hears "a popping sound on the last two
+     * beats", and the same lane's content measured as ending **0.75 s earlier** than the native render's (7.25 s against
+     * 8.00 s over the same part) — a note whose tail is too short is a note the next attack lands on top of. The target
+     * is the native lane's own end time.
+     */
+    [Param.ENV_RELEASE]: 1.3,
+    [Param.PATCH_GAIN]: 0.46,
+  },
+  /**
+   * `sustainedStrings`, quieter — for a genre whose own string part sits well under the mix (`disco`, measured at
+   * **+15.2 dB** over the native reference with the shared patch).
+   *
+   * The shared patch cannot be tuned to satisfy both ends: `ambient` reads −5.4 dB with the same registration, so a
+   * 20 dB spread between two genres is not a patch problem, it is two different parts. That is the owner's rule
+   * arriving as arithmetic.
+   */
+  discoStrings: {
+    [Param.OSC1_ON]: 1,
+    [Param.OSC1_WAVE]: 2,
+    [Param.OSC1_LEVEL]: 0.6,
+    [Param.OSC1_UNISON]: 2,
+    [Param.OSC1_SPREAD]: 0.28,
+    [Param.OSC2_ON]: 1,
+    [Param.OSC2_WAVE]: 2,
+    [Param.OSC2_LEVEL]: 0.18,
+    [Param.OSC2_DETUNE]: -9,
+    [Param.FILTER_TYPE]: 0,
+    [Param.FILTER_CUTOFF]: 3400,
+    [Param.FILTER_RES]: 0.12,
+    [Param.FILTER_ENV_AMT]: 0.1,
+    [Param.FILTER_KBD]: 0.3,
+    [Param.ENV_ATTACK]: 0.28,
+    [Param.ENV_DECAY]: 0.9,
+    [Param.ENV_SUSTAIN]: 0.9,
+    [Param.ENV_RELEASE]: 1.1,
+    [Param.LFO_ON]: 1,
+    [Param.LFO_WAVE]: 0,
+    [Param.LFO_RATE]: 5.2,
+    [Param.LFO_DEPTH]: 0.1,
+    [Param.LFO_TARGET]: Param.OSC1_PITCH,
+    [Param.PATCH_GAIN]: 0.06,
+  },
+  /**
+   * A brass lead that carries — for `reggaeton`, where the shared `analogLead` (corrected for the three saw-lead
+   * genres) measured **−6.1 dB** under the native part. Same voice, more gain and a slower attack, which is what a
+   * brass line does differently from a synth lead.
+   */
+  brassLead: {
+    [Param.OSC1_ON]: 1,
+    [Param.OSC1_WAVE]: 2,
+    [Param.OSC1_LEVEL]: 0.85,
+    [Param.OSC1_UNISON]: 2,
+    [Param.OSC1_SPREAD]: 0.2,
+    [Param.OSC2_ON]: 1,
+    [Param.OSC2_WAVE]: 2,
+    [Param.OSC2_DETUNE]: 7,
+    [Param.OSC2_LEVEL]: 0.24,
+    [Param.FILTER_TYPE]: 0,
+    [Param.FILTER_CUTOFF]: 2000,
+    [Param.FILTER_RES]: 0.28,
+    [Param.FILTER_ENV_AMT]: 0.3,
+    [Param.FILTER_KBD]: 0.4,
+    [Param.ENV_ATTACK]: 0.05,
+    [Param.ENV_DECAY]: 0.3,
+    [Param.ENV_SUSTAIN]: 0.85,
+    [Param.ENV_RELEASE]: 0.35,
+    [Param.PATCH_GAIN]: 0.6,
+  },
+  /**
+   * Dub techno's lead: a short, hollow stab through a resonant low filter — the chord-and-stab language of the genre,
+   * and deliberately nothing like either neighbour in the catalog (`analogLead`'s sustained saw, `sustainedStrings`'
+   * airy pad).
+   */
+  dubStab: {
+    [Param.OSC1_ON]: 1,
+    [Param.OSC1_WAVE]: 3, // pulse — hollow, and the resonant filter does the rest
+    [Param.OSC1_LEVEL]: 0.5,
+    [Param.OSC2_ON]: 1,
+    [Param.OSC2_WAVE]: 1,
+    [Param.OSC2_PITCH]: -12,
+    [Param.OSC2_LEVEL]: 0.25,
+    [Param.FILTER_TYPE]: 0,
+    [Param.FILTER_CUTOFF]: 900,
+    [Param.FILTER_RES]: 0.62,
+    [Param.FILTER_ENV_AMT]: 0.5,
+    [Param.FILTER_KBD]: 0.25,
+    [Param.ENV_ATTACK]: 0.004,
+    [Param.ENV_DECAY]: 0.16,
+    [Param.ENV_SUSTAIN]: 0.25,
+    [Param.ENV_RELEASE]: 0.3,
+    [Param.PATCH_GAIN]: 0.55,
+  },
+  /**
+   * Ambient techno's strings: a wide, slow, noticeably brighter wash than the corrected shared patch — deliberately
+   * **not** the closest match to this lane's native reference.
+   *
+   * This is a documented trade between two guards, and it is worth stating plainly. The voicing rule wants each lane
+   * near its native render; the distinctness floor wants two genres to differ. For `ambient-techno` and `dub-techno`,
+   * both cannot hold: they share their native rhythm section sample for sample, so the pair distance is dominated by
+   * the low end and the *only* lever left is this lane. Two attempts to separate them through the chords moved the
+   * number the wrong way (0.150 → 0.145), which is what a low-end-dominated metric does; the lead is the lever, so the
+   * lead is where they differ, and this patch says so out loud rather than leaving a mystery for the next reader.
+   */
+  ambientStrings: {
+    [Param.OSC1_ON]: 1,
+    [Param.OSC1_WAVE]: 2,
+    [Param.OSC1_LEVEL]: 0.62,
+    [Param.OSC1_UNISON]: 5,
+    [Param.OSC1_SPREAD]: 0.62,
+    [Param.OSC2_ON]: 1,
+    [Param.OSC2_WAVE]: 2,
+    [Param.OSC2_LEVEL]: 0.42,
+    [Param.OSC2_DETUNE]: -11,
+    [Param.FILTER_TYPE]: 0,
+    [Param.FILTER_CUTOFF]: 3400,
+    [Param.FILTER_RES]: 0.12,
+    [Param.FILTER_ENV_AMT]: 0.25,
+    [Param.FILTER_KBD]: 0.35,
+    [Param.ENV_ATTACK]: 0.32,
+    [Param.ENV_DECAY]: 0.9,
+    [Param.ENV_SUSTAIN]: 0.9,
+    [Param.ENV_RELEASE]: 1.1,
+    [Param.LFO_ON]: 1,
+    [Param.LFO_WAVE]: 0,
+    [Param.LFO_RATE]: 5.2,
+    [Param.LFO_DEPTH]: 0.12,
+    [Param.LFO_TARGET]: Param.OSC1_PITCH,
+    [Param.PATCH_GAIN]: 0.5,
+  },
+  /**
+   * A **sine** lead for the instruments that name one.
+   *
+   * `sine_lead` was routed to `squareLead` — a pulse — and measured ×4.44 brightness against its native reference on
+   * `g-funk`. A routing table that ignores the word in the instrument name is the kind of mistake a sweep exists to
+   * find: the patch is a plain sine with a quiet octave, a gentle filter and a full sustain, which is what a sine lead
+   * is.
+   */
+  sineLead: {
+    [Param.OSC1_ON]: 1,
+    [Param.OSC1_WAVE]: 0, // sine
+    [Param.OSC1_LEVEL]: 0.9,
+    [Param.OSC2_ON]: 1,
+    [Param.OSC2_WAVE]: 0,
+    [Param.OSC2_PITCH]: 12,
+    [Param.OSC2_LEVEL]: 0.14,
+    [Param.FILTER_TYPE]: 0,
+    [Param.FILTER_CUTOFF]: 4200,
+    [Param.FILTER_RES]: 0.08,
+    [Param.FILTER_ENV_AMT]: 0.1,
+    [Param.FILTER_KBD]: 0.3,
+    [Param.ENV_ATTACK]: 0.01,
+    [Param.ENV_DECAY]: 0.4,
+    [Param.ENV_SUSTAIN]: 0.85,
+    [Param.ENV_RELEASE]: 0.4,
+    [Param.PATCH_GAIN]: 0.9,
+  },
+  organStack: {
+    [Param.OSC1_ON]: 1,
+    // Triangle rather than pulse: the native registration's partials fall off steeply, and a pulse's 1/n series is
+    // what made this read as bright and buzzy instead of full.
+    [Param.OSC1_WAVE]: 1,
+    [Param.OSC1_LEVEL]: 0.62,
+    // The 16′ sub the native preset cannot express (a periodic wave has one fundamental) — at a level that fills the
+    // body without putting energy under the bass part.
+    [Param.OSC1_SUB]: 1,
+    [Param.OSC1_SUB_LEVEL]: 0.28,
+    [Param.OSC2_ON]: 1,
+    // Sine an octave up, quiet: the upper drawbars, not a second voice.
+    [Param.OSC2_WAVE]: 0,
+    [Param.OSC2_PITCH]: 12,
+    [Param.OSC2_LEVEL]: 0.24,
+    [Param.FILTER_TYPE]: 0, // ladder — the round one, like the native preset's gentle Q
+    [Param.FILTER_CUTOFF]: 4800,
+    [Param.FILTER_RES]: 0.12,
+    [Param.FILTER_ENV_AMT]: 0.12,
+    [Param.FILTER_KBD]: 0.3,
+    [Param.ENV_ATTACK]: 0.006,
+    [Param.ENV_DECAY]: 0.06,
+    [Param.ENV_SUSTAIN]: 0.95,
+    // Long enough to ring like the console the native preset models; the articulation still decides the note.
+    [Param.ENV_RELEASE]: 0.28,
+    [Param.PATCH_GAIN]: 0.42,
+  },
+};
+
+/**
+ * Each patch's velocity-to-cutoff response, read from the **native preset** the routed instruments resolve to.
+ *
+ * Where a patch serves several instruments the value is the median of theirs (they rarely differ: `cleanPluck` reads
+ * 1.5–1.8, `analogLead` 1.2–1.8). This is the one place where "derive the patch from the native preset" turned out to be
+ * the right answer after all — not for the tone, which the calibration showed already matched, but for the **velocity
+ * response**, which it cannot show because a held note hides it.
+ */
+export const GS1_PATCH_VELOCITY_TO_CUTOFF: Partial<Record<Gs1PatchName, number>> = {
+  warmPad: 1,
+  electricPiano: 1.8,
+  cleanPluck: 1.6,
+  supersawStack: 0.9,
+  drivenGuitar: 1.65,
+  organStack: 0.7,
+  analogLead: 1.8,
+  sustainedStrings: 1.2,
+  squareLead: 1,
+  acidLead: 2.2,
+  bellMallet: 1.3,
+  sineLead: 0.8,
+  sampleSurface: 0.65,
+  sampleTexture: 0.5,
+  // The genre-specific voices take their neighbour's response, since they are variants of it.
+  organStab: 0.7,
+  discoStrings: 1.2,
+  brassLead: 1.8,
+  dubStab: 1.8,
+  ambientStrings: 1.2,
+};
+
+/**
+ * The highest `PATCH_GAIN` any patch may carry.
+ *
+ * It exists to keep the core's own limiter out of the picture, and it is a **measurement**, re-taken when the
+ * instrument sweep showed the old 0.6 bound protecting a limiter that was never in danger while a dozen lanes sat 12–22
+ * dB under their native references. Measured with the raised gains on the densest supersaw voicing in the catalogue
+ * (`uplifting-trance`): master peak **0.78 with zero clipped samples** over eight seconds, host true-peak 0.02 against a
+ * limit of 1.
+ *
+ * Exported because two suites assert it, and the second one caught the first one's fix being applied in only one place.
+ */
+export const GS1_PATCH_GAIN_MAX = 3;
+
+/** A routed instrument name, or an explicit decision to leave it on the native engine. */
+export type Gs1Routing =
+  | { patch: Gs1PatchName }
+  | { native: true; reason: string };
+
+const native = (reason: string): Gs1Routing => ({ native: true, reason });
+
+/**
+ * `chords` — 12 instrument names in the library.
+ *
+ * The four kept native are the ones whose identity is an acoustic body or a wooden/struck
+ * transient: a subtractive synth can produce *a* piano-ish tone, but it produces a worse one
+ * than the preset that was written for it.
+ */
+export const GS1_CHORDS_ROUTING: Record<string, Gs1Routing> = {
+  warm_pad: { patch: "warmPad" },
+  rhodes_ep: { patch: "electricPiano" },
+  guitar_lead: { patch: "cleanPluck" },
+  supersaw: { patch: "supersawStack" },
+  distorted_guitar: { patch: "drivenGuitar" },
+  m1_organ: { patch: "organStack" },
+  brass_synth: { patch: "analogLead" },
+  strings_lead: { patch: "sustainedStrings" },
+  piano_lead: native("an acoustic piano is body + hammer noise; the native preset models that, a subtractive patch cannot"),
+  vibraphone: native("a struck metal bar needs inharmonic partials and a mallet transient; kept on the engine that has them"),
+  marimba_lead: native("a wooden bar's identity is its attack noise and short decay, which the native preset already provides"),
+  accordion_lead: native("reedy acoustic timbre; no subtractive analogue worth the switch"),
+};
+
+/**
+ * `lead` — 27 instrument names in the library, the widest mapping surface in the integration.
+ *
+ * The ten kept native are acoustic or section instruments (flute, sax, trumpet, harmonica,
+ * accordion, pan flute, sitar, muted trumpet, piano, brass section). `brass_section` is the one
+ * judgement call worth flagging: a *synth* brass patch is routed, but a section sampled/sung
+ * through the native preset keeps its ensemble character.
+ */
+export const GS1_LEAD_ROUTING: Record<string, Gs1Routing> = {
+  saw_lead: { patch: "analogLead" },
+  square_lead: { patch: "squareLead" },
+  pluck_synth: { patch: "cleanPluck" },
+  pluck_string: { patch: "cleanPluck" },
+  guitar_lead: { patch: "cleanPluck" },
+  supersaw: { patch: "supersawStack" },
+  strings_lead: { patch: "sustainedStrings" },
+  acid_303: { patch: "acidLead" },
+  growl_lead: { patch: "drivenGuitar" },
+  fm_lead: { patch: "bellMallet" },
+  bell_lead: { patch: "bellMallet" },
+  cowbell_lead: { patch: "bellMallet" },
+  sine_lead: { patch: "sineLead" },
+  organ_lead: { patch: "organStack" },
+  brass_synth: { patch: "analogLead" },
+  warm_pad: { patch: "warmPad" },
+  piano_lead: native("acoustic piano; the native preset is the closer model"),
+  brass_section: native("an ensemble section, not a synth brass patch — the native preset keeps the section character"),
+  sax_lead: native("reedy acoustic instrument; subtractive synthesis has no honest analogue"),
+  trumpet_lead: native("brass bore and breath noise; kept native"),
+  muted_trumpet: native("the mute is the sound; kept native"),
+  harmonica_lead: native("reed + hand cupping; kept native"),
+  accordion_lead: native("free-reed acoustic instrument; kept native"),
+  flute_lead: native("breath noise is the attack; kept native"),
+  pan_flute: native("breathy wooden flute; kept native"),
+  sitar_lead: native("sympathetic strings and buzzing bridge; kept native"),
+  m1_organ: { patch: "organStack" },
+};
+
+/** Which routing table applies to a role, or `null` for roles GS-1 does not voice. */
+/**
+ * `texture` — the role P2.5 adds: a lane that plays a **recording** rather than a synth.
+ *
+ * The mechanism ships before the content, deliberately. Which genres get a texture, and which recording each uses, is
+ * a product decision rather than a code one, and the arrangement model already has the `texture` lane that the riser
+ * work (A4) put there. Any name listed here plays the imported sample; anything else stays on the native engine.
+ */
+export const GS1_TEXTURE_ROUTING: Record<string, Gs1Routing> = {
+  /**
+   * `vinyl_crackle` is the one name the **library already uses** — 26 genres declare it for surface noise / needle
+   * hiss — and it is the reason this table exists rather than a hypothetical: the recording is a better source for
+   * that instrument than a subtractive noise preset, and the content did not have to change to say so.
+   */
+  vinyl_crackle: { patch: "sampleSurface" },
+  tape_hiss: { patch: "sampleSurface" },
+  // The musical one-shots: a chop or a found sound carries its own length, so its envelope follows the sample.
+  vinyl_texture: { patch: "sampleTexture" },
+  vocal_chop: { patch: "sampleTexture" },
+  found_sound: { patch: "sampleTexture" },
+};
+
+export function routingForRole(role: string | null | undefined): Record<string, Gs1Routing> | null {
+  if (role === "chords") return GS1_CHORDS_ROUTING;
+  if (role === "lead") return GS1_LEAD_ROUTING;
+  if (role === "texture") return GS1_TEXTURE_ROUTING;
+  return null;
+}
+
+export interface ResolvedGs1Patch {
+  patch: Gs1PatchName;
+  params: Gs1Patch;
+  /** The native preset's velocity-to-cutoff response, when the patch has one to model. */
+  velToCutoff?: number;
+}
+
+/**
+ * The patch for one instrument on one role, or `null` to leave the track on the native engine.
+ *
+ * Total by design: an unknown role, an unknown instrument name or an explicit `native` decision
+ * all return `null`, which is the safe answer (the native engine already works).
+ */
+export function resolveGs1Patch(
+  role: string | null | undefined,
+  instrument: string | null | undefined,
+  genreId?: string | null
+): ResolvedGs1Patch | null {
+  const routing = routingForRole(role);
+  if (!routing || !instrument) return null;
+  const entry = routing[instrument];
+  if (!entry || !("patch" in entry)) return null;
+  /**
+   * **A genre may voice a lane its own way.** The instrument table says what an instrument *is*; it cannot say what a
+   * genre does with it, and the owner's point is that it must not have to: `m1_organ` in a UK-garage lead is a short,
+   * wet stab, while the same instrument under a Latin montuno is a warm pad. The override is consulted first, keyed by
+   * the instrument name so it follows the lane through an instrument swap, and a genre that says nothing keeps the
+   * table's answer exactly as before.
+   */
+  const override = genreId ? GENRE_GS1_PATCH_OVERRIDES[genreId]?.[instrument] : undefined;
+  const patch = override ?? entry.patch;
+  return { patch, params: GS1_PATCHES[patch], velToCutoff: GS1_PATCH_VELOCITY_TO_CUTOFF[patch] };
+}
+
+/**
+ * Genres that voice a lane their own way, by instrument name.
+ *
+ * Deliberately small and grown one genre at a time, with the **native render as the reference**: an override is worth
+ * adding when the GS-1 voice of that lane measures or sounds materially different from the sound the part was written
+ * for (a zero-crossing rate twice the native lane's is bright; half of it is dull), not because a genre could have a
+ * flavour. The plan for sweeping the rest is in `docs/GROOVE_QUALITY_PLAN.md`.
+ */
+export const GENRE_GS1_PATCH_OVERRIDES: Record<string, Partial<Record<string, Gs1PatchName>>> = {
+  /**
+   * The lead is a drawbar organ played as a stab. The shared `organStack` is heard as harsh and short here (measured
+   * at 7.9 kHz zero-crossing against the native lane's 2.0 kHz), so this lane gets a darker, longer-tailed registration
+   * with a level matched to the native part.
+   */
+  "uk-garage": { m1_organ: "organStab" },
+  /** +15.2 dB over the native strings with the shared patch; see `discoStrings`. */
+  disco: { strings_lead: "discoStrings" },
+  /** −6.1 dB under the native brass with the corrected shared lead; see `brassLead`. */
+  reggaeton: { brass_synth: "brassLead" },
+  /** Its own chord stab, and the pair distance the baseline floor requires; see `dubChord`. */
+  "dub-techno": { saw_lead: "dubStab" },
+  "ambient-techno": { strings_lead: "ambientStrings" },
+};
+
+/** The instruments a genre overrides, for the plan's per-genre voicing sweep and for tests. */
+export function genreGs1Overrides(genreId: string): Partial<Record<string, Gs1PatchName>> {
+  return GENRE_GS1_PATCH_OVERRIDES[genreId] ?? {};
+}
+
+/** Every role GS-1 can voice, for gates and UI copy. */
+export const GS1_ROLES = ["chords", "lead", "texture"] as const;
+
+/** Parameter ids referenced by any patch, for bounds checks and documentation. */
+export function patchParamIds(): number[] {
+  const ids = new Set<number>();
+  for (const patch of Object.values(GS1_PATCHES)) {
+    for (const key of Object.keys(patch)) ids.add(Number(key));
+  }
+  return [...ids].sort((a, b) => a - b);
+}
+
+/** The declared spec for a parameter id, when the vendored table has one. */
+export function paramSpec(id: number) {
+  return PARAM_SPECS.find((s) => s.id === (id as ParamId));
+}

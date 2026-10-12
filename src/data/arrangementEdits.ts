@@ -1,0 +1,1045 @@
+/**
+ * Adding, removing and regrouping tracks — the edits a Logic-like interface is made of, as pure functions.
+ *
+ * **Identities are stable and generated here**, not derived from position. An index-as-id is the classic version of this mistake: deleting the second of five tracks silently renames three others, and every
+ * reference to them — an automation lane, a selection, a solo state — follows the wrong track. So ids come from a counter and are never reused within an arrangement.
+ *
+ * Every function returns a **new arrangement**, because a track list is state that an interface re-renders from; mutating in place is how a UI ends up showing something the model does not say.
+ */
+import type { ArrangementV2, NoteEvent, TakeRegion, TrackKindV2, TrackV2, TrackRegion } from "../types/arrangementV2";
+import { normaliseTrackRegion, regionBars, sameTrackRegion } from "./arrangementLanes";
+import { stepCountFor, stepsPerBarFor } from "./noteEvents";
+import type { PlannedTake } from "./takePlanning";
+import { DEFAULT_SAMPLER_ASSET, defaultContentFor, type DefaultContent } from "./defaultContent";
+import { addNote, moveNote, notesFromSteps, removeNote, setNoteLength, setNoteVelocity, stepsFromNotes, STEPS_PER_BEAT } from "./noteEvents";
+import { chordVoicingForStep } from "../audio/chordVoicing";
+
+let nextId = 1;
+
+/** Test/reset seam: ids only have to be unique **within** an arrangement, and a deterministic first id keeps criteria readable. */
+export function resetTrackIdsForTests(): void {
+  nextId = 1;
+}
+
+function freshId(kind: TrackKindV2): string {
+  return `${kind}-${nextId++}`;
+}
+
+/**
+ * The kinds this build has, in one array so "what is a valid kind" has one answer.
+ *
+ * It is runtime data rather than only the type because a value that arrives from outside the type system — an old file,
+ * a hand-edited project — has to be checked against it, and a check written against a second copy of the list is the
+ * copy that goes stale.
+ */
+export const TRACK_KINDS: readonly TrackKindV2[] = ["synth", "sampler", "drumkit", "fx", "folder"];
+
+/**
+ * ⭐ **A kind this build does not have is refused out loud, never guessed at.**
+ *
+ * The kind was renamed `instrument` → `synth` and **no compatibility is kept**: a caller that still sends the old word
+ * is refused by the schema, which names the values that exist. This function is the same rule for a **value** rather
+ * than a request. An arrangement that still carries `"instrument"` must fail with a sentence naming the value, rather
+ * than fall through a lookup into `undefined` and become a lane with no role, a track with no name or a render with a
+ * part silently missing. "This could not be read" is a result a caller can act on; "read as nothing" is the defect.
+ *
+ * **Where this is reached today, and what that leaves open.** No v2 arrangement's track list is persisted anywhere yet:
+ * `ArrangementViewV2` holds it in `useState` (its own comment says "neither is persisted yet"), a `.groove` package
+ * carries only the v1 `patterns`/`sections` that `projectSongToV2` re-derives from, and the MCP arrangements are a
+ * process-local map. So the only way an old literal can arrive is as a **value handed to the model**, and this function
+ * is called where such a value is compiled. **If a v2 arrangement is ever persisted, this check belongs at that
+ * reader too** — the criterion in `src/test/mcpArrangement.test.ts` (which feeds a synthetic legacy value through the
+ * compile) will not cover a file reader that never calls the compile, so it has to be re-verified there.
+ */
+export function requireTrackKind(kind: string, trackName?: string): TrackKindV2 {
+  if ((TRACK_KINDS as readonly string[]).includes(kind)) return kind as TrackKindV2;
+  throw new Error(
+    `${trackName ? `track "${trackName}"` : "a track"} names kind "${kind}", which this build does not have — the kinds are ${TRACK_KINDS.join(", ")}; the kind once spelled "instrument" is now "synth", so an old arrangement that still says "instrument" has to be re-created rather than read as a synth`
+  );
+}
+
+/**
+ * The starter content as notes — **one expression**, so `createArrangement`, the template, `addTrack` and
+ * `starterNotesFor` cannot disagree about what a new track holds.
+ *
+ * `pitches` is spread only when the kind has one. Handing every kind an array of 60s would be this file stating a pitch
+ * the model already has a default for, and it would hide whether a kind's pattern is melodic (one pitch) or a kit part
+ * (the role's own GM numbers).
+ */
+function starterNotes(content: DefaultContent): NoteEvent[] {
+  return notesFromSteps(content.steps, { velocity: 100, ...(content.pitches ? { pitches: content.pitches } : {}) });
+}
+
+/**
+ * A new arrangement **with one track of the chosen kind** — because an empty list is a question and one track is a place to start.
+ *
+ * The owner asked for a new-project entry where a template may be chosen *or* blank, and even blank has a default track typed by that choice. The reason is concrete: the record button needs a track to point
+ * at, and an empty list has none.
+ */
+export function createArrangement(songId: string, kind: TrackKindV2 = "synth"): ArrangementV2 {
+  const id = freshId(kind);
+  const content = defaultContentFor(kind);
+  // ⭐ Content arrives with the track: an empty track is silent, and a silent track looks like a broken engine.
+  return {
+    songId,
+    tracks: [{ id, kind, name: DEFAULT_NAME[kind], ...(content.sample ? { sample: content.sample } : {}) }],
+    notesByTrack: { [id]: starterNotes(content) },
+    // ⭐ Eight bars to start with, because an arrangement exists to hold more than one thing and one bar is where a pattern lives. The templates were written as one-bar patterns, so a new arrangement is long enough for them and short enough to see whole.
+    bars: DEFAULT_BARS,
+    sourceSlots: [],
+  };
+}
+
+/**
+ * How long a new arrangement is. **Eight rather than one**, because the old one-bar figure was the v1 pattern's length leaking into a surface that is not a pattern: an arrangement is a place where four bars is the shortest useful thing and eight fits on a screen.
+ */
+export const DEFAULT_BARS = 8;
+
+/** The longest an arrangement may be. Long enough for a whole piece, short enough that a player never walks into a wall of silence. */
+export const MAX_BARS = 128;
+
+const DEFAULT_NAME: Record<TrackKindV2, string> = {
+  drumkit: "Drums",
+  synth: "Synth",
+  sampler: "Sampler",
+  fx: "FX",
+  folder: "Folder",
+};
+
+/** The few common combinations, deliberately few: **a template list long enough to need choosing is the same as no templates.** */
+export interface Template {
+  id: string;
+  name: string;
+  kinds: Array<{ kind: TrackKindV2; name: string }>;
+}
+
+export const TEMPLATES: readonly Template[] = [
+  { id: "drums-bass", name: "Drums + Bass", kinds: [{ kind: "drumkit", name: "Drums" }, { kind: "synth", name: "Bass" }] },
+  { id: "drums-bass-chords", name: "Drums + Bass + Chords", kinds: [{ kind: "drumkit", name: "Drums" }, { kind: "synth", name: "Bass" }, { kind: "synth", name: "Chords" }] },
+  // ⭐ The template that can be heard: sampler tracks are the kind the whole real-instrument path exists for.
+  { id: "samplers", name: "Samplers", kinds: [{ kind: "sampler", name: "Sampler 1" }, { kind: "sampler", name: "Sampler 2" }] },
+];
+
+/**
+ * An arrangement from a template — **never empty**: every template has at least one track, and so does the blank case.
+ *
+ * ⭐ **And the same length as the blank case, which is what "the same question has two answers" was.**
+ *
+ * This path used to return an arrangement with **no `bars`** while `createArrangement` (the blank path, one screen
+ * below) states `DEFAULT_BARS`. `bars` is optional and the two readers of its absence disagree: the arrangement's
+ * ruler falls back to eight (`DEFAULT_REGION_BARS`) while the compile falls back to **one** — so a project created
+ * from a template drew eight clickable bars over a one-bar pattern, and clicking bar six moved the play-start marker
+ * to a bar the transport did not have. It is the same disagreement `features/arrangement/loopSteps.ts` documents for
+ * the loop brace, arriving through the other door.
+ *
+ * ⭐ **The length is the templates' own:** every template is built from `defaultContentFor`, whose material is
+ * sixteen steps (`steps(4)`) — a one-bar figure. `createArrangement`'s comment already says so ("The templates were
+ * written as one-bar patterns, so a new arrangement is long enough for them and short enough to see whole"), which is
+ * why the answer here is the same constant rather than a per-template length: no template carries more than one bar
+ * of content, and a template that one day does would have to say so in its own entry.
+ */
+export function createArrangementFromTemplate(songId: string, templateId: string | undefined, blankKind: TrackKindV2 = "synth"): ArrangementV2 {
+  const template = TEMPLATES.find((candidate) => candidate.id === templateId);
+  if (!template) return createArrangement(songId, blankKind);
+
+  const tracks: TrackV2[] = [];
+  const notesByTrack: Record<string, NoteEvent[]> = {};
+  for (const { kind, name } of template.kinds) {
+    const id = freshId(kind);
+    const content = defaultContentFor(kind);
+    tracks.push({ id, kind, name, ...(content.sample ? { sample: content.sample } : {}) });
+    notesByTrack[id] = starterNotes(content);
+  }
+  return { songId, tracks, notesByTrack, bars: DEFAULT_BARS, sourceSlots: [] };
+}
+
+/**
+ * The **starter notes** a kind is created with, as notes rather than steps — the same conversion `createArrangement`
+ * performs, exposed so the MCP surface can tell "the caller wrote this" from "the starter content is still here".
+ *
+ * It exists because two field reports describe the same surprise: an agent asks for a new sampler track and receives
+ * four notes at pitch 60 it did not write, with nothing in the reply saying so. The app's starter experience is
+ * deliberately unchanged (§ `createArrangement`); the agent-facing path removes the notes instead, and this is how the
+ * remaining case — an arrangement that still carries them — can be *named* rather than assumed away.
+ */
+export function starterNotesFor(kind: TrackKindV2): NoteEvent[] {
+  return starterNotes(defaultContentFor(kind));
+}
+
+/**
+ * True when a track's notes are exactly the untouched starter content for its kind.
+ *
+ * A note-for-note comparison rather than a flag, because there is no field in the model to mark them and adding one
+ * would be a model change for a reporting decision. It is deliberately strict: adding, removing or editing any note
+ * makes it false, so it fires on "nobody has touched this" and not on a coincidence of pitches.
+ */
+export function carriesStarterNotes(kind: TrackKindV2, notes: readonly NoteEvent[] | undefined): boolean {
+  const starter = starterNotesFor(kind);
+  if (starter.length === 0 || !notes || notes.length !== starter.length) return false;
+  return notes.every((note, index) => {
+    const expected = starter[index]!;
+    return (
+      note.pitch === expected.pitch &&
+      note.startBeats === expected.startBeats &&
+      note.lengthBeats === expected.lengthBeats &&
+      note.velocity === expected.velocity
+    );
+  });
+}
+
+/**
+ * Changing what a track **is** — which the owner asked for — and therefore deciding what happens to the fields that only made sense for the old kind.
+ *
+ * The rule is one sentence: **drop what belongs to the route or the sound source, keep what is content.** A `sample` describes which sample this track plays, which means nothing to a synth, so it must not
+ * survive — a track carrying both would be the "shape permits it, semantics do not" state the model's criteria already guard against. But `takes` are **content, not identity** (the owner's own earlier
+ * correction), so changing what a track is does not un-record what was played onto it, and the take choices travel with them.
+ */
+export function changeTrackKind(arrangement: ArrangementV2, trackId: string, kind: TrackKindV2): ArrangementV2 {
+  return {
+    ...arrangement,
+    tracks: arrangement.tracks.map((track) => {
+      if (track.id !== trackId) return track;
+      const { sample: _dropped, ...rest } = track;
+      /**
+       * **A track that becomes a sampler gets the default instrument, exactly as a new one does.** `defaultContentFor` gives every sampler track an asset "because without it the lane compiles and the planner resolves it to nothing", and a kind
+       * change used to leave the sample unset — so a sampler track sounded or not depending on how it had been created. An asset already chosen is kept rather than replaced.
+       */
+      const sample = kind === "sampler" ? (track.sample ?? { assetId: DEFAULT_SAMPLER_ASSET }) : undefined;
+      return { ...rest, kind, ...(sample ? { sample } : {}) };
+    }),
+  };
+}
+
+export function addTrack(arrangement: ArrangementV2, kind: TrackKindV2, name: string, extra: Partial<TrackV2> = {}): ArrangementV2 {
+  const id = freshId(kind);
+  const content = defaultContentFor(kind);
+  return {
+    ...arrangement,
+    tracks: [...arrangement.tracks, { id, kind, name, ...(content.sample ? { sample: content.sample } : {}), ...extra }],
+    notesByTrack: { ...(arrangement.notesByTrack ?? {}), [id]: starterNotes(content) },
+  };
+}
+
+/**
+ * Remove a track **and anything grouped under it**.
+ *
+ * A folder's children left behind would be orphans: they would still be in the model, still be compiled into lanes, and no longer be reachable from the interface — audible tracks that nothing on screen
+ * accounts for.
+ */
+export function removeTrack(arrangement: ArrangementV2, trackId: string): ArrangementV2 {
+  const doomed = new Set([trackId]);
+  // Repeated passes, because a folder may contain a folder; the set grows until it stops growing.
+  for (let changed = true; changed; ) {
+    changed = false;
+    for (const track of arrangement.tracks) {
+      if (track.parentId && doomed.has(track.parentId) && !doomed.has(track.id)) {
+        doomed.add(track.id);
+        changed = true;
+      }
+    }
+  }
+  // ⭐ The notes go with the track. Leaving them would keep orphans that fire the next time something reuses that id — the same class of problem as a folder's orphaned children.
+  const notes = { ...(arrangement.notesByTrack ?? {}) };
+  for (const id of doomed) delete notes[id];
+  return { ...arrangement, tracks: arrangement.tracks.filter((track) => !doomed.has(track.id)), notesByTrack: notes };
+}
+
+/**
+ * ⭐ **Put a track back — the inverse of `removeTrack`, and the reason it lives here rather than in the history layer.**
+ *
+ * `removeTrack` is destructive twice over: it takes the track **and everything grouped under it**, and it takes their
+ * notes with them. Undo therefore cannot be "add a track again": `addTrack` mints a **new** identity and appends at the
+ * end, so the restored track would be a different track in a different place, and every later reference to the old id —
+ * a selection, a region, another entry on the undo stack — would name something that no longer exists. That is the same
+ * "an index-as-id" mistake this file's header refuses, one level up.
+ *
+ * So the identity and the position are **given**, not derived: `index` is where the track sat, `notes` is what it held.
+ * A track already carrying this id is replaced rather than duplicated, which keeps the function idempotent — an undo
+ * applied twice must not produce two tracks.
+ */
+export function insertTrack(arrangement: ArrangementV2, track: TrackV2, notes: readonly NoteEvent[], index: number): ArrangementV2 {
+  const existing = arrangement.tracks.findIndex((candidate) => candidate.id === track.id);
+  const withoutTrack = existing === -1 ? arrangement.tracks : arrangement.tracks.filter((candidate) => candidate.id !== track.id);
+  const tracks = [...withoutTrack];
+  // The index is read against the array the track was taken from, so an earlier re-insert shifts nothing: every restore clamps to the list it is joining.
+  tracks.splice(Math.max(0, Math.min(index, tracks.length)), 0, track);
+  return { ...arrangement, tracks, notesByTrack: { ...(arrangement.notesByTrack ?? {}), [track.id]: [...notes] } };
+}
+
+/**
+ * ⭐ **Replace a track with a previous version of itself**, which is what an edit that changed more than one field needs
+ * in order to be undoable.
+ *
+ * Two edits are like that and neither has a field-level inverse: `changeTrackKind` **drops the `sample`** when a track
+ * stops being a sampler, and `addTake` moves `selectedTakeId` and rewrites `takeRegions` (splitting the regions it
+ * crosses). A `setTrackKind(a, id, previousKind)` would restore the kind and leave the sample gone; this restores what
+ * the track *was*. A track that is no longer in the arrangement is left alone rather than re-added — this function is a
+ * replacement, and `insertTrack` is the one that restores a position.
+ */
+export function replaceTrack(arrangement: ArrangementV2, track: TrackV2): ArrangementV2 {
+  if (!arrangement.tracks.some((candidate) => candidate.id === track.id)) return arrangement;
+  return { ...arrangement, tracks: arrangement.tracks.map((candidate) => (candidate.id === track.id ? track : candidate)) };
+}
+
+/** Move a track into a folder, or out of one with `parentId: undefined`. Refuses a folder into itself, which would make the tree unrenderable. */
+export function setTrackParent(arrangement: ArrangementV2, trackId: string, parentId: string | undefined): ArrangementV2 {
+  if (parentId === trackId) return arrangement;
+  return { ...arrangement, tracks: arrangement.tracks.map((track) => (track.id === trackId ? { ...track, parentId } : track)) };
+}
+
+/**
+ * The rest of what a track header does: mute, solo, arm, rename, and folding a folder.
+ *
+ * All of them are `map` over the track list, and the reason to write them here rather than inline in a component is the same reason the others are here: they are the states a song can be in, and a song
+ * that is soloed in the model but not in the mixer — or folded in one view and not another — is a contradiction nobody can debug from the screen.
+ *
+ * **Folding is a display state and nothing else.** `setCollapsed` deliberately touches only `collapsed`, and there is a criterion for it, because a fold that silenced its children would be blamed on the
+ * audio engine rather than on this function.
+ *
+ * `armed` shares this function rather than getting its own: it **is** the same shape of edit — one boolean on one track — and a second function with the same body is the kind of near-duplicate that later drifts.
+ * What `armed` is *not* is the same semantics: nothing reads it when a recording starts (the take still goes to the selected track), which is stated on the field in `TrackV2` rather than implied by the
+ * button's appearance.
+ */
+export function setTrackFlag(arrangement: ArrangementV2, trackId: string, flag: "muted" | "soloed" | "armed", value: boolean): ArrangementV2 {
+  return { ...arrangement, tracks: arrangement.tracks.map((track) => (track.id === trackId ? { ...track, [flag]: value } : track)) };
+}
+
+export function renameTrack(arrangement: ArrangementV2, trackId: string, name: string): ArrangementV2 {
+  // An empty name would leave a nameless row that nothing can be said about; the caller's own name is kept instead.
+  const trimmed = name.trim();
+  if (!trimmed) return arrangement;
+  return { ...arrangement, tracks: arrangement.tracks.map((track) => (track.id === trackId ? { ...track, name: trimmed } : track)) };
+}
+
+/**
+ * A track's level, in dB, where 0 is unity.
+ *
+ * **A separate edit from mute rather than a value of it**: Logic's track header has both for the same reason — a muted track keeps its level, and unmuting must not also undo a decision about how loud it is. Clamped to a range the engine can honour (±60 dB is already
+ * inaudible at both ends), so a slider cannot send a value that means "silence by accident".
+ */
+/**
+ * ⭐ **How long the arrangement is.** The edit exists because the length is content: it decides where a note may be written, how much the roll shows, and how long a bounce is — and those three must agree, so they read one number rather than three.
+ *
+ * Clamped to 1…128 rather than refused: a slider at its end is not an error, and an imported file with a silly number should open rather than be rejected.
+ */
+/**
+ * ⭐ **The arrangement's tempo.** Clamped to 20…300 rather than refused, for the same reason the length is: a slider at its end is not an error, and an imported file with a silly number should open.
+ *
+ * It is stored on the arrangement because the compile had **120 hardcoded** — a value nobody chose, which is how a number becomes a decision without anybody making it.
+ */
+export function setArrangementTempo(arrangement: ArrangementV2, bpm: number): ArrangementV2 {
+  const rounded = Math.round(bpm);
+  const clamped = Math.max(20, Math.min(300, Number.isFinite(rounded) ? rounded : 120));
+  return { ...arrangement, bpm: clamped };
+}
+
+/**
+ * ⭐ **The tempo map itself, which the model could carry and no tool could set.**
+ *
+ * Muse's list, re-measured: "arrangement 无 tempo map — 整曲只能一个固定 BPM；变速乐章需手算时间再拼贴". The model,
+ * the projection into the song input and the song's own creation were all built in this session — `tempoTrack` travels
+ * from the arrangement to the renderer — and **there was still no way to say it from the MCP surface**, which is the
+ * half-built shape this repository's `mcpCoverage` invariant exists to catch. `set_arrangement_tempo` writes a single
+ * number; this writes the map.
+ *
+ * Validated, not clamped, for the reason the time signature is: a point silently moved or dropped is a tempo the
+ * caller believes is in the file and is not, and every duration computed from it is then wrong in a way that looks
+ * like the caller's own arithmetic. Points are sorted by bar on the way in, because a map that depends on the order it
+ * was written in is a map that changes meaning when someone reorders it.
+ */
+export function setArrangementTempoMap(
+  arrangement: ArrangementV2,
+  points: readonly { atBar: number; bpm: number; curve?: "jump" | "linear" }[]
+): ArrangementV2 {
+  if (points.length === 0) {
+    // Clearing the map is a real operation: it returns the arrangement to its single tempo rather than to nothing.
+    const { tempoTrack: _cleared, ...rest } = arrangement;
+    return rest;
+  }
+  const cleaned = points.map((point, index) => {
+    /**
+     * ⭐ **Validated on the value as written, before anything is rounded away.**
+     *
+     * `Math.round` used to run first, which made the checks below blind to what the caller wrote: bar `1.5` became
+     * `2` and bpm `300.4` became `300`, so a point just outside the declared range was accepted and silently moved —
+     * the failure this function's own comment says it exists to prevent. Measured: `{atBar: 1.5}`, `{atBar: 0.4}`,
+     * `{bpm: 300.4}` and `{bpm: 19.6}` were all accepted. A bar is now read exactly (a whole number is the contract,
+     * so rounding it is a decision the caller did not make), and the bpm range is tested against the written value
+     * while an in-range bpm keeps the round-to-integer storage its sibling `setArrangementTempo` uses.
+     */
+    const { atBar, bpm } = point;
+    if (!Number.isInteger(atBar) || atBar < 0) {
+      throw new Error(`tempo point ${index + 1} has bar "${point.atBar}" — bars are whole numbers from 0 up`);
+    }
+    if (!Number.isFinite(bpm) || bpm < 20 || bpm > 300) {
+      throw new Error(`tempo point ${index + 1} is ${point.bpm} bpm — the range is 20…300, the same one set_arrangement_tempo enforces`);
+    }
+    return { atBar, bpm: Math.round(bpm), ...(point.curve === undefined ? {} : { curve: point.curve }) };
+  });
+  // Sorted by bar, then deduplicated to the last point written for a bar, so two points cannot fight over one.
+  const byBar = new Map<number, { atBar: number; bpm: number; curve?: "jump" | "linear" }>();
+  for (const point of cleaned) byBar.set(point.atBar, point);
+  return { ...arrangement, tempoTrack: [...byBar.values()].sort((a, b) => a.atBar - b.atBar) };
+}
+
+export function setArrangementBars(arrangement: ArrangementV2, bars: number): ArrangementV2 {
+  const rounded = Math.round(bars);
+  const clamped = Math.max(1, Math.min(MAX_BARS, Number.isFinite(rounded) ? rounded : 1));
+  return { ...arrangement, bars: clamped };
+}
+
+/**
+ * ⭐ **A signature that cannot be read is refused, and that is deliberately unlike its two neighbours.**
+ *
+ * `setArrangementTempo` and `setArrangementBars` above both **clamp** — an unreadable tempo becomes 120, an unreadable
+ * length becomes 1 — and for a number that is the right call, because something has to be chosen and the choice is
+ * harmless. A time signature is not a number: `"4/5"` or `"waltz"` clamped to `"4/4"` would leave a caller believing a
+ * 7/8 arrangement had been written when a 4/4 one had, and every bar length downstream would be wrong in a way that
+ * looks like the caller's own arithmetic. **An assumption must not look like a reading** — the rule this work has
+ * applied to MIDI tempo, to the analysis curve, and to the summary beside it.
+ *
+ * The value is normalised to `n/d` with no spaces, because two spellings of one signature is how a later comparison
+ * against `"3/4"` starts failing.
+ */
+export function setArrangementTimeSignature(arrangement: ArrangementV2, timeSignature: string): ArrangementV2 {
+  const normalised = timeSignature.trim().replace(/\s*\/\s*/, "/");
+  const match = /^(\d+)\/(\d+)$/.exec(normalised);
+  const perBar = match ? Number(match[1]) : 0;
+  const unit = match ? Number(match[2]) : 0;
+  if (!match || perBar <= 0 || unit <= 0) {
+    throw new Error(`"${timeSignature}" is not a time signature — write it as two positive numbers, e.g. "4/4", "3/4", "6/8"`);
+  }
+  return { ...arrangement, timeSignature: normalised };
+}
+
+export function setTrackGain(arrangement: ArrangementV2, trackId: string, gainDb: number): ArrangementV2 {
+  const clamped = Math.max(-60, Math.min(12, gainDb));
+  return {
+    ...arrangement,
+    tracks: arrangement.tracks.map((track) => (track.id === trackId ? { ...track, gainDb: clamped } : track)),
+  };
+}
+
+/**
+ * A track's position in the stereo field: **−1 hard left, 0 centre, 1 hard right**, the same scale the genres already use.
+ *
+ * Stored on the track rather than in the notes, because panning a part is a decision about the part; a piano roll that stored it per note would make "move this track a little left" a thing you do 200 times.
+ */
+export function setTrackPan(arrangement: ArrangementV2, trackId: string, pan: number): ArrangementV2 {
+  const clamped = Math.max(-1, Math.min(1, pan));
+  return {
+    ...arrangement,
+    tracks: arrangement.tracks.map((track) => (track.id === trackId ? { ...track, pan: clamped } : track)),
+  };
+}
+
+export function setCollapsed(arrangement: ArrangementV2, trackId: string, collapsed: boolean): ArrangementV2 {
+  return { ...arrangement, tracks: arrangement.tracks.map((track) => (track.id === trackId ? { ...track, collapsed } : track)) };
+}
+
+/**
+ * ⭐ **Where a track's region sits** — the one edit the arrangement lane's drag makes.
+ *
+ * It goes through `normaliseTrackRegion` rather than storing what the view computed, for two reasons that are both
+ * already rules of this file: **the model's limits belong to the model** (a drag cannot express a region before bar 1
+ * or shorter than a bar, and neither can an imported file), and **a region put back is identical to one that was never
+ * moved** — the default span is stored as *absence*, exactly as an emptied `label`, `mute` or `transpose` is dropped.
+ *
+ * An unknown track, a non-finite range, and a range that normalises to what the track already declares all return
+ * **the arrangement itself** (`next === arrangement`), which is the signal every caller in this code base uses to mean
+ * "no edit happened" — and the reason a drag that lands where it started records no undo entry.
+ */
+export function setTrackRegion(arrangement: ArrangementV2, trackId: string, region: TrackRegion | undefined): ArrangementV2 {
+  const track = arrangement.tracks.find((candidate) => candidate.id === trackId);
+  if (track === undefined) return arrangement;
+  const bars = regionBars(arrangement);
+  const next = normaliseTrackRegion(region, bars);
+  if (sameTrackRegion(normaliseTrackRegion(track.region, bars), next)) return arrangement;
+  return {
+    ...arrangement,
+    tracks: arrangement.tracks.map((candidate) => {
+      if (candidate.id !== trackId) return candidate;
+      if (next === undefined) {
+        // Drop the field rather than storing the default span, so "never moved" and "moved back" are the same bytes.
+        const { region: _defaulted, ...rest } = candidate;
+        return rest;
+      }
+      return { ...candidate, region: next };
+    }),
+  };
+}
+
+/**
+ * Choosing takes — the whole-track choice and the per-range one the owner described ("recorded several times, and playback is one you chose, or one flattened from several").
+ *
+ * Both are the same model used at different granularity, and two properties matter more than the writes:
+ *
+ *   * **a region never overlaps another.** Choosing a take for a range splits any region it crosses rather than layering on top, because `resolveTakeForBar` reads the first match — overlapping regions
+ *     would make the audible result depend on array order, which is exactly the kind of invisible coupling that turns "it plays the wrong take" into an unreproducible report;
+ *   * **choosing a take that does not exist is refused**, not stored. A `selectedTakeId` naming nothing resolves to `undefined` and would silence the track while looking configured.
+ */
+/**
+ * Point a sampler track at a different instrument.
+ *
+ * `changeTrackKind` decides whether a track *may* hold a sample; this chooses *which* one it plays. Only a `sampler` track accepts it — on any other kind the field would be a claim that something sounds from a track whose kind
+ * says it does not, and the model keeps exactly one place where playing a catalogue asset is true.
+ */
+/**
+ * Turn one step of a track's own pattern on or off.
+ *
+ * The steps are the track's content, and until now nothing in the arrangement interface showed them: the rows carried a name, a kind, mute, solo and delete, so a new project was silent in the sense that nothing on screen accounted for
+ * what would be heard. Turning a step is therefore the smallest edit that makes the content both visible and the person's own.
+ *
+ * Refused for `fx` and `folder`: `defaultContentFor` gives them all-zero steps, and that is their definition rather than an omission — a folder makes no sound and an empty effect does nothing.
+ */
+export function toggleStep(arrangement: ArrangementV2, trackId: string, index: number): ArrangementV2 {
+  const track = arrangement.tracks.find((candidate) => candidate.id === trackId);
+  if (!track || track.kind === "fx" || track.kind === "folder") return arrangement;
+  const notes = arrangement.notesByTrack?.[trackId] ?? [];
+  /**
+   * **The grid is a view over notes**, so a toggle is a conversion in both directions rather than an array index flip. The step count is the grid the caller is looking at — sixteen unless the track already says otherwise — and the pitch of a new note is the
+   * track's existing lowest note when it has one, so toggling a drum row does not silently move it to middle C.
+   */
+  /**
+   * ⭐ **The bound is the arrangement's length**, not a fixed sixteen and not a function of how many notes there happen to be. The old expression divided the note *count* by four, which is a category mistake that survived because both readings gave sixteen for a one-bar pattern.
+   */
+  // ⭐ The bar's length comes from the arrangement's signature too, so the grid this edit writes into is the same one the compile builds. Two places computing a bar's length is how a corrected 3/4 grid would have met a sixteen-step one here.
+  const stepCount = stepCountFor(notes, arrangement.bars, stepsPerBarFor(arrangement.timeSignature));
+  const { steps, pitches } = stepsFromNotes(notes, stepCount);
+  if (index < 0 || index >= stepCount) return arrangement;
+  steps[index] = steps[index] ? 0 : 1;
+  const pitch = pitches.find((value) => value > 0) ?? 60;
+  const next = notesFromSteps(steps, { pitches: pitches.map((value) => (value > 0 ? value : pitch)), velocity: 100 });
+  return { ...arrangement, notesByTrack: { ...(arrangement.notesByTrack ?? {}), [trackId]: next } };
+}
+
+/**
+ * Set a track's whole step pattern at once — the drum grid's write.
+ *
+ * `toggleStep` is what a person does one square at a time; this is what a caller that already knows the pattern states, and a tool whose result depends on the order of its calls is not the kind this surface wants. The length is the caller's: a pattern is the
+ * steps it has, so this neither pads nor truncates. A step is **on when its value is non-zero**.
+ *
+ * It converts to notes rather than storing a grid, because notes are the model and the grid is a view. A step length is what a drum hit means here; a caller writing pitched music uses the note-level edits instead.
+ */
+export function setTrackSteps(arrangement: ArrangementV2, trackId: string, steps: readonly number[]): ArrangementV2 {
+  const track = arrangement.tracks.find((candidate) => candidate.id === trackId);
+  if (!track || track.kind === "fx" || track.kind === "folder") return arrangement;
+  const existing = arrangement.notesByTrack?.[trackId] ?? [];
+  const pitch = existing.length > 0 ? Math.min(...existing.map((note) => note.pitch)) : 60;
+  const normalised = steps.map((value) => (value ? 1 : 0));
+  return { ...arrangement, notesByTrack: { ...(arrangement.notesByTrack ?? {}), [trackId]: notesFromSteps(normalised, { velocity: 100, pitches: normalised.map(() => pitch) }) } };
+}
+
+/**
+ * Add one note — what a piano roll, a keyboard or a MIDI file writes.
+ *
+ * The refusal is the same as the grid's, for the same reason: an effect or folder track makes no sound, so a note on it would be content nothing accounts for.
+ */
+export function addTrackNote(arrangement: ArrangementV2, trackId: string, note: NoteEvent): ArrangementV2 {
+  const track = arrangement.tracks.find((candidate) => candidate.id === trackId);
+  if (!track || track.kind === "fx" || track.kind === "folder") return arrangement;
+  const notes = arrangement.notesByTrack?.[trackId] ?? [];
+  return { ...arrangement, notesByTrack: { ...(arrangement.notesByTrack ?? {}), [trackId]: addNote(notes, note) } };
+}
+
+/**
+ * ⭐ **A whole part in one call, because a part is not four thousand calls.**
+ *
+ * Muse measured this: 4176 notes through `add_arrangement_note` meant 4176 tool calls, a `MaxListenersExceededWarning`,
+ * and hours of wall clock — for one movement of one piece. Nothing about the model made that necessary; the loop was
+ * simply on the caller's side of the wire, where every iteration costs a round trip.
+ *
+ * It returns the same shape as its single-note neighbour and reports nothing itself, for the reason recorded on
+ * `removeTrackNote` below: the arrangement **is** the report — a caller compares note counts before and after, which is
+ * also how it discovers that a track of kind `fx` or `folder` swallowed the whole batch, since `addTrackNote` declines
+ * those silently. A batch that returns "ok" while adding nothing would be the worse shape.
+ */
+export function addTrackNotes(arrangement: ArrangementV2, trackId: string, notes: readonly NoteEvent[]): ArrangementV2 {
+  return notes.reduce((current, note) => addTrackNote(current, trackId, note), arrangement);
+}
+
+/** Remove a note at a position. Reported through the arrangement, so a caller can compare before and after. */
+export function removeTrackNote(arrangement: ArrangementV2, trackId: string, at: { pitch: number; startBeats: number }): ArrangementV2 {
+  const notes = arrangement.notesByTrack?.[trackId] ?? [];
+  return { ...arrangement, notesByTrack: { ...(arrangement.notesByTrack ?? {}), [trackId]: removeNote(notes, at) } };
+}
+
+/** Move a note in time and pitch — dragging it in the roll. Refused when the destination already holds a note. */
+export function moveTrackNote(
+  arrangement: ArrangementV2,
+  trackId: string,
+  from: { pitch: number; startBeats: number },
+  to: { pitch: number; startBeats: number }
+): ArrangementV2 {
+  const notes = arrangement.notesByTrack?.[trackId] ?? [];
+  return { ...arrangement, notesByTrack: { ...(arrangement.notesByTrack ?? {}), [trackId]: moveNote(notes, from, to) } };
+}
+
+/**
+ * ⭐ **Change one note's velocity** — the edit the roll had no gesture for. Clamped to 1..127 by `setNoteVelocity`, so a
+ * drag or a slider cannot write a value no synth will read.
+ */
+export function setTrackNoteVelocity(arrangement: ArrangementV2, trackId: string, at: { pitch: number; startBeats: number }, velocity: number): ArrangementV2 {
+  const notes = arrangement.notesByTrack?.[trackId] ?? [];
+  return { ...arrangement, notesByTrack: { ...(arrangement.notesByTrack ?? {}), [trackId]: setNoteVelocity(notes, at, velocity) } };
+}
+
+/** Change how long a note is held. A note shorter than a step is not visible in the grid, so one step is the floor. */
+export function setTrackNoteLength(arrangement: ArrangementV2, trackId: string, at: { pitch: number; startBeats: number }, lengthBeats: number): ArrangementV2 {
+  const notes = arrangement.notesByTrack?.[trackId] ?? [];
+  return { ...arrangement, notesByTrack: { ...(arrangement.notesByTrack ?? {}), [trackId]: setNoteLength(notes, at, lengthBeats) } };
+}
+
+/**
+ * ⭐ **Point a synth track at a preset** (fifth Web evaluation of v2.35.9, P2: *"非 sampler 軌道沒有樂器切換入口"*).
+ *
+ * This is the whole of the model half, and it is smaller than it looked. A synth track already carries `instrument`, and
+ * `resolveInstrumentPresetKey`'s **first** step is an exact, case-insensitive match against the preset keys — so a synth
+ * track that names `warmPad` in `instrument` already sounds through `warmPad`, with nothing for the engine to learn. The
+ * evaluation's gap is that no control could write that field, not that the field was missing.
+ *
+ * Only a `synth` track is touched: a drumkit's sound is its role (one built-in kit), and a sampler's is its `sample`, so
+ * writing an instrument name onto either would be the "looks like it works" control this project refuses.
+ */
+export function setTrackInstrument(arrangement: ArrangementV2, trackId: string, instrument: string): ArrangementV2 {
+  const wanted = instrument.trim();
+  return {
+    ...arrangement,
+    tracks: arrangement.tracks.map((track) =>
+      track.id === trackId && track.kind === "synth" && wanted !== "" ? { ...track, instrument: wanted } : track
+    ),
+  };
+}
+
+export function setTrackSample(arrangement: ArrangementV2, trackId: string, assetId: string): ArrangementV2 {
+  return {
+    ...arrangement,
+    tracks: arrangement.tracks.map((track) =>
+      track.id === trackId && track.kind === "sampler" ? { ...track, sample: { assetId } } : track
+    ),
+  };
+}
+
+/**
+ * File a finished capture onto a track.
+ *
+ * The missing half of recording. `RecordButtonV2` captured audio and, on success, did nothing with it — no take reached the track, so the take list stayed empty no matter how many times a person recorded. The capture itself was fine;
+ * nothing received it.
+ *
+ * The new take is selected, so it is the one heard rather than one the person has to find, and a capture that covered a bar range also claims that range through `assignTakeToRange` — reusing the splitting rule that keeps regions
+ * disjoint, rather than a second implementation of it here.
+ *
+ * Every kind accepts a take: recording is an input form rather than a track type, and the owner corrected an earlier design that treated it as one. What differs is what was recorded — audio for a sampler, a MIDI sequence for the others — and
+ * that is `Take.source`.
+ */
+export function addTake(arrangement: ArrangementV2, trackId: string, planned: PlannedTake): ArrangementV2 {
+  const track = arrangement.tracks.find((candidate) => candidate.id === trackId);
+  if (!track) return arrangement;
+  const withTake: ArrangementV2 = {
+    ...arrangement,
+    tracks: arrangement.tracks.map((candidate) =>
+      candidate.id === trackId
+        ? { ...candidate, takes: [...(candidate.takes ?? []), planned.take], selectedTakeId: planned.take.id }
+        : candidate
+    ),
+  };
+  return planned.region
+    ? assignTakeToRange(withTake, trackId, planned.region.startBar, planned.region.endBar, planned.take.id)
+    : withTake;
+}
+
+export function selectTrackTake(arrangement: ArrangementV2, trackId: string, takeId: string | undefined): ArrangementV2 {
+  return {
+    ...arrangement,
+    tracks: arrangement.tracks.map((track) => {
+      if (track.id !== trackId) return track;
+      // Refused rather than stored: a selection naming a take that is gone would resolve to nothing and silence the track while appearing configured.
+      if (takeId !== undefined && !(track.takes ?? []).some((take) => take.id === takeId)) return track;
+      return takeId === undefined ? { ...track, selectedTakeId: undefined } : { ...track, selectedTakeId: takeId };
+    }),
+  };
+}
+
+export function assignTakeToRange(arrangement: ArrangementV2, trackId: string, startBar: number, endBar: number, takeId: string): ArrangementV2 {
+  return {
+    ...arrangement,
+    tracks: arrangement.tracks.map((track) => {
+      if (track.id !== trackId) return track;
+      if (endBar <= startBar) return track;
+      if (!(track.takes ?? []).some((take) => take.id === takeId)) return track;
+
+      // ⭐ Split every region the new one crosses, so regions stay disjoint: an overlap would make the heard take depend on array order.
+      const kept: TakeRegion[] = [];
+      for (const region of track.takeRegions ?? []) {
+        if (region.endBar <= startBar || region.startBar >= endBar) {
+          kept.push(region);
+          continue;
+        }
+        if (region.startBar < startBar) kept.push({ ...region, endBar: startBar });
+        if (region.endBar > endBar) kept.push({ ...region, startBar: endBar });
+      }
+      kept.push({ startBar, endBar, takeId });
+      // Sorted by start so the stored order matches the musical order, which keeps a saved arrangement readable and a diff meaningful.
+      kept.sort((a, b) => a.startBar - b.startBar);
+      return { ...track, takeRegions: kept };
+    }),
+  };
+}
+
+/**
+ * ⭐ **A velocity ramp across a track's notes**, read from the older grid's behaviour: the notes are ordered by where they
+ * start, a single one takes the midpoint of the two ends, and many run linearly between them, clamped to the legal range.
+ * Notes are ordered by start so the ramp is a shape in time rather than in whatever order the map happened to hold.
+ */
+export function rampArrangementNoteVelocity(
+  arrangement: ArrangementV2,
+  trackId: string,
+  startVel = 40,
+  endVel = 120
+): ArrangementV2 {
+  const notes = arrangement.notesByTrack?.[trackId];
+  if (notes === undefined || notes.length === 0) return arrangement;
+  const ordered = [...notes].sort((a, b) => a.startBeats - b.startBeats);
+  const landed = ordered.map((note, index) => {
+    const velocity =
+      ordered.length === 1
+        ? Math.round((startVel + endVel) / 2)
+        : Math.round(startVel + (index / (ordered.length - 1)) * (endVel - startVel));
+    return { ...note, velocity: Math.max(1, Math.min(127, velocity)) };
+  });
+  return { ...arrangement, notesByTrack: { ...arrangement.notesByTrack, [trackId]: landed } };
+}
+
+/**
+ * ⭐ **Lengths onto the grid, and only lengths.** The older quantiser snaps a note's gate and never its start, which is what
+ * both its name and its code say; a snap of zero or less means nothing to snap to, so the arrangement is returned as it is.
+ */
+export function quantizeArrangementNoteLengths(
+  arrangement: ArrangementV2,
+  trackId: string,
+  snapBeats: number
+): ArrangementV2 {
+  const notes = arrangement.notesByTrack?.[trackId];
+  if (notes === undefined || notes.length === 0 || !(snapBeats > 0)) return arrangement;
+  const landed = notes.map((note) => {
+    const snapped = Math.round(note.lengthBeats / snapBeats) * snapBeats;
+    return { ...note, lengthBeats: Math.max(snapBeats, snapped) };
+  });
+  return { ...arrangement, notesByTrack: { ...arrangement.notesByTrack, [trackId]: landed } };
+}
+
+/**
+ * ⭐ **The notes inside a rectangle, in beats and pitches.** Both axes are normalised first, so a drag in any direction means
+ * the same rectangle — the older grid's rule, with steps replaced by where a note starts.
+ */
+export interface NoteRect {
+  fromBeats: number;
+  toBeats: number;
+  pitchFrom: number;
+  pitchTo: number;
+}
+
+export function notesWithinRect(notes: readonly NoteEvent[], rect: NoteRect): NoteEvent[] {
+  const lo = Math.min(rect.fromBeats, rect.toBeats);
+  const hi = Math.max(rect.fromBeats, rect.toBeats);
+  const pitchLo = Math.min(rect.pitchFrom, rect.pitchTo);
+  const pitchHi = Math.max(rect.pitchFrom, rect.pitchTo);
+  return notes.filter((note) => note.startBeats >= lo && note.startBeats <= hi && note.pitch >= pitchLo && note.pitch <= pitchHi);
+}
+
+/**
+ * ⭐ **A region copied to where it is put.** The older grid's copy shifts a selection by a delta, drops whatever falls outside
+ * the arrangement, and replaces what it lands on, so a copy cannot silently stack a stranger's notes; the copies come back.
+ */
+export function duplicateNotesByDelta(
+  arrangement: ArrangementV2,
+  trackId: string,
+  rect: NoteRect,
+  deltaBeats: number
+): { arrangement: ArrangementV2; copied: NoteEvent[] } {
+  const notes = arrangement.notesByTrack?.[trackId] ?? [];
+  const within = notesWithinRect(notes, rect);
+  const endBeats = (arrangement.bars ?? 4) * 4;
+  const copies = within
+    .map((note) => ({ ...note, startBeats: note.startBeats + deltaBeats }))
+    .filter((note) => note.startBeats >= 0 && note.startBeats < endBeats);
+  if (copies.length === 0) return { arrangement, copied: [] };
+  const landed = new Set(copies.map((note) => `${note.pitch}@${note.startBeats}`));
+  const kept = notes.filter((note) => !landed.has(`${note.pitch}@${note.startBeats}`));
+  return {
+    arrangement: { ...arrangement, notesByTrack: { ...arrangement.notesByTrack, [trackId]: [...kept, ...copies] } },
+    copied: copies,
+  };
+}
+
+/** ⭐ **The rectangle's notes removed, and nothing else touched.** */
+export function removeNotesWithinRect(arrangement: ArrangementV2, trackId: string, rect: NoteRect): ArrangementV2 {
+  const notes = arrangement.notesByTrack?.[trackId];
+  if (notes === undefined || notes.length === 0) return arrangement;
+  const doomed = new Set(notesWithinRect(notes, rect));
+  const kept = notes.filter((note) => !doomed.has(note));
+  return { ...arrangement, notesByTrack: { ...arrangement.notesByTrack, [trackId]: kept } };
+}
+
+/**
+ * ⭐ **Legato: every selected note reaches the next one.** The older grid's rule, in beats: a note is extended to the next
+ * sounding start, or to the loop's end when nothing follows, and it shortens when the next note is closer than the note is
+ * long — that is what the word means. The ceiling is the distance itself unless a caller names a smaller one, because this
+ * layer has no audio-path gate limit to inherit.
+ */
+export function legatoNotesInRect(
+  arrangement: ArrangementV2,
+  trackId: string,
+  rect: NoteRect,
+  options: {
+    loopEndBeats?: number;
+    maxLengthBeats?: number;
+    minLengthBeats?: number;
+    /** ⭐ **Exactly these notes.** Marks are a set, and a rectangle can hold notes nobody marked — so a caller with marks says so. */
+    only?: readonly { pitch: number; startBeats: number }[];
+  } = {}
+): ArrangementV2 {
+  const notes = arrangement.notesByTrack?.[trackId];
+  if (notes === undefined || notes.length === 0) return arrangement;
+  const targets = new Set(
+    options.only === undefined
+      ? notesWithinRect(notes, rect)
+      : notes.filter((note) =>
+          options.only!.some((mark) => mark.pitch === note.pitch && mark.startBeats === note.startBeats)
+        )
+  );
+  if (targets.size === 0) return arrangement;
+  const sounding = [...new Set(notes.map((note) => note.startBeats))].sort((a, b) => a - b);
+  const fallbackEnd = options.loopEndBeats ?? (arrangement.bars ?? 4) * 4;
+  const floor = options.minLengthBeats ?? 0.1;
+  const landed = notes.map((note) => {
+    if (!targets.has(note)) return note;
+    const later = sounding.filter((start) => start > note.startBeats);
+    const boundary = later.length > 0 ? later[0]! : fallbackEnd;
+    const reach = Math.max(floor, boundary - note.startBeats);
+    const ceiling = options.maxLengthBeats ?? reach;
+    return { ...note, lengthBeats: Math.max(floor, Math.min(ceiling, reach)) };
+  });
+  return { ...arrangement, notesByTrack: { ...arrangement.notesByTrack, [trackId]: landed } };
+}
+
+/**
+ * ⭐ **Arpeggio: a chord laid out one note at a time.** The older grid takes the notes that share a start, leaves a group of
+ * one alone, orders the rest by pitch and steps them forward by an interval in the chosen direction, dropping whatever runs
+ * past the end and replacing whatever already sits where a note lands. A note's length is capped at eight tenths of a step,
+ * which is the older rule carried into beats.
+ */
+export function arpeggiateNotesInRect(
+  arrangement: ArrangementV2,
+  trackId: string,
+  rect: NoteRect,
+  options: {
+    direction?: "up" | "down" | "updown";
+    stepBeats?: number;
+    /** ⭐ **Exactly these notes.** Marks are a set; a rectangle can hold notes nobody marked. */
+    only?: readonly { pitch: number; startBeats: number }[];
+  } = {}
+): ArrangementV2 {
+  const notes = arrangement.notesByTrack?.[trackId];
+  if (notes === undefined || notes.length === 0) return arrangement;
+  const targets =
+    options.only === undefined
+      ? notesWithinRect(notes, rect)
+      : notes.filter((note) => options.only!.some((mark) => mark.pitch === note.pitch && mark.startBeats === note.startBeats));
+  if (targets.length < 2) return arrangement;
+  const direction = options.direction ?? "up";
+  const stepBeats = options.stepBeats ?? 0.25;
+  const endBeats = (arrangement.bars ?? 4) * 4;
+  const starts = [...new Set(targets.map((note) => note.startBeats))].sort((a, b) => a - b);
+  let working = [...notes];
+  for (const start of starts) {
+    const group = targets.filter((note) => note.startBeats === start);
+    if (group.length <= 1) continue;
+    const doomed = new Set(group);
+    working = working.filter((note) => !doomed.has(note));
+    const up = [...group].sort((a, b) => a.pitch - b.pitch);
+    const sequence =
+      direction === "up" ? up : direction === "down" ? [...up].reverse() : [...up, ...up.slice(1, -1).reverse()];
+    sequence.forEach((note, index) => {
+      const at = start + index * stepBeats;
+      if (at >= endBeats) return;
+      working = working.filter((candidate) => !(candidate.startBeats === at && candidate.pitch === note.pitch));
+      working.push({ ...note, startBeats: at, lengthBeats: Math.min(note.lengthBeats, 0.8 * stepBeats) });
+    });
+  }
+  return { ...arrangement, notesByTrack: { ...arrangement.notesByTrack, [trackId]: working } };
+}
+
+/** ⭐ **The seven shapes a stamp can place.** The older grid's own union, named here so the arrangement does not import it. */
+export type ChordStampTypeV2 = "note" | "triad" | "seventh" | "ninth" | "sus4" | "sus2" | "power";
+
+/**
+ * ⭐ **A chord stamped where the rectangle starts.** The older grid's rule: a step outside the pattern is left alone, a single
+ * note takes the plain path, and any other shape replaces whatever sits on the step it lands on. Two shapes state their
+ * intervals outright; the rest come from the audio layer's voicing helper, which holds no grid types and is already shared
+ * between the engine and the data layer.
+ */
+export function stampChordInRect(
+  arrangement: ArrangementV2,
+  trackId: string,
+  rect: NoteRect,
+  options: {
+    type: ChordStampTypeV2;
+    rootMidi: number;
+    velocity?: number;
+    lengthBeats?: number;
+    scale?: string;
+    /** ⭐ **Exactly these notes.** Marks are a set; a rectangle can hold notes nobody marked. */
+    only?: readonly { pitch: number; startBeats: number }[];
+  }
+): ArrangementV2 {
+  const notes = arrangement.notesByTrack?.[trackId] ?? [];
+  const start = options.only?.[0]?.startBeats ?? rect.fromBeats;
+  if (start < 0 || start >= (arrangement.bars ?? 4) * 4) return arrangement;
+  const root = Math.round(options.rootMidi);
+  const velocity = Math.max(1, Math.min(127, options.velocity ?? 100));
+  const lengthBeats = Math.max(0.05, options.lengthBeats ?? 0.5);
+  const pitches =
+    options.type === "note"
+      ? [root]
+      : options.type === "ninth"
+        ? [root, root + 4, root + 7, root + 11, root + 14]
+        : options.type === "sus2"
+          ? [root, root + 2, root + 7]
+          : chordVoicingForStep(root, options.scale, {
+              style:
+                options.type === "triad"
+                  ? "triad"
+                  : options.type === "seventh"
+                    ? "seventh"
+                    : options.type === "sus4"
+                      ? "sus"
+                      : "power",
+            });
+  const kept = notes.filter((note) => note.startBeats !== start);
+  const stamped = [...new Set(pitches.map((pitch) => Math.round(pitch)))].map((pitch) => ({
+    pitch,
+    startBeats: start,
+    lengthBeats,
+    velocity,
+  }));
+  return { ...arrangement, notesByTrack: { ...arrangement.notesByTrack, [trackId]: [...kept, ...stamped] } };
+}
+
+/**
+ * ⭐ **A ramp that scales what is there, and only inside a range.**
+ *
+ * The arrangement forms ask a section to grow from one factor to another — `[0.3, 0.7]` — and a factor is not a velocity: it
+ * multiplies the notes the composer wrote, so the shape of their dynamics survives the ramp. Notes outside the range are returned
+ * untouched, and a factor of exactly one leaves the range as it found it, which is what makes the operation reversible.
+ */
+export function rampVelocityInRange(
+  arrangement: ArrangementV2,
+  trackId: string,
+  fromBeats: number,
+  toBeats: number,
+  fromFactor: number,
+  toFactor: number
+): ArrangementV2 {
+  const notes = arrangement.notesByTrack?.[trackId];
+  if (notes === undefined || notes.length === 0) return arrangement;
+  const span = toBeats - fromBeats;
+  const landed = notes.map((note) => {
+    if (note.startBeats < fromBeats || note.startBeats >= toBeats) return note;
+    const at = span > 0 ? (note.startBeats - fromBeats) / span : 0;
+    const factor = fromFactor + at * (toFactor - fromFactor);
+    return { ...note, velocity: Math.max(1, Math.min(127, Math.round(note.velocity * factor))) };
+  });
+  return { ...arrangement, notesByTrack: { ...arrangement.notesByTrack, [trackId]: landed } };
+}
+
+/**
+ * ⭐ **A transposition that applies to a span, and only to that span.**
+ *
+ * The older editor transposed a section; an arrangement has parts rather than sections, so the operation is stated over a bar
+ * range and states the rule the older note helper also stated: the result is clamped to the MIDI range rather than wrapped, and zero semitones is the identity, which is what makes the move reversible by moving it back.
+ */
+export function transposeNotesInRange(
+  arrangement: ArrangementV2,
+  trackId: string,
+  fromBeats: number,
+  toBeats: number,
+  semitones: number
+): ArrangementV2 {
+  const notes = arrangement.notesByTrack?.[trackId];
+  if (notes === undefined || notes.length === 0) return arrangement;
+  const delta = Math.round(Number.isFinite(semitones) ? semitones : 0);
+  const landed = notes.map((note) => {
+    if (note.startBeats < fromBeats || note.startBeats >= toBeats) return note;
+    if (delta === 0) return { ...note };
+    return { ...note, pitch: Math.min(127, Math.max(1, note.pitch + delta)) };
+  });
+  return { ...arrangement, notesByTrack: { ...arrangement.notesByTrack, [trackId]: landed } };
+}
+
+/**
+ * ⭐ **A variation of a track's notes, as a pure function of the notes and a source of chance.**
+ *
+ * The studio's version of this worked on a step grid: it cloned a `DrumPattern` and rolled dice over its arrays. The arrangement
+ * has no step grid -- notes are pitched, placed in beats and held for a length -- so the same idea is written against notes
+ * instead of being bridged back through a pattern that this model does not keep. The scales came with it, because they are music
+ * theory rather than a property of the older sequencer.
+ *
+ * **`random` is a parameter rather than a call to `Math.random` inside.** A variation is chance by nature, and a criterion for
+ * chance would be flaky; a caller that wants a fixed result passes a seeded source, and the interface passes nothing at all.
+ */
+const VARIATION_SCALES: Record<string, number[]> = {
+  minorPentatonic: [0, 3, 5, 7, 10],
+  dorian: [0, 2, 3, 5, 7, 9, 10],
+  naturalMinor: [0, 2, 3, 5, 7, 8, 10],
+  major: [0, 2, 4, 5, 7, 9, 11],
+  blues: [0, 3, 5, 6, 7, 10],
+};
+
+export type VariationIntensity = "subtle" | "medium" | "wild";
+
+export interface VaryNotesOptions {
+  intensity?: VariationIntensity;
+  /** ⭐ Which scale the melodic notes are moved within. Unknown names read as the minor pentatonic. */
+  scale?: keyof typeof VARIATION_SCALES;
+  /** ⭐ Injected so a criterion can ask for one exact variation and a caller can ask for a different one each time. */
+  random?: () => number;
+}
+
+export function varyArrangementNotes(
+  arrangement: ArrangementV2,
+  trackId: string,
+  options: VaryNotesOptions = {}
+): ArrangementV2 {
+  const notes = arrangement.notesByTrack?.[trackId];
+  if (notes === undefined || notes.length === 0) return arrangement;
+
+  const intensity = options.intensity ?? "medium";
+  const random = options.random ?? Math.random;
+  // The thresholds are the studio's own: how likely a note is to be touched at each setting.
+  const threshold = intensity === "subtle" ? 0.25 : intensity === "medium" ? 0.5 : 0.8;
+  const scale = VARIATION_SCALES[options.scale ?? "minorPentatonic"] ?? VARIATION_SCALES.minorPentatonic;
+
+  const landed = notes.map((note) => {
+    if (random() >= threshold) return note;
+    /**
+     * ⭐ **The lowest note keeps its place.** In a drum part that is the kick, and moving it turns a groove into a different one;
+     * the studio called the same rule `preserveKick`, and it is written here as "the lowest pitch in the part" because an
+     * arrangement track does not carry a role of its own.
+     */
+    const lowest = Math.min(...notes.map((candidate) => candidate.pitch));
+    if (note.pitch === lowest) return note;
+
+    // A step within the scale, upwards or downwards, taken from the chance source.
+    const step = random() < 0.5 ? -1 : 1;
+    const index = scale.indexOf(((note.pitch % 12) + 12) % 12);
+    const degree = index === -1 ? 0 : index;
+    const nextDegree = (degree + step + scale.length) % scale.length;
+    const octave = Math.floor(note.pitch / 12) * 12;
+    const pitch = Math.max(0, Math.min(127, octave + scale[nextDegree]!));
+    // And a touch of dynamics, so the variation is not only pitch.
+    const velocity = Math.max(1, Math.min(127, note.velocity + (step > 0 ? 10 : -10)));
+    return { ...note, pitch, velocity };
+  });
+  return { ...arrangement, notesByTrack: { ...arrangement.notesByTrack, [trackId]: landed } };
+}

@@ -1,0 +1,39 @@
+/**
+ * Skin palette source: "sovietYears" — 苏联年代 (the Soviet-era paper look).
+ *
+ * **A source, not a stylesheet.** Nothing imports this file, so no selector here ever ships to a
+ * browser: it is the one place the skin's values are written, and `scripts/desktop_skins.mjs` reads
+ * it (`npm run skins:gen` writes, `npm run check:skins` verifies) to derive the desktop's `--d-*`
+ * palette. See `minimal.css` for why the palette moved out of the deleted phone shell.
+ *
+ * A light skin: printed-paper ground, black ink, a red accent. The faint two-axis ruling is the
+ * paper's own texture and is part of the palette block because the generator copies the ground
+ * paint as well as the tokens.
+ */
+:root[data-skin="sovietYears"] {
+  --m-bg: #f4f1e1;
+  --m-card: #ece7d6;
+  --m-card-2: #ded7bf;
+  --m-line: #c9c3ad;
+  --m-line-2: #8f8a76;
+  --m-ink: #111111;
+  --m-ink-2: #3d3a33;
+  --m-ink-3: #56514a;
+  --m-on-gold: #f4f1e1;
+  --m-font-display: "Russo One", "PingFang SC", "HarmonyOS Sans", "Noto Sans SC", "Impact", sans-serif;
+  --m-font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  --m-teal: #1f5f6b;
+  --m-red: #9e0b22;
+  --m-green: #1c5c2e;
+  --m-violet: #3b3f6b;
+  --m-gold: #cc0000;
+  --m-gold-hi: #ffd700;
+  --m-warning: #8a4d00;
+  --m-gold-rgb: 204 0 0;
+  background-color: var(--m-bg);
+  background-image: repeating-linear-gradient(0deg, rgba(17, 17, 17, 0.028) 0 1px, transparent 1px 3px), repeating-linear-gradient(90deg, rgba(17, 17, 17, 0.022) 0 1px, transparent 1px 4px);
+  background-attachment: fixed;
+  color: var(--m-ink);
+  font-family: var(--m-font-display);
+  -webkit-font-smoothing: antialiased;
+}

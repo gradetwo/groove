@@ -1,0 +1,25 @@
+{
+  "version": "2.37.5",
+  "releaseDate": "2026-10-12",
+  "changelogCount": 10,
+  "latest": {
+    "version": "2.37.5",
+    "date": "2026-10-12",
+    "category": "refactor",
+    "title": {
+      "zh": "可视化循环节流并在空闲停帧",
+      "en": "Throttle the visualiser loops and stop them when idle"
+    },
+    "highlights": [
+      {
+        "zh": "5 处可视化循环（VinylCanvas、两个示波器、PhosphorOscilloscope、ConsolePanel 电平表）在移动/触屏节流到约 40 FPS，Header 可视化空闲时彻底停帧。",
+        "en": "Five visualiser loops (VinylCanvas, both scopes, PhosphorOscilloscope, the ConsolePanel meters) are throttled to about 40 FPS on mobile/touch, and the Header visualiser stops entirely when idle."
+      },
+      {
+        "zh": "新增确定性判据：播放时每帧仍排队（节流而非冻死）、空闲时从不排队；把排队移到节流检查之后即变红。120Hz 帧率本机未测。",
+        "en": "A deterministic gate now pins that the loop is re-armed every frame while playing (throttled, not dead) and never while idle; moving the re-arm after the throttle check turns it red. No 120 Hz frame rate was measured here."
+      }
+    ],
+    "truncated": false
+  }
+}

@@ -1,0 +1,237 @@
+#!/usr/bin/env node
+/**
+ * Groove Lab MCP server (stdio).
+ *
+ * Build it with `npm run mcp:build` (esbuild → `dist-mcp/groove-mcp.mjs`), run it with `npm run mcp`, or point an
+ * MCP client's `command` at the bundle. See `docs/MCP.md` for the surface and `mcp/README.md` for client config.
+ *
+ * The split of concerns is deliberate: this file only wires the registry to the protocol. The tools themselves
+ * are plain functions with unit tests (`src/test/mcpTools.test.ts`), which is why a tool can be tested without
+ * starting a server and the server can be smoke-tested without a browser.
+ */
+import { z } from "zod";
+import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
+import type { RequestHandlerExtra } from "@modelcontextprotocol/sdk/shared/protocol.js";
+import type { ServerNotification, ServerRequest } from "@modelcontextprotocol/sdk/types.js";
+import { PROMPTS, RESOURCES, TOOLS, failure, json } from "./registry";
+import { installRendererLifecycle } from "./render/worker";
+import { unknownArguments } from "./toolKit";
+import { createRenderProgress } from "./render/progress";
+import { installStdioGuards } from "./stdioChannel";
+
+const VERSION = process.env.GROOVE_MCP_VERSION || "1.0.0";
+
+export function createServer(): McpServer {
+  const server = new McpServer(
+    { name: "groove-lab", version: VERSION },
+    {
+      instructions: [
+        "Groove Lab is a genre library and an arrangement studio: 159 genres with their real material, a v2 arrangement",
+        "surface (tracks, notes, instruments, takes, mixing), exporters (WAV/MP3/MIDI/MusicXML/Ableton/Logic) and audio measurement.",
+        "",
+        "Typical flow: search_genres or list_genres → get_genre (the recorded facts) → create_arrangement (seed from the genre)",
+        "→ add_arrangement_track / add_arrangement_notes (compose) → render_arrangement and export_* (hand it to a human).",
+        "",
+        "Everything except the render tools runs without a browser. The library is read-only: create_arrangement makes a new",
+        "arrangement and never edits a genre.",
+      ].join("\n"),
+    }
+  );
+
+  for (const tool of TOOLS) {
+    server.registerTool(
+      tool.name,
+      {
+        title: tool.title,
+        description: tool.description,
+        inputSchema: tool.inputSchema,
+        annotations: {
+          readOnlyHint: tool.readOnly,
+          // The one tool that writes a file: destructive only in the sense that it creates one.
+          destructiveHint: !tool.readOnly,
+          openWorldHint: false,
+        },
+      },
+      async (args: Record<string, unknown>, extra: RequestHandlerExtra<ServerRequest, ServerNotification>) => {
+        try {
+          /**
+           * **Progress exists only because the caller asked for it.**
+           *
+           * MCP carries the opt-in in the request's `_meta.progressToken` and the SDK hands the handler the whole
+           * `extra` — token, and a `sendNotification` bound to *this* request. `createRenderProgress` is what turns
+           * those two into a reporter, and it returns `undefined` when there is no token, so a handler cannot
+           * accidentally narrate a request nobody asked about. The token is echoed back in every notification, which
+           * is how a client with several calls in flight tells them apart.
+           *
+           * This is not a courtesy: a client that sees `notifications/progress` does not treat a long render as a
+           * hang, and the SDK's own client resets its request timeout on progress when it is configured to
+           * (`resetTimeoutOnProgress`), which is the mechanism that lets a 445-511 s eight-bar render survive a
+           * timeout the caller set for short calls.
+           */
+          /** ⭐ A trace for the "no notifications arrived" question: did the server even see a token, and did it send? */
+          if (process.env.GROOVE_TRACE_PROGRESS === "1") {
+            console.error(`PROGRESS-TRACE token=${String(extra?._meta?.progressToken)} tool=${String((args as { __tool?: unknown }).__tool ?? "")}`);
+          }
+          const progress = createRenderProgress(extra?._meta?.progressToken, (token, value, total, message) => {
+            if (process.env.GROOVE_TRACE_PROGRESS === "1") console.error(`PROGRESS-SEND token=${String(token)} value=${value} total=${String(total)}`);
+            void extra
+              .sendNotification({
+                method: "notifications/progress",
+                params: {
+                  progressToken: token,
+                  progress: value,
+                  ...(total !== undefined ? { total } : {}),
+                  message,
+                },
+              })
+              .catch((error: unknown) => {
+                /**
+                 * A disconnected client is not a failed render: the work still finishes and the result is still written.
+                 * ⭐ But the error is *said* under `GROOVE_TRACE_PROGRESS`, because a swallowed send failure is exactly
+                 * how "the tool promises progress and no notification ever arrives" looks from the outside.
+                 */
+                if (process.env.GROOVE_TRACE_PROGRESS === "1") console.error("PROGRESS-SEND-FAILED", error);
+              });
+          });
+          const context = { ...(progress ? { progress } : {}) };
+          const result = await tool.handler(args ?? {}, context);
+          // Handlers may return a ready-made MCP result (a failure) or plain data.
+          if (result && typeof result === "object" && "content" in (result as Record<string, unknown>)) {
+            return result as { content: Array<{ type: "text"; text: string }> };
+          }
+          /**
+           * ⭐ **Say which arguments this tool never declared** (MCP deep test of v2.35.9): `path` instead of
+           * `outputDir` + `filename` was dropped by the schema without a word, and the file went to a temporary directory
+           * the caller never named. A reply that echoes the ignored keys is the difference between a mystery and a typo.
+           */
+          const unknown = unknownArguments(tool.inputSchema, (args ?? {}) as Record<string, unknown>);
+          if (unknown.length === 0) return json(result);
+          const warned =
+            result && typeof result === "object"
+              ? { ...(result as Record<string, unknown>), unknownArgs: unknown, unknownArgsNote: `this tool does not declare ${unknown.join(", ")} — those arguments were ignored` }
+              : { result, unknownArgs: unknown, unknownArgsNote: `${tool.name} does not declare ${unknown.join(", ")} — those arguments were ignored` };
+          return json(warned);
+        } catch (error) {
+          return failure(`${tool.name} failed: ${(error as Error).message}`);
+        }
+      }
+    );
+  }
+
+  for (const resource of RESOURCES) {
+    server.registerResource(
+      resource.name,
+      resource.uri,
+      { title: resource.name, description: resource.description, mimeType: resource.mimeType },
+      async (uri: URL) => {
+        // `groove://genre/{id}` carries its id in the path; fixed resources ignore it.
+        const id = uri.pathname?.replace(/^\//, "") || uri.hostname;
+        return { contents: [{ uri: uri.href, mimeType: resource.mimeType, text: resource.read(id) }] };
+      }
+    );
+  }
+
+  for (const prompt of PROMPTS) {
+    server.registerPrompt(
+      prompt.name,
+      {
+        title: prompt.title,
+        description: prompt.description,
+        argsSchema: Object.fromEntries(
+          prompt.arguments.map((argument) => [
+            argument.name,
+            argument.required
+              ? z.string().describe(argument.description)
+              : z.string().optional().describe(argument.description),
+          ])
+        ),
+      },
+      (args) => ({
+        messages: [
+          {
+            role: "user" as const,
+            content: { type: "text" as const, text: prompt.build((args ?? {}) as Record<string, string>) },
+          },
+        ],
+      })
+    );
+  }
+
+  return server;
+}
+
+async function main(): Promise<void> {
+  const server = createServer();
+  /**
+   * **The protocol channel is guarded before the transport can write a byte of it.**
+   *
+   * A client that gives up on a long render can close its side of the pipe while the render is still running; the
+   * reply then fails with `EPIPE`, which an unguarded `process.stdout` turns into an uncaught exception and a dead
+   * server. `installStdioGuards` returns the writer the transport must use: it installs the missing `error`
+   * listener, refuses to die, and names every reply it could not deliver (with the render's own file path) on
+   * stderr. The full reasoning is in `mcp/stdioChannel.ts`.
+   *
+   * Installed here rather than at module scope for the same reason as the lifecycle below: a test imports
+   * `createServer`, and a module-scope listener on the test process's stdout would outlive the test.
+   */
+  const protocol = installStdioGuards();
+  const transport = new StdioServerTransport(process.stdin, protocol);
+  /**
+   * Close the browser and the dev server on every path this process can leave by — client disconnect, signal, and a
+   * synchronous last resort for the Vite child. The reasoning, and the measurement that made it necessary, are in
+   * `installRendererLifecycle`.
+   *
+   * Installed here rather than at module scope **on purpose**: `createServer` is imported by
+   * `src/test/mcpSchemaPassthrough.test.ts`, and a module-scope `stdin` `end` listener would let a test run's own
+   * stdin closing exit the test process.
+   */
+  installRendererLifecycle();
+  await server.connect(transport);
+  // Never write to stdout: it is the protocol channel. Diagnostics go to stderr.
+  console.error(`groove-lab MCP server ready (${TOOLS.length} tools, ${RESOURCES.length} resources, ${PROMPTS.length} prompts)`);
+}
+
+/**
+ * ⭐ **The hidden span mode: one span, one process, no protocol.**
+ *
+ * `mcp/render/spanHosts.ts` starts these processes to render a long piece K spans at a time — measured at 3.90× the
+ * throughput of one (`scratch/node-host-scaling.mjs`). It is the same bundle rather than a second entry point because
+ * the bundle is what can import the app's own renderer outside the dev server. Nothing about the protocol path
+ * changes: this runs before `main()` and exits without touching stdin.
+ */
+const isEntryPoint = process.argv[1] && import.meta.url.endsWith(process.argv[1].split("/").pop() ?? "");
+if (isEntryPoint || process.env.GROOVE_MCP_FORCE_MAIN === "1") {
+  const job = process.env.GROOVE_SPAN_JOB;
+  if (process.env.GROOVE_SELF_AB === "1") {
+    import("./render/spanRunner")
+      .then(({ runSelfAb }) => runSelfAb())
+      .then(() => process.exit(0))
+      .catch((error) => {
+        console.error(error);
+        process.exit(1);
+      });
+  } else if (process.env.GROOVE_ANALYSIS_JOB) {
+    /** ⭐ The analysis child: one file, one reply on stdout, then exit (F07's second half — see `render/analysisJob.ts`). */
+    import("./render/analysisJob")
+      .then(({ runAnalysisJob }) => runAnalysisJob())
+      .then(() => process.exit(0))
+      .catch((error) => {
+        console.error(error);
+        process.exit(1);
+      });
+  } else if (job) {
+    import("./render/spanRunner")
+      .then(({ runSpanJob }) => runSpanJob(job))
+      .then(() => process.exit(0))
+      .catch((error) => {
+        console.error(error);
+        process.exit(1);
+      });
+  } else {
+    main().catch((error) => {
+      console.error(error);
+      process.exit(1);
+    });
+  }
+}

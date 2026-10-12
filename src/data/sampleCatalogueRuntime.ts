@@ -1,0 +1,125 @@
+/**
+ * The catalogue, fetched at runtime from the mirror — the piece that turns a manifest in the repository into assets the player can resolve.
+ *
+ * Until now the catalogue was a constant that shipped **empty** and the three consumers (the loader, the lane planner, the lane scheduler) defaulted to it. That was deliberate: the
+ * slice was read-only and nothing in the app called it. This module is the first half of wiring it up — fetch, parse, cache — and it keeps the same discipline the sample loader
+ * already uses:
+ *
+ *   * **single-flight**: two callers asking at once share one fetch, because a manifest is not worth downloading twice;
+ *   * **failure is not cached**: a network failure is reported and the next attempt tries again, because caching a failure turns a transient outage into a permanent one;
+ *   * **never throws for a bad manifest**: problems are returned alongside whatever assets could be resolved, so a partly-broken manifest still plays what it can.
+ *
+ * A root that is empty or absent leaves the catalogue empty, which is exactly today's behaviour — so wiring this in cannot change anything until a root is configured.
+ */
+import type { SampleAsset } from "./sampleCatalogue";
+import { catalogueFromManifestText } from "./sampleCatalogue";
+import { storedUserLibraries } from "./userLibraryStore";
+
+export interface CatalogueRuntime {
+  /** The assets resolved so far — empty until `load` succeeds. */
+  assets: readonly SampleAsset[];
+  /** Everything that went wrong, named by entry and file. */
+  problems: readonly string[];
+  /** True once a load has completed successfully; the UI uses this rather than guessing. */
+  ready: boolean;
+  /** Whether a mirror root is configured at all — "not set up" and "set up and broken" are different states to report. */
+  configured: boolean;
+  /** True while a fetch is in flight, so an interface can say "loading" instead of "nothing yet". */
+  loading: boolean;
+  load(): Promise<{ assets: SampleAsset[]; problems: string[] }>;
+}
+
+export interface CatalogueRuntimeOptions {
+  /** Where the mirror lives, e.g. `https://samples.example/groove`. Empty means the catalogue stays empty. */
+  root?: string;
+  /** Where the manifest lives. Defaults to the copy this repository ships. */
+  manifestUrl?: string;
+  fetchImpl?: (url: string) => Promise<{ ok: boolean; status: number; text(): Promise<string> }>;
+}
+
+export function createCatalogueRuntime(options: CatalogueRuntimeOptions = {}): CatalogueRuntime {
+  const root = options.root ?? "";
+  const manifestUrl = options.manifestUrl ?? "/samples/manifest.json";
+  const fetchImpl = options.fetchImpl ?? ((url: string) => fetch(url));
+
+  let assets: SampleAsset[] = [];
+  let problems: string[] = [];
+  let ready = false;
+  let inFlight: Promise<{ assets: SampleAsset[]; problems: string[] }> | null = null;
+
+  const load = async () => {
+    // No root means no mirror to resolve against, so the honest answer is an empty catalogue rather than a fetch that cannot work.
+    if (!root) return { assets: [], problems: [] };
+    if (inFlight) return inFlight;
+
+    inFlight = (async () => {
+      try {
+        const response = await fetchImpl(manifestUrl);
+        if (!response.ok) {
+          // Reported, and **not** cached: a 404 from a mistyped root must not become permanent.
+          problems = [`manifest: ${response.status} from ${manifestUrl}`];
+          return { assets: [], problems: [...problems] };
+        }
+        /**
+         * ⭐ **The creator's own libraries join the catalogue here, and this is the only line that does it.**
+         *
+         * They are read from `localStorage` and handed to the same `catalogueFromManifestText` the MCP surface
+         * uses, which merges them **before** `sampleAssetsFromManifest` runs `withProgramIds`. That position is
+         * what keeps the promise the whole feature rests on: one place makes asset ids, one resolver turns a
+         * note into a region, and a library someone added is subject to both rather than being a second kind of
+         * instrument. Nothing downstream needs to know the library came from a person.
+         *
+         * Read at load rather than cached at module scope, so registering a library takes effect on the next
+         * catalogue build without a reload of the module graph.
+         */
+        const parsed = catalogueFromManifestText(await response.text(), root, storedUserLibraries());
+        assets = parsed.assets;
+        problems = parsed.problems;
+        ready = true;
+        return { assets: parsed.assets, problems: parsed.problems };
+      } catch (error) {
+        problems = [`manifest: ${error && (error as Error).message ? (error as Error).message : String(error)}`];
+        return { assets: [], problems: [...problems] };
+      } finally {
+        // Cleared whether it succeeded or failed, which is what makes a retry possible.
+        inFlight = null;
+      }
+    })();
+
+    return inFlight;
+  };
+
+  return {
+    get assets() {
+      return assets;
+    },
+    /** Whether a mirror root is configured at all — the difference between "not set up" and "set up and broken". */
+    get configured() {
+      return root !== "";
+    },
+    /** True while a fetch is in flight, so an interface can say "loading" rather than "nothing yet". */
+    get loading() {
+      return inFlight !== null;
+    },
+    get problems() {
+      return problems;
+    },
+    get ready() {
+      return ready;
+    },
+    load,
+  };
+}
+
+/**
+ * The application's one catalogue runtime.
+ *
+ * One instance rather than one per caller: the manifest is fetched once per session, and the engine, the offline render and any future UI must all see the **same** assets — otherwise one
+ * of them resolves an instrument while another reports it missing, which is the "two places, one thing" failure this workstream has hit five times.
+ *
+ * The root comes from `VITE_SAMPLE_ROOT` and **defaults to empty**, which is the state the runtime treats as "no mirror configured": it fetches nothing and the catalogue stays empty.
+ * That is what makes wiring this into the engine a change that cannot alter behaviour until a mirror is configured and populated.
+ */
+export const appCatalogueRuntime = createCatalogueRuntime({
+  root: typeof import.meta !== "undefined" && import.meta.env ? String(import.meta.env.VITE_SAMPLE_ROOT ?? "") : "",
+});

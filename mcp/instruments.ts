@@ -1,0 +1,612 @@
+/**
+ * Which instruments an agent may choose.
+ *
+ * `set_arrangement_track_asset` takes an `assetId`, and nothing listed the ids that exist — so the choosing half of the feature was reachable and the discovering half was not, which for a client that cannot read the repository means the feature is
+ * unusable in practice. This module answers it from the same manifest the application loads.
+ *
+ * **It reads `public/samples/manifest.json` from disk rather than from the network.** The id list is a property of the repository at the version being run, and an agent asking "what can I play" should get the same answer offline as online; only the
+ * addresses need a root, and they are omitted rather than guessed when one is not configured.
+ */
+import path from "node:path";
+import { existsSync, readFileSync } from "node:fs";
+import { catalogueFromManifestText, type SampleAsset } from "../src/data/sampleCatalogue";
+import { parseManifest } from "../src/data/sampleManifest";
+import { mergeUserLibraries } from "../src/data/userLibraries";
+import { readUserLibraries } from "./sampleLibraries";
+import { filterInstruments } from "../src/data/instrumentSearch";
+import {
+  playableTechniques,
+  STRING_SITUATION_RULES,
+  type StringInstrument,
+  type StringSituation,
+  type StringTechnique,
+} from "../src/data/stringTechniques";
+import { ALL_SAMPLED_INSTRUMENTS } from "../src/data/sampledInstruments";
+
+function resolveManifestPath(): string {
+  const candidates = [
+    process.env.GROOVE_MCP_ROOT ? path.resolve(process.env.GROOVE_MCP_ROOT, "public/samples/manifest.json") : "",
+    path.resolve(process.cwd(), "public/samples/manifest.json"),
+    path.resolve(process.cwd(), "groove/public/samples/manifest.json"),
+    path.resolve("public/samples/manifest.json"),
+  ].filter(Boolean);
+  for (const candidate of candidates) {
+    if (existsSync(candidate)) return candidate;
+  }
+  return "public/samples/manifest.json";
+}
+
+let cachedManifestPath: string | null = null;
+let cachedManifestText: string | null = null;
+let cachedManifestJson: { entries?: { id: string }[] } | null = null;
+let cachedBaseCatalogue: { root: string; assets: SampleAsset[]; problems: string[] } | null = null;
+
+/**
+ * ⭐ **The fully-built instrument catalogue, cached.** Building it walks every asset through the
+ * technique table (`situationsFor` + `servesSituation` per instrument) and sorts with `localeCompare`.
+ * The result is deterministic for a given manifest and root, so it is built once; the per-call filters
+ * (`library`/`category`/`query`/…) are cheap string operations and stay per-call.
+ *
+ * On the shipped 4.0 MB manifest / 315-instrument catalogue that build is **sub-millisecond**: the
+ * baseline revision without this cache (`4a71254`), which rebuilds it on every call, measured 0.90 ms
+ * median for `{}`. So the invalidation key must not cost more than the build — the first cut keyed on
+ * the manifest text and cost ~4.3 ms per call, which is the regression the identity key below removes.
+ *
+ * The key is the root plus the parsed **manifest object**, compared by identity: `loadManifest`
+ * parses the file once and holds that one object for as long as the text is not re-read, so a
+ * content change replaces the object and the root change is string equality — the same inputs the
+ * uncached path reads, so the cache can never disagree with a fresh build.
+ *
+ * ⭐ **It is deliberately not the manifest text.** Hashing/concatenating and comparing the ~4 MB
+ * string cost more than the build it was meant to skip: measured 2026-10-12, `/tmp` harness, 3
+ * warm-ups discarded, 15 calls, `{}` on the same data — ed923ca (text key) 4.33 ms median vs
+ * 4a71254 (no built cache) 0.90 ms median, while the identity key restores ~0.6 ms. The identity
+ * check is O(1) and semantically identical: the text can only change when `loadManifest` re-reads,
+ * which also replaces this object.
+ */
+interface BuiltCatalogue {
+  /** The `GROOVE_SAMPLE_ROOT` the catalogue was built for. */
+  root: string;
+  /** The parsed manifest instance the catalogue was built from — see the identity note above. */
+  manifest: { entries?: { id: string }[] };
+  all: CatalogueInstrument[];
+  libraries: string[];
+  categories: Array<{ name: string; count: number; subcategories: Array<{ name: string; count: number }> }>;
+  /** Problems raised by the mapped-instrument check, which depends only on `all`. */
+  mappedProblems: string[];
+}
+let cachedBuiltCatalogue: BuiltCatalogue | null = null;
+
+function loadManifest(): { text: string; manifest: { entries?: { id: string }[] } } {
+  if (!cachedManifestText) {
+    cachedManifestPath = resolveManifestPath();
+    cachedManifestText = readFileSync(cachedManifestPath, "utf8");
+    cachedManifestJson = JSON.parse(cachedManifestText);
+  }
+  return { text: cachedManifestText, manifest: cachedManifestJson! };
+}
+
+/**
+ * ⭐ **The parsed shipped manifest, memoised on the manifest text.**
+ *
+ * `parseManifest` runs `JSON.parse` over the whole 4.0 MB text and then validates all 16,691 file records — measured
+ * at 25.0 ms — and `list_sample_libraries` was paying for it twice per call: once for the library listing itself and
+ * once inside `catalogueFromManifestText`. With this memo and the `prepared` result threaded through, the first call
+ * parses once and every later call parses nothing.
+ *
+ * The key is the text's **identity**, not its content: `loadManifest` reads the file once per process and returns
+ * that same string object for as long as it is not re-read, so an identity comparison is exact and O(1) — the same
+ * reason `getBuiltCatalogue` above keys on the parsed object rather than the 4 MB text.
+ */
+let cachedParsedManifest: { text: string; result: ReturnType<typeof parseManifest> } | null = null;
+function parsedManifest(): ReturnType<typeof parseManifest> {
+  const { text } = loadManifest();
+  if (!cachedParsedManifest || cachedParsedManifest.text !== text) {
+    cachedParsedManifest = { text, result: parseManifest(text) };
+  }
+  return cachedParsedManifest.result;
+}
+
+function getBaseCatalogue(root: string): { assets: SampleAsset[]; problems: string[] } {
+  if (!cachedBaseCatalogue || cachedBaseCatalogue.root !== root) {
+    const { text } = loadManifest();
+    const result = catalogueFromManifestText(text, root, [], parsedManifest());
+    cachedBaseCatalogue = { root, assets: [...result.assets], problems: [...result.problems] };
+  }
+  return { assets: [...cachedBaseCatalogue.assets], problems: [...cachedBaseCatalogue.problems] };
+}
+
+/**
+ * ⭐ **The instrument an `assetId` names, with the addresses that instrument's own file lives at.**
+ *
+ * `inspect_instrument_sfz` was declared as taking the SFZ's **URL** and nothing else, and the schema said
+ * `list_sample_libraries` reports one per instrument — which it does not. That tool answers a licensing question and
+ * carries each library's `sourceUrl`/`repo`/`pin`, never a `.sfz` address, so the documented route to a usable
+ * argument did not exist; the owner's own plan ("get the URL from `list_sample_libraries`, then inspect") could not
+ * be carried out, and what a caller following the schema got was `Failed to parse URL from <instrument name>`.
+ *
+ * So the lookup exists: an id from `list_arrangement_instruments` — the tool that actually lists the ids a sampler
+ * track can be pointed at — is resolved through the same catalogue that tool builds, and the caller never has to know
+ * that a source URL is derived from `repo` + `pin` while a mirror URL is derived from the configured root.
+ *
+ * The **merged** catalogue is used, the same one `list_sample_libraries` counts from, so a library the owner
+ * registered through `register_sample_library` is inspectable by the id that registry gave it rather than being the
+ * one case the tool refuses.
+ */
+export function catalogueAssetById(assetId: string): SampleAsset | undefined {
+  const root = process.env.GROOVE_SAMPLE_ROOT ?? "";
+  const stored = readUserLibraries();
+  if (stored.libraries.length === 0) {
+    const { assets } = getBaseCatalogue(root);
+    return assets.find((asset) => asset.assetId === assetId);
+  }
+  const { text } = loadManifest();
+  const { assets } = catalogueFromManifestText(text, root, stored.libraries);
+  return assets.find((asset) => asset.assetId === assetId);
+}
+
+/**
+ * The ids near a miss, so a refusal can say what does exist — the same shape `unknownGenre` uses.
+ *
+ * Ranked by **how many of the miss's own tokens an id contains**, not by which comes first: every id in a library
+ * starts with the library's name, so a first-match rule answers `vcsl:Agogo-Bells` for a misspelled
+ * `vcsl:Vibraphone-Keywitch`. Counting the tokens puts the ids that agree about the instrument above the ones that
+ * merely agree about the library, which is the whole value of naming them.
+ */
+export function nearestCatalogueAssetIds(assetId: string, limit = 3): string[] {
+  const tokens = assetId
+    .trim()
+    .toLowerCase()
+    .split(/[^a-z0-9]+/)
+    .filter((token) => token.length >= 3);
+  if (tokens.length === 0) return [];
+  return listCatalogueInstruments({ limit: 5000 })
+    .instruments.map((instrument) => ({
+      id: instrument.assetId,
+      score: tokens.filter((token) => instrument.assetId.toLowerCase().includes(token)).length,
+    }))
+    .filter((candidate) => candidate.score > 0)
+    .sort((a, b) => b.score - a.score || a.id.length - b.id.length || a.id.localeCompare(b.id))
+    .slice(0, limit)
+    .map((candidate) => candidate.id);
+}
+
+/**
+ * ⭐ **The situations a technique serves**, read from the rules rather than restated here.
+ *
+ * `technique → situations` is derived by walking `STRING_SITUATION_RULES` in preference order, which keeps the
+ * listing and the rule table from drifting: a rule that stops preferring pizzicato stops advertising it here too.
+ */
+function situationsFor(technique: StringTechnique): StringSituation[] {
+  return STRING_SITUATION_RULES.filter((rule) => rule.preferred.includes(technique)).map((rule) => rule.situation);
+}
+
+/**
+ * ⭐ **Whether a program actually serves a situation, register included.**
+ *
+ * A rule with a `range` ("walking" is a low line) applies only to a program whose **whole compass** sits inside it,
+ * not merely to one that overlaps. Measured on this table: overlap lets the viola's pizzicato through for
+ * `plucked-walking` (it reaches down to MIDI 48, which is inside the register, while reaching up to 86, which is
+ * not) — and a walking line answered by a viola is the same name-matching this table replaces, one level up.
+ * Containment is what makes `plucked-walking` return the contrabass alone.
+ */
+function servesSituation(
+  program: { lowestNote: number; highestNote: number; technique: StringTechnique },
+  situation: StringSituation
+): boolean {
+  const rule = STRING_SITUATION_RULES.find((candidate) => candidate.situation === situation);
+  if (!rule || !rule.preferred.includes(program.technique)) return false;
+  if (!rule.range) return true;
+  const [low, high] = rule.range;
+  return program.lowestNote >= low && program.highestNote <= high;
+}
+
+/**
+ * ⭐ **The playing techniques, by catalogue asset id.**
+ *
+ * The string table (`src/data/stringTechniques.ts`) is the one place a technique is claimed, and this keys it by the
+ * id the catalogue actually uses so the listing can say what an asset *plays* rather than only what it is called.
+ * Only the **playable** rows are indexed: an unmirrored technique has no asset id in the catalogue, and offering it
+ * here would name an instrument a caller cannot choose.
+ */
+const TECHNIQUE_BY_ASSET = new Map(playableTechniques().map((program) => [program.assetId, program]));
+
+export interface CatalogueInstrument {
+  assetId: string;
+  name: string;
+  /** The longest sample, measured by `ffprobe` when the library was mirrored. */
+  seconds: number;
+  /** The library the entry came from, which is the part of the id before the colon for a multi-instrument one. */
+  library: string;
+  /** What kind of instrument it is — "Acoustic Drums", "Bass", "Winds". Absent when the manifest does not say, which a caller should show as "uncategorised" rather than invent. */
+  category?: string;
+  /** The second level, for a category too long to scan: VCSL's idiophones divide into struck, plucked and friction, a bass library's programs into arco and pizz. */
+  subcategory?: string;
+  /** The SFZ program this instrument is, when it is one. */
+  program?: string;
+  /** The string instrument this program is, when the technique table knows it: "violin", "viola", "cello", "contrabass", "solo-violin". */
+  stringInstrument?: StringInstrument;
+  /**
+   * ⭐ **What the player is doing** — "sustain", "pizzicato". Absent for every instrument the technique table does not cover, which today is every non-string library.
+   *
+   * A separate field from `name` because the name is prose and this is a choice: `list_arrangement_instruments` can be
+   * narrowed by `situation`, and `situation: "plucked-walking"` finds the contrabass pizzicato without a caller having
+   * to guess that a pluck is spelled `Pizz` in one library and `pizz` in another.
+   */
+  technique?: StringTechnique;
+  /** The situations this technique serves, so a caller can search by what the music is doing rather than by the word for the playing. */
+  situations?: StringSituation[];
+  /**
+   * ⭐ **How long a note may be written on this asset before the one-shot recording runs out**, in seconds — the
+   * `11.697 s` lesson, carried to the surface that chooses the asset.
+   *
+   * Present only where it was measured (the string table's mirrored rows). A caller writing a long sustained bed can
+   * read this before writing it instead of discovering the truncation by ear.
+   */
+  maxHeldSeconds?: number;
+  /** How many distinct recorded dynamic layers velocity selects between, when the number was measured. */
+  dynamicLayers?: number;
+}
+
+export interface InstrumentList {
+  instruments: CatalogueInstrument[];
+  /** Every library the manifest declares, including any that contribute nothing — a gap worth seeing rather than inferring. */
+  libraries: string[];
+  /**
+   * The categories the instruments actually carry, **each with the second level underneath it and the counts**, so a caller filters by words that exist rather than ones it guessed, and can see which categories are worth filtering at all.
+   */
+  categories: Array<{ name: string; count: number; subcategories: Array<{ name: string; count: number }> }>;
+  /** Why a declared library is not in the list: no measured duration, or a licence that forbids redistribution. */
+  problems: string[];
+  /**
+   * ⭐ **Which written instrument name plays which catalogue asset** — the table at `src/data/sampledInstruments.ts`,
+   * surfaced because it is otherwise a fact only the source code knows.
+   *
+   * It is the same list the renderer and the live engine consult, so a caller can ask for a recording **by name**
+   * (`add_arrangement_track {kind:"synth", instrument:"piano_lead"}`) instead of by asset id, and can see the judgement
+   * behind each row (`because`) rather than reverse-engineering it.
+   *
+   * ⭐ **It carries the string techniques too.** The 26 mirrored rows of `src/data/stringTechniques.ts` are derived
+   * into this list under their identity names (`violin_section_sustain`, `violin_section_spiccato`, …,
+   * `solo_violin_tremolo`, `contrabass_solo_non_vibrato`), so a technique `chooseTechnique` selects has a name that
+   * reaches the recording. A technique whose bytes are not mirrored is deliberately **absent** — naming it would
+   * promise a recording the mirror does not hold.
+   */
+  mappedInstruments: Array<{ instrument: string; assetId: string; because: string }>;
+  /** Where the bytes are served from, empty when no root is configured. */
+  root: string;
+}
+
+/**
+ * The expensive half of `listCatalogueInstruments`, built once and cached.
+ *
+ * Walking every asset through the technique table (`situationsFor` + `servesSituation` per
+ * instrument) and the `localeCompare` sort dominates the call — the manifest and catalogue loads
+ * above are already cached, but this build was not. The result is deterministic for a given
+ * manifest and root, so the cache key is exactly those inputs; a manifest change (or a different
+ * `GROOVE_SAMPLE_ROOT`) rebuilds, anything else hits.
+ *
+ * The key is compared **by identity and O(1)**: see the `BuiltCatalogue` note above for why the
+ * manifest text is not part of it.
+ *
+ * The per-call narrowing (`library`/`category`/`query`/`situation`/`limit`) stays outside the
+ * cache: those are cheap string operations on the built list.
+ */
+function getBuiltCatalogue(root: string): {
+  all: CatalogueInstrument[];
+  libraries: string[];
+  categories: Array<{ name: string; count: number; subcategories: Array<{ name: string; count: number }> }>;
+  mappedProblems: string[];
+} {
+  const { manifest } = loadManifest();
+  if (
+    cachedBuiltCatalogue &&
+    cachedBuiltCatalogue.root === root &&
+    cachedBuiltCatalogue.manifest === manifest
+  ) {
+    return cachedBuiltCatalogue;
+  }
+  const { assets } = getBaseCatalogue(root);
+  const libraries = (manifest.entries ?? []).map((entry) => entry.id);
+
+  const all: CatalogueInstrument[] = assets
+    // Only what can actually be played: an asset without an SFZ is a sample rather than an instrument, and pointing a sampler track at one would be the silent-sampler mistake.
+    .filter((asset) => asset.sfz !== undefined)
+    .map((asset) => {
+      // A multi-instrument library names its programs `entry:program`, which is where the library part of the id ends.
+      const separator = asset.assetId.indexOf(":");
+      const technique = TECHNIQUE_BY_ASSET.get(asset.assetId);
+      return {
+        assetId: asset.assetId,
+        name: asset.name,
+        seconds: asset.seconds,
+        library: separator === -1 ? asset.assetId : asset.assetId.slice(0, separator),
+        ...(asset.category ? { category: asset.category } : {}),
+        ...(asset.subcategory ? { subcategory: asset.subcategory } : {}),
+        ...(asset.sfz ? { program: asset.sfz.path } : {}),
+        /**
+         * ⭐ **What it plays, not just what it is called.** Filled from the technique table by asset id, so the
+         * mapping lives in the table rather than being re-derived here from a program's name — the guess this
+         * feature exists to replace.
+         */
+        ...(technique
+          ? {
+              stringInstrument: technique.instrument,
+              technique: technique.technique,
+              /**
+               * ⭐ **The compass this program actually sounds** (finding D2).
+               *
+               * The independent evaluation reported that an agent could not tell a double bass from a piccolo before
+               * writing notes: the listing carried ids and names, so an out-of-range part was written and came back
+               * silent, and `get_pitch_report` had to be called pitch by pitch to find out. These two numbers come from
+               * the **measured** technique table (`src/data/stringTechniques.ts`), and they are stated only where that
+               * table states them — an asset with no measurement carries no range rather than a guessed 0–127, because
+               * a guessed range is exactly the silent failure this replaces.
+               */
+              lowestNote: technique.lowestNote,
+              highestNote: technique.highestNote,
+              /**
+               * **The situations this exact program serves**, register included — so `plucked-walking` appears on the
+               * contrabass pizzicato and not on the viola's, which is the difference between a rule and a synonym.
+               */
+              situations: situationsFor(technique.technique).filter((situation) =>
+                servesSituation(
+                  { lowestNote: technique.lowestNote, highestNote: technique.highestNote, technique: technique.technique },
+                  situation
+                )
+              ),
+              maxHeldSeconds: technique.maxSampleSeconds,
+              /**
+               * ⭐ **And the length at or below which every sample of the program suffices** (third evaluation, section 6:
+               * legato/articulation and longest duration as machine-readable constraints).
+               *
+               * `maxHeldSeconds` is the *longest* sample; between it and this number a note sounds whole only if the
+               * sample for **its** pitch happens to be long enough. The table has carried that distinction since the
+               * string work ("a risk worth naming rather than rounding away") and the listing exposed only the ceiling.
+               */
+              safeHeldSeconds: technique.safeSeconds,
+              /**
+               * ⭐ **Legato is not a flag this engine has** (third evaluation, section 6: legato as a machine-readable
+               * constraint).
+               *
+               * The fact is recorded in this repository twice over: the loader implements none of the legato opcodes
+               * (`trigger=legato`, `locc64`, the CC modulations a library like MTG's uses), and the samples do not loop.
+               * So a program cannot join two notes; a legato line is written by **overlapping note lengths**, and every
+               * note still re-attacks. Saying `false` here is more useful than silence, because it is the difference
+               * between "no tool call will give me this" and "I have not found the right one yet" — and a caller who
+               * needs a joined line is choosing between overlapping lengths and a synth voice.
+               */
+              legatoSupported: false,
+              dynamicLayers: technique.velocityLayers.length,
+            }
+          : {}),
+      };
+    })
+    .sort((a, b) => a.library.localeCompare(b.library) || a.name.localeCompare(b.name));
+
+  /**
+   * The tree, built from the instruments rather than from the manifest: a category with nothing in it is not shown as empty, and a count is the number of things a click would actually reveal.
+   */
+  const byCategory = new Map<string, Map<string, number>>();
+  for (const instrument of all) {
+    const name = instrument.category ?? "Uncategorised";
+    if (!byCategory.has(name)) byCategory.set(name, new Map());
+    const subs = byCategory.get(name)!;
+    const sub = instrument.subcategory ?? "";
+    subs.set(sub, (subs.get(sub) ?? 0) + 1);
+  }
+  const categories = [...byCategory.entries()]
+    .map(([name, subs]) => ({
+      name,
+      count: [...subs.values()].reduce((total, value) => total + value, 0),
+      subcategories: [...subs.entries()]
+        .filter(([sub]) => sub !== "")
+        .map(([sub, count]) => ({ name: sub, count }))
+        .sort((a, b) => a.name.localeCompare(b.name)),
+    }))
+    .sort((a, b) => a.name.localeCompare(b.name));
+
+  /**
+   * ⭐ **A mapped row whose asset this manifest does not declare is itself a problem**, and it is reported here rather
+   * than discovered at render time: the table is a promise about what a name sounds like, and a mirror that cannot keep
+   * it should say so where someone is choosing an instrument rather than where they are listening for one.
+   *
+   * Deterministic for a given `all`, so it lives in the cache rather than being re-derived per call.
+   */
+  const mappedProblems: string[] = [];
+  const knownIds = new Set(all.map((instrument) => instrument.assetId));
+  for (const choice of ALL_SAMPLED_INSTRUMENTS) {
+    if (knownIds.has(choice.assetId)) continue;
+    mappedProblems.push(
+      `the recorded-instrument table maps "${choice.instrument}" to "${choice.assetId}", which public/samples/manifest.json does not declare — that lane falls back to its built-in preset`
+    );
+  }
+
+  cachedBuiltCatalogue = { root, manifest, all, libraries, categories, mappedProblems };
+  return cachedBuiltCatalogue;
+}
+
+/**
+ * The instruments a caller may name, optionally narrowed to one library.
+ *
+ * `limit` exists because `vcsl` alone declares 88 instruments and a reply carrying all of them is a lot of text for a question that is often "what is there"; the caller can page or narrow instead.
+ */
+export function listCatalogueInstruments({
+  library,
+  category,
+  subcategory,
+  situation,
+  query,
+  limit,
+}: {
+  library?: string;
+  category?: string;
+  subcategory?: string;
+  /**
+   * ⭐ **Narrow to what the music is doing, not to what the instrument is called.**
+   *
+   * `situation: "plucked-walking"` is the request a composer actually has, and answering it needs the rule table
+   * rather than a name match. Only the situations the string rules name are accepted, which is checked against the
+   * table itself so a typo is a problem stated rather than an empty list that looks like "nothing available".
+   */
+  situation?: StringSituation;
+  /** Free text, matched the same way the library panel matches it — one rule, so an agent and a person find the same instruments with the same words. */
+  query?: string;
+  limit?: number;
+} = {}): InstrumentList {
+  const root = process.env.GROOVE_SAMPLE_ROOT ?? "";
+  // `getBaseCatalogue` is cached internally; the fresh `problems` copy per call keeps callers
+  // from seeing each other's mutations. The expensive build below is cached in `getBuiltCatalogue`.
+  const { problems: baseProblems } = getBaseCatalogue(root);
+  const { all, libraries, categories, mappedProblems } = getBuiltCatalogue(root);
+  const problems = [...baseProblems, ...mappedProblems];
+
+  /**
+   * Two filters rather than one, because they answer different questions: `library` is "everything from this download" and `category` is "every bass I have", which crosses libraries. The categories are listed so a caller can see what exists before
+   * filtering by a word it guessed.
+   */
+  const narrowed = filterInstruments(all, query ?? "")
+    .filter((instrument) => library === undefined || instrument.library === library)
+    .filter((instrument) => category === undefined || instrument.category === category)
+    .filter((instrument) => subcategory === undefined || instrument.subcategory === subcategory)
+    /**
+     * ⭐ **The situation filter, which is the query a composer actually has.**
+     *
+     * `situation: "plucked-walking"` must find the contrabass pizzicato without the caller knowing that a pluck is
+     * spelled `Pizz` in one program and `pizz` in another. The register travels with the rule — "walking" is a low
+     * line — so this filters on `servesSituation`, the same function that fills each instrument's own `situations`,
+     * rather than on the raw preference list.
+     */
+    .filter((instrument) => situation === undefined || (instrument.situations ?? []).includes(situation));
+
+  const mappedInstruments = ALL_SAMPLED_INSTRUMENTS.map((choice) => ({ ...choice }));
+
+  return {
+    instruments: limit !== undefined && limit >= 0 ? narrowed.slice(0, limit) : narrowed,
+    libraries,
+    categories,
+    problems,
+    mappedInstruments,
+    root,
+  };
+}
+
+/**
+ * **What each declared library is, under what licence, and what is missing.**
+ *
+ * The instrument list answers "what can I play"; this answers the question an agent has to ask *before* it publishes anything — **where the bytes came from and what their licence requires**. The manifest has carried `licence`, `sourceUrl`, `repo` and `pin` all along, and an agent could not see any of it, which is the one gap that matters for the CC-BY library this project pinned on purpose to exercise the attribution path.
+ *
+ * **A duration is reported only when it was measured.** `durationSeconds` is written by the mirroring step with `ffprobe` after the bytes are downloaded; until then it is absent, and this says so with a reason rather than a zero. That is the same rule the rest of this project follows: a number nobody measured is worse than a stated gap.
+ */
+export interface SampleLibrary {
+  id: string;
+  name: string;
+  /** The licence the manifest declares, verbatim — `CC0`, `CC-BY`, and whatever else a later entry says. */
+  licence: string;
+  /** Where the material came from, and where attribution should point. */
+  sourceUrl?: string;
+  /** The upstream repository and the commit the library was pinned to, so a byte-for-byte reference is reproducible. */
+  repo?: string;
+  pin?: string;
+  /** How many instruments this library contributes to the catalogue, which is zero for a library that declares none. */
+  instruments: number;
+  /** The longest sample, **measured by `ffprobe` after download**. Absent when nothing has been downloaded. */
+  durationSeconds?: number;
+  /** ⭐ Whose library this is: shipped with the project, or registered by the creator. */
+  source: "built-in" | "user";
+  /** Why a field that a caller might expect is not here. */
+  problems: string[];
+}
+
+export function listSampleLibraries(): { libraries: SampleLibrary[]; root: string; note: string } {
+  const root = process.env.GROOVE_SAMPLE_ROOT ?? "";
+  const { text } = loadManifest();
+  /**
+   * ⭐ **The creator's own libraries are merged before anything derives an asset id from the manifest.**
+   *
+   * That position is the whole design, and it is the same one `catalogueFromManifestText` uses: the asset counts
+   * below and the asset list itself both come from one merged manifest, so a library someone registered gets
+   * its ids from `withProgramIds` like any other and resolves through the one resolver. Merging afterwards would
+   * give the same SFZ two ids, or a loading path of its own.
+   *
+   * `readUserLibraries` never throws: a missing file is an empty list and a malformed one is a problem naming
+   * the file, both reported below, because a person who registered a library and cannot see it needs to know
+   * whether the file or the entry is at fault.
+   */
+  const stored = readUserLibraries();
+  const parsed = parsedManifest();
+  /** Which ids the shipped manifest itself states, so a library can be reported as the caller's own when it is not. */
+  const builtInIds = new Set((parsed.ok && parsed.manifest ? parsed.manifest.entries : []).map((entry) => entry.id));
+  const merged =
+    parsed.ok && parsed.manifest
+      ? mergeUserLibraries(parsed.manifest, stored.libraries)
+      : { manifest: { version: 1 as const, entries: [] }, problems: parsed.errors, added: [] as string[] };
+  /**
+   * The libraries go to the catalogue as well as to the merge, so a registered library's instruments are
+   * counted: `list_sample_libraries` is where a caller finds out what is reachable, and a library listed with
+   * zero instruments would read as broken when it is merely not registered with a duration yet.
+   *
+   * ⭐ **Neither branch re-parses the manifest.** With nothing registered the base catalogue is exactly what
+   * `getBaseCatalogue` already caches — the same `catalogueFromManifestText(text, root, [])` this call used to
+   * run, so reusing it is an identity change, not a behavioural one. With user libraries the parsed manifest
+   * above is handed to `catalogueFromManifestText` as `prepared`, which keeps the merge-before-`withProgramIds`
+   * order and the parse-failure problems exactly where they were; only the second `JSON.parse` disappears.
+   * `readUserLibraries()` is still called every time, so a library registered between two calls takes effect
+   * on the next one.
+   */
+  const { assets, problems: catalogueProblems } =
+    stored.libraries.length === 0
+      ? getBaseCatalogue(root)
+      : catalogueFromManifestText(text, root, stored.libraries, parsed);
+
+  const counts = new Map<string, number>();
+  for (const asset of assets) {
+    if (!asset.sfz) continue;
+    const library = asset.assetId.includes(":") ? asset.assetId.slice(0, asset.assetId.indexOf(":")) : asset.assetId;
+    counts.set(library, (counts.get(library) ?? 0) + 1);
+  }
+
+  const libraries = merged.manifest.entries.map((entry) => {
+    const problems: string[] = [];
+    if (entry.licence === undefined) problems.push("the manifest declares no licence, so the material must be treated as all rights reserved");
+    if (entry.durationSeconds === undefined) {
+      problems.push("no measured duration: nothing has been downloaded, so the manifest reports the gap rather than a number");
+    }
+    if ((counts.get(entry.id) ?? 0) === 0) {
+      problems.push("this library contributes no instrument to the catalogue — either it declares none, or the catalogue could not read its SFZ");
+    }
+    return {
+      id: entry.id,
+      name: entry.name ?? entry.id,
+      licence: entry.licence ?? "unknown",
+      /** ⭐ Whose library this is. A caller deciding whether to trust a label needs to know where it came from. */
+      source: builtInIds.has(entry.id) ? ("built-in" as const) : ("user" as const),
+      ...(entry.sourceUrl === undefined ? {} : { sourceUrl: entry.sourceUrl }),
+      ...(entry.repo === undefined ? {} : { repo: entry.repo }),
+      ...(entry.pin === undefined ? {} : { pin: entry.pin }),
+      instruments: counts.get(entry.id) ?? 0,
+      ...(entry.durationSeconds === undefined ? {} : { durationSeconds: entry.durationSeconds }),
+      problems,
+    };
+  });
+
+  const attribution = libraries.filter((library) => /BY/i.test(library.licence)).map((library) => library.id);
+  return {
+    libraries,
+    root,
+    /**
+     * ⭐ **What went wrong with the libraries the creator supplied, and what the catalogue made of the manifest.**
+     *
+     * A registered library that is absent, refused or excluded has to be visible here rather than only in the
+     * file: the whole point of the registry is that a person can tell whether the library they added is
+     * reachable, and "it is not in the list" answers a different question from "it was refused for this reason".
+     */
+    ...(stored.problems.length + merged.problems.length + catalogueProblems.length === 0
+      ? {}
+      : { problems: [...stored.problems, ...merged.problems, ...catalogueProblems] }),
+    note:
+      attribution.length === 0
+        ? "No declared library requires attribution by its licence name."
+        : `These libraries require attribution by their licence name: ${attribution.join(", ")}. Point at the \`sourceUrl\` (and the \`repo\`/\`pin\` for a byte-for-byte reference).`,
+  };
+}

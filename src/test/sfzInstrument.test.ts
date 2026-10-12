@@ -1,0 +1,144 @@
+import { describe, expect, it } from "vitest";
+import { resolveInstrumentNote } from "../audio/sfz/instrument";
+import { parseSfz } from "../audio/sfz/parse";
+import { playbackForNote } from "../audio/sfz/regionPlayback";
+
+/**
+ * The five criteria fixed **before** this code was written, so they judge the contract rather than the implementation.
+ *
+ * The first is the one the objective demands of every step in this workstream: a catalogue entry without the field behaves exactly as it did before, which is what
+ * keeps "a song that references no instrument is unchanged" true by construction rather than by hope.
+ */
+const instrument = (extra: Record<string, unknown> = {}) => ({ assetId: "piano", sfz: { url: "/samples/piano.sfz" }, ...extra });
+const SFZ = `
+<region> sample=low.wav lokey=0 hikey=47 pitch_keycenter=40
+<region> sample=mid.wav lokey=48 hikey=71 pitch_keycenter=60
+<region> sample=high.wav lokey=72 hikey=127 pitch_keycenter=84 tune=100
+`;
+
+describe("resolveInstrumentNote", () => {
+  it("refuses an entry that is not an instrument, without touching anything else", () => {
+    const plain = { assetId: "riser-01" };
+    const result = resolveInstrumentNote(plain, SFZ, 60);
+    expect(result.ok).toBe(false);
+    expect(result.reason).toBe('sample "riser-01" is not an instrument (it has no sfz)');
+    expect(result.regions).toEqual([]);
+    // The entry itself is untouched: this function has no side effects on the catalogue.
+    expect(plain).toEqual({ assetId: "riser-01" });
+  });
+
+  it("returns exactly what playbackForNote returns — the arithmetic stays in one place", () => {
+    const regions = parseSfz(SFZ);
+    for (const note of [40, 52, 60, 72, 90]) {
+      const expected = playbackForNote(regions, note)!;
+      const resolved = resolveInstrumentNote(instrument(), SFZ, note);
+      expect(resolved.ok, `note ${note} should resolve`).toBe(true);
+      expect(resolved.note).toEqual({
+        samplePath: expected.sample,
+        rootKey: expected.rootKey,
+        ratio: expected.ratio,
+        seqPosition: expected.seqPosition,
+      });
+    }
+    // And the value is not trivially 1 everywhere, which would make the comparison meaningless.
+    expect(resolveInstrumentNote(instrument(), SFZ, 52).note!.ratio).not.toBeCloseTo(1, 3);
+    expect(resolveInstrumentNote(instrument(), SFZ, 72).note!.ratio).not.toBeCloseTo(1, 3);
+  });
+
+  it("explains an uncovered note instead of picking the nearest sample", () => {
+    const narrow = "<region> sample=only.wav lokey=60 hikey=64 pitch_keycenter=60";
+    const result = resolveInstrumentNote(instrument(), narrow, 70);
+    expect(result.ok).toBe(false);
+    expect(result.reason).toBe("note 70 has no playback: the file's regions cover keys 60–64");
+    expect(result.note).toBeUndefined();
+    // The regions are still reported, so a caller can say what the instrument does cover.
+    expect(result.regions).toHaveLength(1);
+  });
+
+  it("cycles round robins in file order through the same picker", () => {
+    const rr = `
+<region> sample=rr1.wav pitch_keycenter=60 seq_length=2 seq_position=1
+<region> sample=rr2.wav pitch_keycenter=60 seq_length=2 seq_position=2
+`;
+    const paths = [0, 1, 2, 3].map((nth) => resolveInstrumentNote(instrument(), rr, 60, { nth }).note!.samplePath);
+    expect(paths).toEqual(["rr1.wav", "rr2.wav", "rr1.wav", "rr2.wav"]);
+  });
+
+  it("treats empty or region-less SFZ text as an error rather than as silence", () => {
+    const empty = resolveInstrumentNote(instrument(), "   ", 60);
+    expect(empty.ok).toBe(false);
+    expect(empty.reason).toBe('instrument "piano" has empty SFZ text');
+
+    // A file that parses to nothing — a header this subset does not model — is its own, distinct reason.
+    const headerOnly = resolveInstrumentNote(instrument(), "<control> default_path=samples", 60);
+    expect(headerOnly.ok).toBe(false);
+    expect(headerOnly.reason).toBe('instrument "piano" defines no regions');
+
+    // And a velocity outside every region is a gap, not a default.
+    const byVelocity = resolveInstrumentNote(instrument(), "<region> sample=x.wav lovel=100 hivel=127", 60, { velocity: 10 });
+    expect(byVelocity.ok).toBe(false);
+    expect(byVelocity.reason).toMatch(/no playback/);
+  });
+});
+
+/**
+ * A region's sample path as an address — the question the catalogue cannot answer, because it holds instruments and the region names a file.
+ */
+describe("sampleAssetForPath", () => {
+  it("resolves the path against the program file, not the library root", async () => {
+    const { sampleAssetForPath } = await import("../audio/sfz/instrument");
+    const asset = sampleAssetForPath("../Samples/kickmic/snare/x.flac", {
+      programUrl: "https://raw.githubusercontent.com/sfzinstruments/virtuosity_drums/9f04cf9a7345/Programs/01-basic-kit.sfz",
+      programFallbackUrl: "https://r2mirror.groove.wangda.today/virtuosity-drums/Programs/01-basic-kit.sfz",
+    });
+    // One step up from `Programs/` — the same relative relationship the SFZ itself expresses.
+    expect(asset.url).toBe("https://raw.githubusercontent.com/sfzinstruments/virtuosity_drums/9f04cf9a7345/Samples/kickmic/snare/x.flac");
+    expect(asset.fallbackUrl).toBe("https://r2mirror.groove.wangda.today/virtuosity-drums/Samples/kickmic/snare/x.flac");
+    // The path is the id: it is what the region said, and it is what an error should quote back.
+    expect(asset.assetId).toBe("../Samples/kickmic/snare/x.flac");
+  });
+
+  it("omits the fallback when there is no mirror address, rather than inventing one", async () => {
+    const { sampleAssetForPath } = await import("../audio/sfz/instrument");
+    const asset = sampleAssetForPath("Samples/a.flac", { programUrl: "https://host/lib/Programs/k.sfz" });
+    expect(asset.url).toBe("https://host/lib/Programs/Samples/a.flac");
+    expect(asset.fallbackUrl).toBeUndefined();
+  });
+
+  /**
+   * **The gates run before a region is chosen, at the values the file itself declares.** `loccN`/`hiccN` are not modulations: a region outside its range is absent, and choosing one anyway plays a microphone the file says is off.
+   */
+  it("leaves out a region the file's own controller values gate off", () => {
+    // `set_cc1=0` and an unset controller are the same value, and 0 is below the 64 the region asks for.
+    const gated = `
+<control>
+set_cc1=0
+<region> sample=low.wav lokey=0 hikey=127 pitch_keycenter=60 locc1=64
+`;
+    const result = resolveInstrumentNote(instrument(), gated, 60);
+    expect(result.ok).toBe(false);
+    // The reason says which instrument and why, rather than "no region covers note 60" — the regions do cover it; they are switched off.
+    expect(result.reason).toMatch(/none of them sound at the controller values/);
+  });
+
+  it("plays that same region once the file's defaults turn the controller on", () => {
+    // The only difference is `set_cc1=127`, which is how `virtuosity_drums` enables every microphone it declares a gate for.
+    const enabled = `
+<control>
+set_cc1=127
+<region> sample=low.wav lokey=0 hikey=127 pitch_keycenter=60 locc1=64
+`;
+    const result = resolveInstrumentNote(instrument(), enabled, 60);
+    expect(result.ok).toBe(true);
+    expect(result.note?.samplePath).toBe("low.wav");
+  });
+
+  it("still reports the file's regions when every one of them is gated off, so the file can be inspected", () => {
+    // Both are off at rest for the same reason an unset controller is 0: `locc1=64` needs 64 and `locc2=1` needs 1.
+    const gated = "<region> sample=a.wav pitch_keycenter=60 locc1=64\n<region> sample=b.wav pitch_keycenter=60 locc2=1\n";
+    const result = resolveInstrumentNote(instrument(), gated, 60);
+    expect(result.ok).toBe(false);
+    // Both regions are reported: a caller diagnosing "nothing sounds" needs to see what the file defines, not just that nothing does.
+    expect(result.regions.map((region) => region.sample)).toEqual(["a.wav", "b.wav"]);
+  });
+});

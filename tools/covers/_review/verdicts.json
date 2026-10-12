@@ -1,0 +1,10 @@
+{
+  "default": [
+    {"genre": "acid-techno", "reasons": ["R1"], "hint": "Make it a distinct Berlin concrete turbine hall with a patched modular wall, not another silver bass box."},
+    {"genre": "ambient", "reasons": ["R1", "R4"], "hint": "Show a specific flooded empty hall with one window and slow fog; a featureless gradient is a failure."},
+    {"genre": "alternative-rnb", "reasons": ["R4", "R1"], "hint": "Use a Toronto studio at night: a treated vocal booth, a condenser microphone and a sparse lit console, not a lone mic in fog."},
+    {"genre": "bossa-nova", "reasons": ["R4", "R1"], "hint": "Rio balcony at dawn with a nylon-string guitar on a chair and a calm bay; avoid the guitar-on-a-bed cliche."},
+    {"genre": "chicago-drill", "reasons": ["R1"], "hint": "Cold Midwestern block at night: bare streetlight, chain-link fence, sliding 808 weight; no empty club room."},
+    {"genre": "chillwave", "reasons": ["R4"], "hint": "Sun-bleached late-2000s blog era: washed-out cassette deck, faded beach towel, hazy sun; keep it specific and physical."}
+  ]
+}

@@ -1,0 +1,89 @@
+name: Release
+
+# ⭐ **Two ways in, and neither one deploys.**
+#
+# `scripts/release.sh` owns the live site: it runs the gate, deploys, tags and mirrors, in that order, because on v2.34.25 a
+# failed deploy was followed by steps that ran anyway. This workflow does the other half — it turns a commit into files somebody
+# can download — so it deliberately does not touch `deploy`, `main` or a tag that does not exist yet.
+#
+# A tag push packages that tag. The manual entry exists because a rebuild is sometimes wanted for an existing tag (a dependency
+# fix in the runner image, a packaging change) and because a release should be re-runnable without cutting a new version.
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "The tag to package. It must already exist; this workflow never creates one."
+        required: true
+        type: string
+      verify:
+        description: "Run the full gate before packaging. Slower, and the right default for a release."
+        type: boolean
+        default: true
+
+permissions:
+  contents: write
+
+jobs:
+  package:
+    name: Package (${{ github.event_name }})
+    runs-on: ubuntu-latest
+    steps:
+      - name: Resolve the tag
+        id: tag
+        # ⭐ One place decides which commit is being packaged, so the two entries cannot disagree about it.
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "tag=${{ inputs.tag }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "tag=${GITHUB_REF_NAME}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ steps.tag.outputs.tag }}
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: ".nvmrc"
+          cache: "npm"
+
+      - run: npm ci
+
+      # ⭐ The gate is optional rather than absent: on a tag the commit has already passed CI, and on a manual rebuild the point
+      # is usually the packaging itself. When it runs, it is the same list `ci.yml` runs in the same order.
+      - name: Gate
+        if: github.event_name == 'workflow_dispatch' && inputs.verify
+        run: |
+          npm run version:check
+          npm run typecheck
+          npm run lint
+          npm run redlines
+
+      - name: Build
+        run: npm run build
+
+      - name: Package
+        # ⭐ The repository's own packager, not a second one: `scripts/package.py` writes groove-release.zip, dist.zip and
+        # groove-release.tar.gz into `release/`, and the release notes below say what the version is.
+        run: python3 scripts/package.py
+
+      - name: Attach the packages to the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          TAG="${{ steps.tag.outputs.tag }}"
+          VERSION="$(node -p "require('./package.json').version")"
+          # ⭐ A draft is created only when the release does not exist yet; an existing release is refreshed in place, so a
+          # manual rebuild does not publish a second, competing release for the same tag.
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release upload "$TAG" release/groove-release.zip release/dist.zip release/groove-release.tar.gz --clobber
+          else
+            gh release create "$TAG" \
+              release/groove-release.zip release/dist.zip release/groove-release.tar.gz \
+              --title "$TAG (v$VERSION)" \
+              --notes "Packaged from \`$TAG\` by the Release workflow. The live site is deployed by \`scripts/release.sh\`, not by this job."
+          fi

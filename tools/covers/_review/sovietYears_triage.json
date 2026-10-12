@@ -1,0 +1,5131 @@
+{
+  "_header": {
+    "generated": "2026-09-25T18:24:58Z",
+    "skin": "sovietYears",
+    "images": 159,
+    "thresholds": {
+      "min_file_bytes": 20000,
+      "min_std_luma": 6.0,
+      "max_unique_colors_blank": 2000,
+      "palette_distance_warn": 0.42,
+      "palette_distance_flag": 0.6,
+      "phash_hamming_dup": 6,
+      "pixdiff_dup": 12.0,
+      "pixdiff_dup_flat_skin": 4.0,
+      "pixel_max_unique_smooth": 23000,
+      "pixel_min_edge_hardness": 0.55,
+      "text_edge_density": 0.3,
+      "text_small_components": 12
+    },
+    "palette": {
+      "ground": "#f4f1e1",
+      "ink": "#111111",
+      "accent": "#cc0000"
+    },
+    "flag_meanings": {
+      "invalid": "unreadable / not 1024x1024 / under min_file_bytes",
+      "near_blank": "luma_std < min_std_luma AND unique_colors_256 < max_unique_colors_blank",
+      "palette_drift": "mean colour >= palette_distance_flag from nearest skin colour (hue+lightness)",
+      "palette_drift_warn": ">= palette_distance_warn but below flag",
+      "duplicate": "mean |RGB| difference on a 16x16 grid below the skin's duplicate threshold (pixdiff_dup, or pixdiff_dup_flat_skin for minimal) vs another genre in this skin",
+      "calibration_note": "near_blank must not flag the approved pilot minimal/minimal-techno (luma_std 11.33, 825 colours), hence min_std_luma=6.0",
+      "not_pixelated": "pixel skin only: unique_colors_full > pixel_max_unique_smooth AND edge_hardness < pixel_min_edge_hardness",
+      "smooth_suspect": "pixel skin only: edge_hardness < pixel_min_edge_hardness",
+      "text_or_signature_suspect": "bottom-band edge density > text_edge_density (weak heuristic)"
+    },
+    "calibration": "thresholds tuned against the 18 approved pilot images so none are flagged",
+    "note": "flags are evidence, not verdicts; the verdict is the visual contact-sheet review"
+  },
+  "flag_counts": {},
+  "flagged": {},
+  "images": {
+    "2-step-garage": {
+      "flags": [],
+      "metrics": {
+        "bytes": 246726,
+        "luma_mean": 78.25,
+        "luma_std": 79.1,
+        "unique_colors_256": 18639,
+        "palette_distance": 0.0404,
+        "mean_rgb": [
+          134,
+          56,
+          47
+        ],
+        "ahash": 18411174329262899711,
+        "dhash": 11140413333440215726,
+        "text_band_edge_density": 0.0108,
+        "pixdiff_nearest": [
+          [
+            "death-metal",
+            25.83
+          ],
+          [
+            "dub",
+            33.73
+          ],
+          [
+            "industrial-techno",
+            34.49
+          ]
+        ]
+      }
+    },
+    "acid-house": {
+      "flags": [],
+      "metrics": {
+        "bytes": 258956,
+        "luma_mean": 77.48,
+        "luma_std": 72.91,
+        "unique_colors_256": 18502,
+        "palette_distance": 0.0594,
+        "mean_rgb": [
+          126,
+          59,
+          46
+        ],
+        "ahash": 13871117882308330479,
+        "dhash": 18365906383904415908,
+        "text_band_edge_density": 0.0132,
+        "pixdiff_nearest": [
+          [
+            "salsa",
+            36.96
+          ],
+          [
+            "peak-time-techno",
+            38.49
+          ],
+          [
+            "smooth-jazz",
+            38.7
+          ]
+        ]
+      }
+    },
+    "acid-jazz": {
+      "flags": [],
+      "metrics": {
+        "bytes": 343150,
+        "luma_mean": 69.37,
+        "luma_std": 70.26,
+        "unique_colors_256": 17439,
+        "palette_distance": 0.0858,
+        "mean_rgb": [
+          106,
+          56,
+          45
+        ],
+        "ahash": 9298847482526870781,
+        "dhash": 10854434531717846702,
+        "text_band_edge_density": 0.0445,
+        "pixdiff_nearest": [
+          [
+            "deep-house",
+            30.68
+          ],
+          [
+            "synth-pop",
+            32.42
+          ],
+          [
+            "dubstep",
+            33.28
+          ]
+        ]
+      }
+    },
+    "acid-techno": {
+      "flags": [],
+      "metrics": {
+        "bytes": 367914,
+        "luma_mean": 91.69,
+        "luma_std": 75.88,
+        "unique_colors_256": 24491,
+        "palette_distance": 0.0349,
+        "mean_rgb": [
+          140,
+          74,
+          58
+        ],
+        "ahash": 72128100273168271,
+        "dhash": 13326751874218230146,
+        "text_band_edge_density": 0.0132,
+        "pixdiff_nearest": [
+          [
+            "french-house",
+            28.14
+          ],
+          [
+            "glitch-hop",
+            36.13
+          ],
+          [
+            "detroit-techno",
+            37.87
+          ]
+        ]
+      }
+    },
+    "afro-house": {
+      "flags": [],
+      "metrics": {
+        "bytes": 309912,
+        "luma_mean": 88.45,
+        "luma_std": 76.57,
+        "unique_colors_256": 26560,
+        "palette_distance": 0.05,
+        "mean_rgb": [
+          139,
+          70,
+          50
+        ],
+        "ahash": 10160263153884578303,
+        "dhash": 12005150597428995722,
+        "text_band_edge_density": 0.0108,
+        "pixdiff_nearest": [
+          [
+            "neo-soul",
+            37.15
+          ],
+          [
+            "electro-house",
+            37.47
+          ],
+          [
+            "speedbass",
+            39.43
+          ]
+        ]
+      }
+    },
+    "afrobeat": {
+      "flags": [],
+      "metrics": {
+        "bytes": 344648,
+        "luma_mean": 90.4,
+        "luma_std": 76.62,
+        "unique_colors_256": 20715,
+        "palette_distance": 0.0305,
+        "mean_rgb": [
+          135,
+          74,
+          62
+        ],
+        "ahash": 18167662478808878839,
+        "dhash": 12014182011033723801,
+        "text_band_edge_density": 0.0373,
+        "pixdiff_nearest": [
+          [
+            "thrash-metal",
+            27.73
+          ],
+          [
+            "salsa",
+            32.3
+          ],
+          [
+            "hard-trap",
+            38.43
+          ]
+        ]
+      }
+    },
+    "alternative-rnb": {
+      "flags": [],
+      "metrics": {
+        "bytes": 261443,
+        "luma_mean": 88.22,
+        "luma_std": 70.67,
+        "unique_colors_256": 13738,
+        "palette_distance": 0.0184,
+        "mean_rgb": [
+          141,
+          67,
+          59
+        ],
+        "ahash": 16157815968675072957,
+        "dhash": 4077955254488433798,
+        "text_band_edge_density": 0.012,
+        "pixdiff_nearest": [
+          [
+            "reggae",
+            44.75
+          ],
+          [
+            "texas-blues",
+            46.68
+          ],
+          [
+            "hard-techno",
+            48.13
+          ]
+        ]
+      }
+    },
+    "alternative-rock": {
+      "flags": [],
+      "metrics": {
+        "bytes": 319611,
+        "luma_mean": 112.27,
+        "luma_std": 79.81,
+        "unique_colors_256": 20220,
+        "palette_distance": 0.0675,
+        "mean_rgb": [
+          160,
+          95,
+          77
+        ],
+        "ahash": 16645586801561554911,
+        "dhash": 8186029788976047302,
+        "text_band_edge_density": 0.0421,
+        "pixdiff_nearest": [
+          [
+            "reggae",
+            40.85
+          ],
+          [
+            "hard-bop",
+            40.91
+          ],
+          [
+            "dancehall",
+            41.62
+          ]
+        ]
+      }
+    },
+    "amapiano": {
+      "flags": [],
+      "metrics": {
+        "bytes": 269524,
+        "luma_mean": 96.73,
+        "luma_std": 78.38,
+        "unique_colors_256": 15032,
+        "palette_distance": 0.0346,
+        "mean_rgb": [
+          150,
+          77,
+          59
+        ],
+        "ahash": 17940143095118568590,
+        "dhash": 5503003812128591527,
+        "text_band_edge_density": 0.0331,
+        "pixdiff_nearest": [
+          [
+            "punk-rock",
+            49.16
+          ],
+          [
+            "traditional-pop",
+            49.95
+          ],
+          [
+            "psytrance",
+            51.63
+          ]
+        ]
+      }
+    },
+    "ambient": {
+      "flags": [],
+      "metrics": {
+        "bytes": 239752,
+        "luma_mean": 98.9,
+        "luma_std": 77.55,
+        "unique_colors_256": 13990,
+        "palette_distance": 0.0381,
+        "mean_rgb": [
+          138,
+          85,
+          69
+        ],
+        "ahash": 9309080339953582527,
+        "dhash": 13744580998778243726,
+        "text_band_edge_density": 0.0096,
+        "pixdiff_nearest": [
+          [
+            "electro-house",
+            42.82
+          ],
+          [
+            "neo-soul",
+            44.57
+          ],
+          [
+            "dub",
+            47.54
+          ]
+        ]
+      }
+    },
+    "ambient-dub": {
+      "flags": [],
+      "metrics": {
+        "bytes": 237395,
+        "luma_mean": 93.3,
+        "luma_std": 83.54,
+        "unique_colors_256": 18163,
+        "palette_distance": 0.0283,
+        "mean_rgb": [
+          134,
+          78,
+          66
+        ],
+        "ahash": 13618885872442639359,
+        "dhash": 11714569242583081088,
+        "text_band_edge_density": 0.0072,
+        "pixdiff_nearest": [
+          [
+            "ragga-jungle",
+            32.13
+          ],
+          [
+            "happy-hardcore",
+            36.15
+          ],
+          [
+            "electro-house",
+            37.69
+          ]
+        ]
+      }
+    },
+    "ambient-techno": {
+      "flags": [],
+      "metrics": {
+        "bytes": 267990,
+        "luma_mean": 78.01,
+        "luma_std": 68.97,
+        "unique_colors_256": 13240,
+        "palette_distance": 0.0574,
+        "mean_rgb": [
+          119,
+          63,
+          52
+        ],
+        "ahash": 13367394788627481854,
+        "dhash": 10142602921446380203,
+        "text_band_edge_density": 0.012,
+        "pixdiff_nearest": [
+          [
+            "acid-jazz",
+            36.57
+          ],
+          [
+            "industrial-techno",
+            36.78
+          ],
+          [
+            "deep-house",
+            38.93
+          ]
+        ]
+      }
+    },
+    "bachata": {
+      "flags": [],
+      "metrics": {
+        "bytes": 291415,
+        "luma_mean": 88.8,
+        "luma_std": 75.41,
+        "unique_colors_256": 16336,
+        "palette_distance": 0.03,
+        "mean_rgb": [
+          151,
+          66,
+          48
+        ],
+        "ahash": 13836367189307071742,
+        "dhash": 16925567072236382922,
+        "text_band_edge_density": 0.0523,
+        "pixdiff_nearest": [
+          [
+            "trip-hop",
+            41.11
+          ],
+          [
+            "jersey-club",
+            41.56
+          ],
+          [
+            "future-bass",
+            41.93
+          ]
+        ]
+      }
+    },
+    "bass-house": {
+      "flags": [],
+      "metrics": {
+        "bytes": 303218,
+        "luma_mean": 79.26,
+        "luma_std": 77.89,
+        "unique_colors_256": 18552,
+        "palette_distance": 0.0486,
+        "mean_rgb": [
+          122,
+          63,
+          54
+        ],
+        "ahash": 9331732071830817279,
+        "dhash": 13177051656330585746,
+        "text_band_edge_density": 0.0126,
+        "pixdiff_nearest": [
+          [
+            "industrial-techno",
+            31.58
+          ],
+          [
+            "brooklyn-drill",
+            31.7
+          ],
+          [
+            "downtempo",
+            32.97
+          ]
+        ]
+      }
+    },
+    "bassline": {
+      "flags": [],
+      "metrics": {
+        "bytes": 318299,
+        "luma_mean": 90.18,
+        "luma_std": 78.55,
+        "unique_colors_256": 18494,
+        "palette_distance": 0.0336,
+        "mean_rgb": [
+          138,
+          72,
+          59
+        ],
+        "ahash": 11494453507076890109,
+        "dhash": 9413287169363119762,
+        "text_band_edge_density": 0.0409,
+        "pixdiff_nearest": [
+          [
+            "industrial-techno",
+            34.26
+          ],
+          [
+            "contemporary-rnb",
+            35.49
+          ],
+          [
+            "chillstep",
+            36.16
+          ]
+        ]
+      }
+    },
+    "bebop": {
+      "flags": [],
+      "metrics": {
+        "bytes": 308317,
+        "luma_mean": 100.77,
+        "luma_std": 84.33,
+        "unique_colors_256": 20202,
+        "palette_distance": 0.0453,
+        "mean_rgb": [
+          147,
+          85,
+          64
+        ],
+        "ahash": 216173954658678783,
+        "dhash": 16857763733262602771,
+        "text_band_edge_density": 0.0258,
+        "pixdiff_nearest": [
+          [
+            "acid-techno",
+            41.45
+          ],
+          [
+            "tearout-dubstep",
+            42.46
+          ],
+          [
+            "glitch-hop",
+            42.54
+          ]
+        ]
+      }
+    },
+    "big-beat": {
+      "flags": [],
+      "metrics": {
+        "bytes": 334011,
+        "luma_mean": 105.06,
+        "luma_std": 79.87,
+        "unique_colors_256": 19876,
+        "palette_distance": 0.0526,
+        "mean_rgb": [
+          151,
+          88,
+          71
+        ],
+        "ahash": 18428729679545436059,
+        "dhash": 15191405242409339849,
+        "text_band_edge_density": 0.0264,
+        "pixdiff_nearest": [
+          [
+            "jazz-fusion",
+            41.03
+          ],
+          [
+            "post-punk",
+            42.89
+          ],
+          [
+            "lofi-house",
+            43.17
+          ]
+        ]
+      }
+    },
+    "black-metal": {
+      "flags": [],
+      "metrics": {
+        "bytes": 467541,
+        "luma_mean": 85.63,
+        "luma_std": 73.36,
+        "unique_colors_256": 25455,
+        "palette_distance": 0.0437,
+        "mean_rgb": [
+          121,
+          72,
+          64
+        ],
+        "ahash": 18298606345991192729,
+        "dhash": 17769711829438228680,
+        "text_band_edge_density": 0.2782,
+        "pixdiff_nearest": [
+          [
+            "jersey-drill",
+            39.13
+          ],
+          [
+            "industrial-techno",
+            40.5
+          ],
+          [
+            "trap-rap",
+            40.82
+          ]
+        ]
+      }
+    },
+    "blues-rock": {
+      "flags": [],
+      "metrics": {
+        "bytes": 279226,
+        "luma_mean": 104.65,
+        "luma_std": 79.61,
+        "unique_colors_256": 17861,
+        "palette_distance": 0.0519,
+        "mean_rgb": [
+          161,
+          84,
+          68
+        ],
+        "ahash": 17906366067568215951,
+        "dhash": 16067324601120172434,
+        "text_band_edge_density": 0.0325,
+        "pixdiff_nearest": [
+          [
+            "dancehall",
+            37.29
+          ],
+          [
+            "grime",
+            37.9
+          ],
+          [
+            "glitch-hop",
+            39.03
+          ]
+        ]
+      }
+    },
+    "boom-bap": {
+      "flags": [],
+      "metrics": {
+        "bytes": 276517,
+        "luma_mean": 97.87,
+        "luma_std": 84.77,
+        "unique_colors_256": 13468,
+        "palette_distance": 0.0349,
+        "mean_rgb": [
+          151,
+          78,
+          65
+        ],
+        "ahash": 9331952336509567993,
+        "dhash": 11433217349481769124,
+        "text_band_edge_density": 0.0361,
+        "pixdiff_nearest": [
+          [
+            "ghetto-house",
+            32.56
+          ],
+          [
+            "happy-hardcore",
+            36.3
+          ],
+          [
+            "uplifting-trance",
+            37.02
+          ]
+        ]
+      }
+    },
+    "bossa-nova": {
+      "flags": [],
+      "metrics": {
+        "bytes": 310115,
+        "luma_mean": 102.67,
+        "luma_std": 81.37,
+        "unique_colors_256": 22026,
+        "palette_distance": 0.0502,
+        "mean_rgb": [
+          137,
+          92,
+          73
+        ],
+        "ahash": 9295588611381467039,
+        "dhash": 10846597089973078441,
+        "text_band_edge_density": 0.0733,
+        "pixdiff_nearest": [
+          [
+            "happy-hardcore",
+            33.85
+          ],
+          [
+            "eurodance",
+            36.09
+          ],
+          [
+            "ambient-dub",
+            40.79
+          ]
+        ]
+      }
+    },
+    "breakbeat": {
+      "flags": [],
+      "metrics": {
+        "bytes": 352058,
+        "luma_mean": 71.89,
+        "luma_std": 71.12,
+        "unique_colors_256": 21155,
+        "palette_distance": 0.0655,
+        "mean_rgb": [
+          117,
+          55,
+          45
+        ],
+        "ahash": 13272522173241460476,
+        "dhash": 10281347193827136438,
+        "text_band_edge_density": 0.0174,
+        "pixdiff_nearest": [
+          [
+            "acid-jazz",
+            34.16
+          ],
+          [
+            "deep-house",
+            35.98
+          ],
+          [
+            "psytrance",
+            36.24
+          ]
+        ]
+      }
+    },
+    "breakcore": {
+      "flags": [],
+      "metrics": {
+        "bytes": 371850,
+        "luma_mean": 105.53,
+        "luma_std": 80.03,
+        "unique_colors_256": 21107,
+        "palette_distance": 0.0502,
+        "mean_rgb": [
+          153,
+          87,
+          74
+        ],
+        "ahash": 1198415363871,
+        "dhash": 16263053003195712587,
+        "text_band_edge_density": 0.0643,
+        "pixdiff_nearest": [
+          [
+            "tearout-dubstep",
+            36.46
+          ],
+          [
+            "tech-house",
+            38.68
+          ],
+          [
+            "j-pop",
+            39.39
+          ]
+        ]
+      }
+    },
+    "brooklyn-drill": {
+      "flags": [],
+      "metrics": {
+        "bytes": 281114,
+        "luma_mean": 61.01,
+        "luma_std": 71.17,
+        "unique_colors_256": 16239,
+        "palette_distance": 0.0946,
+        "mean_rgb": [
+          99,
+          46,
+          37
+        ],
+        "ahash": 18410857688170868991,
+        "dhash": 10284720453324021422,
+        "text_band_edge_density": 0.0102,
+        "pixdiff_nearest": [
+          [
+            "death-metal",
+            29.15
+          ],
+          [
+            "neo-soul",
+            29.21
+          ],
+          [
+            "melodic-dubstep",
+            29.95
+          ]
+        ]
+      }
+    },
+    "brostep": {
+      "flags": [],
+      "metrics": {
+        "bytes": 417427,
+        "luma_mean": 89.28,
+        "luma_std": 74.47,
+        "unique_colors_256": 27395,
+        "palette_distance": 0.0485,
+        "mean_rgb": [
+          126,
+          76,
+          63
+        ],
+        "ahash": 49000808178175,
+        "dhash": 11435385844809914546,
+        "text_band_edge_density": 0.0757,
+        "pixdiff_nearest": [
+          [
+            "jungle",
+            42.24
+          ],
+          [
+            "sambass",
+            42.5
+          ],
+          [
+            "raw-techno",
+            43.55
+          ]
+        ]
+      }
+    },
+    "chicago-blues": {
+      "flags": [],
+      "metrics": {
+        "bytes": 345658,
+        "luma_mean": 77.12,
+        "luma_std": 69.53,
+        "unique_colors_256": 22982,
+        "palette_distance": 0.0615,
+        "mean_rgb": [
+          123,
+          60,
+          47
+        ],
+        "ahash": 16251396093488105215,
+        "dhash": 13449652440941116313,
+        "text_band_edge_density": 0.0252,
+        "pixdiff_nearest": [
+          [
+            "synth-pop",
+            30.11
+          ],
+          [
+            "smooth-jazz",
+            32.54
+          ],
+          [
+            "deep-house",
+            32.69
+          ]
+        ]
+      }
+    },
+    "chicago-drill": {
+      "flags": [],
+      "metrics": {
+        "bytes": 294910,
+        "luma_mean": 115.06,
+        "luma_std": 82.4,
+        "unique_colors_256": 14777,
+        "palette_distance": 0.0749,
+        "mean_rgb": [
+          175,
+          92,
+          77
+        ],
+        "ahash": 11242958306190757791,
+        "dhash": 14308105017560703885,
+        "text_band_edge_density": 0.0144,
+        "pixdiff_nearest": [
+          [
+            "dancehall",
+            24.01
+          ],
+          [
+            "hard-bop",
+            38.04
+          ],
+          [
+            "hardstyle",
+            39.82
+          ]
+        ]
+      }
+    },
+    "chicago-house": {
+      "flags": [],
+      "metrics": {
+        "bytes": 321591,
+        "luma_mean": 97.64,
+        "luma_std": 77.95,
+        "unique_colors_256": 19388,
+        "palette_distance": 0.0369,
+        "mean_rgb": [
+          153,
+          77,
+          60
+        ],
+        "ahash": 13767521653059753759,
+        "dhash": 15409306723323513219,
+        "text_band_edge_density": 0.0493,
+        "pixdiff_nearest": [
+          [
+            "thrash-metal",
+            47.83
+          ],
+          [
+            "neurofunk",
+            48.73
+          ],
+          [
+            "acid-techno",
+            49.3
+          ]
+        ]
+      }
+    },
+    "chillstep": {
+      "flags": [],
+      "metrics": {
+        "bytes": 301566,
+        "luma_mean": 75.81,
+        "luma_std": 69.84,
+        "unique_colors_256": 16427,
+        "palette_distance": 0.0558,
+        "mean_rgb": [
+          123,
+          58,
+          48
+        ],
+        "ahash": 9332001176511676927,
+        "dhash": 16060582387360635024,
+        "text_band_edge_density": 0.0126,
+        "pixdiff_nearest": [
+          [
+            "contemporary-rnb",
+            30.15
+          ],
+          [
+            "phonk",
+            31.23
+          ],
+          [
+            "downtempo",
+            32.94
+          ]
+        ]
+      }
+    },
+    "chillwave": {
+      "flags": [],
+      "metrics": {
+        "bytes": 291437,
+        "luma_mean": 145.77,
+        "luma_std": 80.02,
+        "unique_colors_256": 15827,
+        "palette_distance": 0.1421,
+        "mean_rgb": [
+          184,
+          133,
+          113
+        ],
+        "ahash": 18444210798970478399,
+        "dhash": 17022098725429937689,
+        "text_band_edge_density": 0.0018,
+        "pixdiff_nearest": [
+          [
+            "vaporwave",
+            38.48
+          ],
+          [
+            "wave",
+            43.95
+          ],
+          [
+            "minimal-techno",
+            45.07
+          ]
+        ]
+      }
+    },
+    "chiptune": {
+      "flags": [],
+      "metrics": {
+        "bytes": 282574,
+        "luma_mean": 99.12,
+        "luma_std": 83.38,
+        "unique_colors_256": 16153,
+        "palette_distance": 0.0388,
+        "mean_rgb": [
+          145,
+          82,
+          65
+        ],
+        "ahash": 1246195302399,
+        "dhash": 11381212782445923124,
+        "text_band_edge_density": 0.0343,
+        "pixdiff_nearest": [
+          [
+            "math-rock",
+            41.23
+          ],
+          [
+            "tech-house",
+            44.13
+          ],
+          [
+            "metalcore",
+            45.02
+          ]
+        ]
+      }
+    },
+    "city-pop": {
+      "flags": [],
+      "metrics": {
+        "bytes": 310130,
+        "luma_mean": 105.27,
+        "luma_std": 83.53,
+        "unique_colors_256": 20106,
+        "palette_distance": 0.0533,
+        "mean_rgb": [
+          159,
+          85,
+          69
+        ],
+        "ahash": 14105292280311514107,
+        "dhash": 16208059838812432892,
+        "text_band_edge_density": 0.006,
+        "pixdiff_nearest": [
+          [
+            "grunge",
+            39.3
+          ],
+          [
+            "boom-bap",
+            39.73
+          ],
+          [
+            "happy-hardcore",
+            39.79
+          ]
+        ]
+      }
+    },
+    "cloud-rap": {
+      "flags": [],
+      "metrics": {
+        "bytes": 269505,
+        "luma_mean": 87.79,
+        "luma_std": 86.14,
+        "unique_colors_256": 18800,
+        "palette_distance": 0.0571,
+        "mean_rgb": [
+          120,
+          77,
+          64
+        ],
+        "ahash": 16857430258796823039,
+        "dhash": 7400683740317135522,
+        "text_band_edge_density": 0.018,
+        "pixdiff_nearest": [
+          [
+            "dub",
+            40.0
+          ],
+          [
+            "death-metal",
+            41.3
+          ],
+          [
+            "2-step-garage",
+            41.67
+          ]
+        ]
+      }
+    },
+    "conscious-hip-hop": {
+      "flags": [],
+      "metrics": {
+        "bytes": 262113,
+        "luma_mean": 99.79,
+        "luma_std": 84.5,
+        "unique_colors_256": 14266,
+        "palette_distance": 0.0411,
+        "mean_rgb": [
+          149,
+          82,
+          65
+        ],
+        "ahash": 13889222369141669039,
+        "dhash": 14877962042631691958,
+        "text_band_edge_density": 0.0589,
+        "pixdiff_nearest": [
+          [
+            "punk-rock",
+            42.17
+          ],
+          [
+            "future-bass",
+            43.72
+          ],
+          [
+            "chillstep",
+            46.61
+          ]
+        ]
+      }
+    },
+    "contemporary-rnb": {
+      "flags": [],
+      "metrics": {
+        "bytes": 249690,
+        "luma_mean": 78.66,
+        "luma_std": 75.56,
+        "unique_colors_256": 12428,
+        "palette_distance": 0.0448,
+        "mean_rgb": [
+          130,
+          59,
+          49
+        ],
+        "ahash": 10199708127906267387,
+        "dhash": 12003978336903793308,
+        "text_band_edge_density": 0.0523,
+        "pixdiff_nearest": [
+          [
+            "chillstep",
+            30.15
+          ],
+          [
+            "industrial-techno",
+            31.47
+          ],
+          [
+            "brooklyn-drill",
+            32.88
+          ]
+        ]
+      }
+    },
+    "cool-jazz": {
+      "flags": [],
+      "metrics": {
+        "bytes": 301919,
+        "luma_mean": 78.37,
+        "luma_std": 75.96,
+        "unique_colors_256": 21696,
+        "palette_distance": 0.0647,
+        "mean_rgb": [
+          119,
+          63,
+          51
+        ],
+        "ahash": 16393388516660577279,
+        "dhash": 13317868343849562321,
+        "text_band_edge_density": 0.015,
+        "pixdiff_nearest": [
+          [
+            "neo-soul",
+            39.13
+          ],
+          [
+            "thrash-metal",
+            39.39
+          ],
+          [
+            "melodic-dubstep",
+            40.41
+          ]
+        ]
+      }
+    },
+    "cumbia": {
+      "flags": [],
+      "metrics": {
+        "bytes": 318078,
+        "luma_mean": 96.25,
+        "luma_std": 80.72,
+        "unique_colors_256": 21142,
+        "palette_distance": 0.0347,
+        "mean_rgb": [
+          149,
+          77,
+          58
+        ],
+        "ahash": 9548125722150408191,
+        "dhash": 11712407566882743440,
+        "text_band_edge_density": 0.0198,
+        "pixdiff_nearest": [
+          [
+            "footwork",
+            37.78
+          ],
+          [
+            "jersey-drill",
+            38.42
+          ],
+          [
+            "boom-bap",
+            38.54
+          ]
+        ]
+      }
+    },
+    "dancehall": {
+      "flags": [],
+      "metrics": {
+        "bytes": 298611,
+        "luma_mean": 114.59,
+        "luma_std": 81.21,
+        "unique_colors_256": 21445,
+        "palette_distance": 0.0767,
+        "mean_rgb": [
+          179,
+          91,
+          72
+        ],
+        "ahash": 4395514348760666047,
+        "dhash": 9698106680627471757,
+        "text_band_edge_density": 0.0355,
+        "pixdiff_nearest": [
+          [
+            "chicago-drill",
+            24.01
+          ],
+          [
+            "reggae",
+            34.83
+          ],
+          [
+            "hard-bop",
+            37.07
+          ]
+        ]
+      }
+    },
+    "death-metal": {
+      "flags": [],
+      "metrics": {
+        "bytes": 248919,
+        "luma_mean": 68.27,
+        "luma_std": 75.27,
+        "unique_colors_256": 17050,
+        "palette_distance": 0.0558,
+        "mean_rgb": [
+          124,
+          46,
+          39
+        ],
+        "ahash": 18267023956817052159,
+        "dhash": 13442302171953012390,
+        "text_band_edge_density": 0.018,
+        "pixdiff_nearest": [
+          [
+            "2-step-garage",
+            25.83
+          ],
+          [
+            "brooklyn-drill",
+            29.15
+          ],
+          [
+            "dub",
+            31.28
+          ]
+        ]
+      }
+    },
+    "deathstep": {
+      "flags": [],
+      "metrics": {
+        "bytes": 302936,
+        "luma_mean": 97.93,
+        "luma_std": 83.33,
+        "unique_colors_256": 17028,
+        "palette_distance": 0.0327,
+        "mean_rgb": [
+          144,
+          80,
+          68
+        ],
+        "ahash": 852134447746041,
+        "dhash": 10561198311854417038,
+        "text_band_edge_density": 0.0331,
+        "pixdiff_nearest": [
+          [
+            "grime",
+            45.6
+          ],
+          [
+            "bebop",
+            47.35
+          ],
+          [
+            "idm",
+            48.04
+          ]
+        ]
+      }
+    },
+    "deep-house": {
+      "flags": [],
+      "metrics": {
+        "bytes": 260003,
+        "luma_mean": 66.24,
+        "luma_std": 66.37,
+        "unique_colors_256": 16847,
+        "palette_distance": 0.0873,
+        "mean_rgb": [
+          105,
+          52,
+          41
+        ],
+        "ahash": 9620959291973209855,
+        "dhash": 15191429836633715430,
+        "text_band_edge_density": 0.0156,
+        "pixdiff_nearest": [
+          [
+            "synth-pop",
+            30.6
+          ],
+          [
+            "acid-jazz",
+            30.68
+          ],
+          [
+            "chicago-blues",
+            32.69
+          ]
+        ]
+      }
+    },
+    "delta-blues": {
+      "flags": [],
+      "metrics": {
+        "bytes": 374095,
+        "luma_mean": 104.46,
+        "luma_std": 78.14,
+        "unique_colors_256": 23103,
+        "palette_distance": 0.0525,
+        "mean_rgb": [
+          144,
+          91,
+          73
+        ],
+        "ahash": 1802676681506960304,
+        "dhash": 14718383648919887260,
+        "text_band_edge_density": 0.0415,
+        "pixdiff_nearest": [
+          [
+            "k-pop",
+            44.57
+          ],
+          [
+            "black-metal",
+            44.74
+          ],
+          [
+            "texas-blues",
+            46.82
+          ]
+        ]
+      }
+    },
+    "detroit-techno": {
+      "flags": [],
+      "metrics": {
+        "bytes": 337589,
+        "luma_mean": 101.61,
+        "luma_std": 87.36,
+        "unique_colors_256": 21146,
+        "palette_distance": 0.0438,
+        "mean_rgb": [
+          145,
+          86,
+          71
+        ],
+        "ahash": 9295465373199962015,
+        "dhash": 17056463052250129614,
+        "text_band_edge_density": 0.0529,
+        "pixdiff_nearest": [
+          [
+            "happy-hardcore",
+            36.89
+          ],
+          [
+            "eurodance",
+            37.61
+          ],
+          [
+            "acid-techno",
+            37.87
+          ]
+        ]
+      }
+    },
+    "disco": {
+      "flags": [],
+      "metrics": {
+        "bytes": 365286,
+        "luma_mean": 92.19,
+        "luma_std": 79.92,
+        "unique_colors_256": 24037,
+        "palette_distance": 0.0462,
+        "mean_rgb": [
+          128,
+          79,
+          65
+        ],
+        "ahash": 11320924188699363837,
+        "dhash": 9704850981235631782,
+        "text_band_edge_density": 0.0319,
+        "pixdiff_nearest": [
+          [
+            "industrial-techno",
+            32.38
+          ],
+          [
+            "dub",
+            32.88
+          ],
+          [
+            "tech-trance",
+            35.98
+          ]
+        ]
+      }
+    },
+    "doom-metal": {
+      "flags": [],
+      "metrics": {
+        "bytes": 323480,
+        "luma_mean": 99.43,
+        "luma_std": 74.61,
+        "unique_colors_256": 18850,
+        "palette_distance": 0.0415,
+        "mean_rgb": [
+          149,
+          82,
+          62
+        ],
+        "ahash": 13898217512591231877,
+        "dhash": 16605397021129745556,
+        "text_band_edge_density": 0.0877,
+        "pixdiff_nearest": [
+          [
+            "uplifting-trance",
+            43.87
+          ],
+          [
+            "glitch-hop",
+            43.92
+          ],
+          [
+            "heavy-metal",
+            45.48
+          ]
+        ]
+      }
+    },
+    "downtempo": {
+      "flags": [],
+      "metrics": {
+        "bytes": 262680,
+        "luma_mean": 85.04,
+        "luma_std": 70.69,
+        "unique_colors_256": 14920,
+        "palette_distance": 0.0606,
+        "mean_rgb": [
+          130,
+          69,
+          51
+        ],
+        "ahash": 16249129986584577533,
+        "dhash": 8278428373324313270,
+        "text_band_edge_density": 0.015,
+        "pixdiff_nearest": [
+          [
+            "industrial-techno",
+            30.27
+          ],
+          [
+            "chillstep",
+            32.94
+          ],
+          [
+            "bass-house",
+            32.97
+          ]
+        ]
+      }
+    },
+    "dream-trance": {
+      "flags": [],
+      "metrics": {
+        "bytes": 223911,
+        "luma_mean": 87.34,
+        "luma_std": 72.41,
+        "unique_colors_256": 16359,
+        "palette_distance": 0.0074,
+        "mean_rgb": [
+          147,
+          63,
+          60
+        ],
+        "ahash": 11349503725811118591,
+        "dhash": 10576392462874090174,
+        "text_band_edge_density": 0.0168,
+        "pixdiff_nearest": [
+          [
+            "speedbass",
+            35.94
+          ],
+          [
+            "neo-soul",
+            39.9
+          ],
+          [
+            "progressive-rock",
+            41.24
+          ]
+        ]
+      }
+    },
+    "drift-phonk": {
+      "flags": [],
+      "metrics": {
+        "bytes": 277893,
+        "luma_mean": 98.13,
+        "luma_std": 80.11,
+        "unique_colors_256": 15807,
+        "palette_distance": 0.0358,
+        "mean_rgb": [
+          146,
+          80,
+          65
+        ],
+        "ahash": 6877308246755075,
+        "dhash": 18053861607929319817,
+        "text_band_edge_density": 0.0276,
+        "pixdiff_nearest": [
+          [
+            "salsa",
+            39.73
+          ],
+          [
+            "gypsy-jazz",
+            43.17
+          ],
+          [
+            "acid-techno",
+            44.74
+          ]
+        ]
+      }
+    },
+    "dub": {
+      "flags": [],
+      "metrics": {
+        "bytes": 279088,
+        "luma_mean": 78.09,
+        "luma_std": 78.87,
+        "unique_colors_256": 16373,
+        "palette_distance": 0.077,
+        "mean_rgb": [
+          114,
+          65,
+          51
+        ],
+        "ahash": 13803961364658620671,
+        "dhash": 9987447469032519334,
+        "text_band_edge_density": 0.0156,
+        "pixdiff_nearest": [
+          [
+            "industrial-techno",
+            28.83
+          ],
+          [
+            "death-metal",
+            31.28
+          ],
+          [
+            "jump-up",
+            31.83
+          ]
+        ]
+      }
+    },
+    "dub-techno": {
+      "flags": [],
+      "metrics": {
+        "bytes": 286537,
+        "luma_mean": 88.22,
+        "luma_std": 82.34,
+        "unique_colors_256": 18689,
+        "palette_distance": 0.0324,
+        "mean_rgb": [
+          137,
+          69,
+          57
+        ],
+        "ahash": 14917073219176858111,
+        "dhash": 16339781417716336834,
+        "text_band_edge_density": 0.0312,
+        "pixdiff_nearest": [
+          [
+            "afro-house",
+            43.0
+          ],
+          [
+            "neo-soul",
+            43.1
+          ],
+          [
+            "electro-house",
+            44.21
+          ]
+        ]
+      }
+    },
+    "dubstep": {
+      "flags": [],
+      "metrics": {
+        "bytes": 293103,
+        "luma_mean": 69.05,
+        "luma_std": 67.38,
+        "unique_colors_256": 16950,
+        "palette_distance": 0.0684,
+        "mean_rgb": [
+          116,
+          52,
+          42
+        ],
+        "ahash": 14936362988682184959,
+        "dhash": 16478260484258965154,
+        "text_band_edge_density": 0.0319,
+        "pixdiff_nearest": [
+          [
+            "synth-pop",
+            28.64
+          ],
+          [
+            "industrial-techno",
+            31.95
+          ],
+          [
+            "brooklyn-drill",
+            32.19
+          ]
+        ]
+      }
+    },
+    "east-coast-hip-hop": {
+      "flags": [],
+      "metrics": {
+        "bytes": 328259,
+        "luma_mean": 89.02,
+        "luma_std": 67.29,
+        "unique_colors_256": 25886,
+        "palette_distance": 0.0348,
+        "mean_rgb": [
+          146,
+          68,
+          50
+        ],
+        "ahash": 9763963977549869565,
+        "dhash": 16196855884412796526,
+        "text_band_edge_density": 0.0186,
+        "pixdiff_nearest": [
+          [
+            "jersey-drill",
+            33.91
+          ],
+          [
+            "synth-pop",
+            36.8
+          ],
+          [
+            "chillstep",
+            37.14
+          ]
+        ]
+      }
+    },
+    "edm-trap": {
+      "flags": [],
+      "metrics": {
+        "bytes": 346005,
+        "luma_mean": 88.36,
+        "luma_std": 80.0,
+        "unique_colors_256": 20728,
+        "palette_distance": 0.0386,
+        "mean_rgb": [
+          135,
+          71,
+          57
+        ],
+        "ahash": 9295636895403773181,
+        "dhash": 9842202051825870542,
+        "text_band_edge_density": 0.0234,
+        "pixdiff_nearest": [
+          [
+            "jersey-club",
+            36.54
+          ],
+          [
+            "downtempo",
+            36.67
+          ],
+          [
+            "deep-house",
+            37.01
+          ]
+        ]
+      }
+    },
+    "electric-blues": {
+      "flags": [],
+      "metrics": {
+        "bytes": 303108,
+        "luma_mean": 107.72,
+        "luma_std": 79.2,
+        "unique_colors_256": 19956,
+        "palette_distance": 0.062,
+        "mean_rgb": [
+          168,
+          86,
+          64
+        ],
+        "ahash": 9295575878851304381,
+        "dhash": 13445116896219991174,
+        "text_band_edge_density": 0.0535,
+        "pixdiff_nearest": [
+          [
+            "eurodance",
+            38.31
+          ],
+          [
+            "hard-bop",
+            39.12
+          ],
+          [
+            "ragga-jungle",
+            42.18
+          ]
+        ]
+      }
+    },
+    "electro": {
+      "flags": [],
+      "metrics": {
+        "bytes": 296052,
+        "luma_mean": 83.41,
+        "luma_std": 79.6,
+        "unique_colors_256": 19959,
+        "palette_distance": 0.048,
+        "mean_rgb": [
+          127,
+          67,
+          55
+        ],
+        "ahash": 18410857738902013951,
+        "dhash": 12873133301946688162,
+        "text_band_edge_density": 0.015,
+        "pixdiff_nearest": [
+          [
+            "dub",
+            34.97
+          ],
+          [
+            "2-step-garage",
+            35.11
+          ],
+          [
+            "neo-soul",
+            35.54
+          ]
+        ]
+      }
+    },
+    "electro-house": {
+      "flags": [],
+      "metrics": {
+        "bytes": 300753,
+        "luma_mean": 86.73,
+        "luma_std": 81.97,
+        "unique_colors_256": 19463,
+        "palette_distance": 0.0466,
+        "mean_rgb": [
+          135,
+          69,
+          53
+        ],
+        "ahash": 9295633631127110143,
+        "dhash": 12303428353245099184,
+        "text_band_edge_density": 0.0192,
+        "pixdiff_nearest": [
+          [
+            "neo-soul",
+            33.59
+          ],
+          [
+            "dub",
+            36.34
+          ],
+          [
+            "afro-house",
+            37.47
+          ]
+        ]
+      }
+    },
+    "emo-rap": {
+      "flags": [],
+      "metrics": {
+        "bytes": 284460,
+        "luma_mean": 111.63,
+        "luma_std": 84.8,
+        "unique_colors_256": 15082,
+        "palette_distance": 0.0675,
+        "mean_rgb": [
+          157,
+          96,
+          76
+        ],
+        "ahash": 3462125372107004,
+        "dhash": 13017204639169013350,
+        "text_band_edge_density": 0.0102,
+        "pixdiff_nearest": [
+          [
+            "brostep",
+            55.96
+          ],
+          [
+            "hard-rock",
+            56.57
+          ],
+          [
+            "sambass",
+            57.07
+          ]
+        ]
+      }
+    },
+    "euro-trance": {
+      "flags": [],
+      "metrics": {
+        "bytes": 295600,
+        "luma_mean": 103.79,
+        "luma_std": 84.43,
+        "unique_colors_256": 17968,
+        "palette_distance": 0.0497,
+        "mean_rgb": [
+          149,
+          88,
+          71
+        ],
+        "ahash": 9295641836368396799,
+        "dhash": 10277960603226918066,
+        "text_band_edge_density": 0.0385,
+        "pixdiff_nearest": [
+          [
+            "hardcore-gabber",
+            35.15
+          ],
+          [
+            "speedbass",
+            36.39
+          ],
+          [
+            "vocal-trance",
+            39.53
+          ]
+        ]
+      }
+    },
+    "eurodance": {
+      "flags": [],
+      "metrics": {
+        "bytes": 344533,
+        "luma_mean": 106.3,
+        "luma_std": 80.67,
+        "unique_colors_256": 27187,
+        "palette_distance": 0.0561,
+        "mean_rgb": [
+          159,
+          87,
+          69
+        ],
+        "ahash": 13002805023,
+        "dhash": 10991781119045829284,
+        "text_band_edge_density": 0.024,
+        "pixdiff_nearest": [
+          [
+            "j-pop",
+            33.09
+          ],
+          [
+            "ragga-jungle",
+            33.19
+          ],
+          [
+            "hardstyle",
+            34.63
+          ]
+        ]
+      }
+    },
+    "footwork": {
+      "flags": [],
+      "metrics": {
+        "bytes": 327348,
+        "luma_mean": 100.92,
+        "luma_std": 82.52,
+        "unique_colors_256": 15803,
+        "palette_distance": 0.0425,
+        "mean_rgb": [
+          154,
+          81,
+          66
+        ],
+        "ahash": 10197806750364469673,
+        "dhash": 9712840024653276844,
+        "text_band_edge_density": 0.0397,
+        "pixdiff_nearest": [
+          [
+            "boom-bap",
+            37.03
+          ],
+          [
+            "cumbia",
+            37.78
+          ],
+          [
+            "k-pop",
+            42.7
+          ]
+        ]
+      }
+    },
+    "free-jazz": {
+      "flags": [],
+      "metrics": {
+        "bytes": 294532,
+        "luma_mean": 99.32,
+        "luma_std": 90.15,
+        "unique_colors_256": 15843,
+        "palette_distance": 0.0378,
+        "mean_rgb": [
+          137,
+          86,
+          71
+        ],
+        "ahash": 10163645250372339711,
+        "dhash": 10860068645456884393,
+        "text_band_edge_density": 0.0198,
+        "pixdiff_nearest": [
+          [
+            "electro",
+            40.05
+          ],
+          [
+            "post-dubstep",
+            40.41
+          ],
+          [
+            "electro-house",
+            41.48
+          ]
+        ]
+      }
+    },
+    "french-house": {
+      "flags": [],
+      "metrics": {
+        "bytes": 253945,
+        "luma_mean": 90.98,
+        "luma_std": 77.71,
+        "unique_colors_256": 16225,
+        "palette_distance": 0.0254,
+        "mean_rgb": [
+          155,
+          67,
+          52
+        ],
+        "ahash": 9295641703619725239,
+        "dhash": 17073897929322049706,
+        "text_band_edge_density": 0.024,
+        "pixdiff_nearest": [
+          [
+            "acid-techno",
+            28.14
+          ],
+          [
+            "peak-time-techno",
+            35.91
+          ],
+          [
+            "glitch-hop",
+            36.84
+          ]
+        ]
+      }
+    },
+    "frenchcore": {
+      "flags": [],
+      "metrics": {
+        "bytes": 331137,
+        "luma_mean": 98.63,
+        "luma_std": 80.41,
+        "unique_colors_256": 18053,
+        "palette_distance": 0.0374,
+        "mean_rgb": [
+          153,
+          78,
+          65
+        ],
+        "ahash": 18411995737817582847,
+        "dhash": 12309150088156128930,
+        "text_band_edge_density": 0.0216,
+        "pixdiff_nearest": [
+          [
+            "industrial-techno",
+            39.1
+          ],
+          [
+            "downtempo",
+            39.32
+          ],
+          [
+            "disco",
+            42.07
+          ]
+        ]
+      }
+    },
+    "funk": {
+      "flags": [],
+      "metrics": {
+        "bytes": 272786,
+        "luma_mean": 100.99,
+        "luma_std": 81.7,
+        "unique_colors_256": 13433,
+        "palette_distance": 0.0456,
+        "mean_rgb": [
+          156,
+          81,
+          60
+        ],
+        "ahash": 1801464049888868159,
+        "dhash": 5488439663065076499,
+        "text_band_edge_density": 0.0661,
+        "pixdiff_nearest": [
+          [
+            "chiptune",
+            47.36
+          ],
+          [
+            "acid-techno",
+            48.59
+          ],
+          [
+            "glitch-hop",
+            50.18
+          ]
+        ]
+      }
+    },
+    "future-bass": {
+      "flags": [],
+      "metrics": {
+        "bytes": 302627,
+        "luma_mean": 99.35,
+        "luma_std": 83.14,
+        "unique_colors_256": 17191,
+        "palette_distance": 0.0418,
+        "mean_rgb": [
+          156,
+          79,
+          62
+        ],
+        "ahash": 9223433730270305983,
+        "dhash": 14048616776616365469,
+        "text_band_edge_density": 0.027,
+        "pixdiff_nearest": [
+          [
+            "punk-rock",
+            35.82
+          ],
+          [
+            "traditional-pop",
+            39.49
+          ],
+          [
+            "bachata",
+            41.93
+          ]
+        ]
+      }
+    },
+    "future-garage": {
+      "flags": [],
+      "metrics": {
+        "bytes": 314717,
+        "luma_mean": 74.2,
+        "luma_std": 76.49,
+        "unique_colors_256": 22282,
+        "palette_distance": 0.0401,
+        "mean_rgb": [
+          113,
+          58,
+          59
+        ],
+        "ahash": 10556578816763072511,
+        "dhash": 14540974159242568946,
+        "text_band_edge_density": 0.027,
+        "pixdiff_nearest": [
+          [
+            "thrash-metal",
+            34.96
+          ],
+          [
+            "salsa",
+            37.64
+          ],
+          [
+            "jersey-drill",
+            38.32
+          ]
+        ]
+      }
+    },
+    "future-house": {
+      "flags": [],
+      "metrics": {
+        "bytes": 339913,
+        "luma_mean": 103.82,
+        "luma_std": 87.86,
+        "unique_colors_256": 20253,
+        "palette_distance": 0.0498,
+        "mean_rgb": [
+          139,
+          92,
+          78
+        ],
+        "ahash": 15780613197886585851,
+        "dhash": 14829103209876514092,
+        "text_band_edge_density": 0.0974,
+        "pixdiff_nearest": [
+          [
+            "sambass",
+            50.06
+          ],
+          [
+            "ambient-dub",
+            58.31
+          ],
+          [
+            "speedbass",
+            59.26
+          ]
+        ]
+      }
+    },
+    "g-funk": {
+      "flags": [],
+      "metrics": {
+        "bytes": 281284,
+        "luma_mean": 122.12,
+        "luma_std": 87.56,
+        "unique_colors_256": 14864,
+        "palette_distance": 0.0896,
+        "mean_rgb": [
+          161,
+          109,
+          91
+        ],
+        "ahash": 18360191621955653535,
+        "dhash": 8062275177334080932,
+        "text_band_edge_density": 0.0186,
+        "pixdiff_nearest": [
+          [
+            "lofi-house",
+            53.12
+          ],
+          [
+            "big-beat",
+            55.64
+          ],
+          [
+            "industrial-techno",
+            55.64
+          ]
+        ]
+      }
+    },
+    "ghetto-house": {
+      "flags": [],
+      "metrics": {
+        "bytes": 249688,
+        "luma_mean": 108.9,
+        "luma_std": 84.1,
+        "unique_colors_256": 14264,
+        "palette_distance": 0.0605,
+        "mean_rgb": [
+          160,
+          90,
+          74
+        ],
+        "ahash": 9298838205246178237,
+        "dhash": 12873142141440862372,
+        "text_band_edge_density": 0.0198,
+        "pixdiff_nearest": [
+          [
+            "boom-bap",
+            32.56
+          ],
+          [
+            "happy-hardcore",
+            34.21
+          ],
+          [
+            "ragga-jungle",
+            39.27
+          ]
+        ]
+      }
+    },
+    "glitch-hop": {
+      "flags": [],
+      "metrics": {
+        "bytes": 312696,
+        "luma_mean": 100.71,
+        "luma_std": 79.64,
+        "unique_colors_256": 15678,
+        "palette_distance": 0.0442,
+        "mean_rgb": [
+          152,
+          82,
+          63
+        ],
+        "ahash": 11601272747699670927,
+        "dhash": 10715847946372686226,
+        "text_band_edge_density": 0.0679,
+        "pixdiff_nearest": [
+          [
+            "acid-techno",
+            36.13
+          ],
+          [
+            "thrash-metal",
+            36.21
+          ],
+          [
+            "riddim",
+            36.52
+          ]
+        ]
+      }
+    },
+    "goa-trance": {
+      "flags": [],
+      "metrics": {
+        "bytes": 343773,
+        "luma_mean": 75.7,
+        "luma_std": 74.18,
+        "unique_colors_256": 18958,
+        "palette_distance": 0.0616,
+        "mean_rgb": [
+          116,
+          60,
+          51
+        ],
+        "ahash": 14520053325073321471,
+        "dhash": 12451547910792718005,
+        "text_band_edge_density": 0.0294,
+        "pixdiff_nearest": [
+          [
+            "nu-disco-house",
+            32.1
+          ],
+          [
+            "trip-hop",
+            32.19
+          ],
+          [
+            "chicago-blues",
+            32.69
+          ]
+        ]
+      }
+    },
+    "grime": {
+      "flags": [],
+      "metrics": {
+        "bytes": 234016,
+        "luma_mean": 90.74,
+        "luma_std": 81.5,
+        "unique_colors_256": 13518,
+        "palette_distance": 0.0174,
+        "mean_rgb": [
+          145,
+          69,
+          60
+        ],
+        "ahash": 9295712218317000703,
+        "dhash": 17220881743170273682,
+        "text_band_edge_density": 0.0355,
+        "pixdiff_nearest": [
+          [
+            "blues-rock",
+            37.9
+          ],
+          [
+            "dancehall",
+            38.73
+          ],
+          [
+            "heavy-metal",
+            39.19
+          ]
+        ]
+      }
+    },
+    "grunge": {
+      "flags": [],
+      "metrics": {
+        "bytes": 376113,
+        "luma_mean": 98.17,
+        "luma_std": 71.23,
+        "unique_colors_256": 19526,
+        "palette_distance": 0.0365,
+        "mean_rgb": [
+          142,
+          82,
+          66
+        ],
+        "ahash": 13240842962600298495,
+        "dhash": 11090873530172477684,
+        "text_band_edge_density": 0.1268,
+        "pixdiff_nearest": [
+          [
+            "jazz-fusion",
+            25.73
+          ],
+          [
+            "industrial-techno",
+            35.09
+          ],
+          [
+            "jersey-drill",
+            38.33
+          ]
+        ]
+      }
+    },
+    "gypsy-jazz": {
+      "flags": [],
+      "metrics": {
+        "bytes": 301852,
+        "luma_mean": 98.67,
+        "luma_std": 82.24,
+        "unique_colors_256": 18943,
+        "palette_distance": 0.0405,
+        "mean_rgb": [
+          144,
+          83,
+          64
+        ],
+        "ahash": 13872358146315325319,
+        "dhash": 18217819733859278992,
+        "text_band_edge_density": 0.0499,
+        "pixdiff_nearest": [
+          [
+            "glitch-hop",
+            40.65
+          ],
+          [
+            "acid-house",
+            41.32
+          ],
+          [
+            "salsa",
+            41.86
+          ]
+        ]
+      }
+    },
+    "halftime": {
+      "flags": [],
+      "metrics": {
+        "bytes": 355913,
+        "luma_mean": 95.95,
+        "luma_std": 79.56,
+        "unique_colors_256": 18810,
+        "palette_distance": 0.0457,
+        "mean_rgb": [
+          128,
+          85,
+          70
+        ],
+        "ahash": 220483789373375,
+        "dhash": 9672305592367881101,
+        "text_band_edge_density": 0.0156,
+        "pixdiff_nearest": [
+          [
+            "jersey-drill",
+            44.11
+          ],
+          [
+            "hard-trap",
+            44.91
+          ],
+          [
+            "thrash-metal",
+            44.94
+          ]
+        ]
+      }
+    },
+    "happy-hardcore": {
+      "flags": [],
+      "metrics": {
+        "bytes": 324511,
+        "luma_mean": 98.56,
+        "luma_std": 80.48,
+        "unique_colors_256": 25898,
+        "palette_distance": 0.0354,
+        "mean_rgb": [
+          143,
+          82,
+          69
+        ],
+        "ahash": 62223599241119,
+        "dhash": 9700356203404626084,
+        "text_band_edge_density": 0.0264,
+        "pixdiff_nearest": [
+          [
+            "bossa-nova",
+            33.85
+          ],
+          [
+            "ghetto-house",
+            34.21
+          ],
+          [
+            "ambient-dub",
+            36.15
+          ]
+        ]
+      }
+    },
+    "hard-bop": {
+      "flags": [],
+      "metrics": {
+        "bytes": 281921,
+        "luma_mean": 102.75,
+        "luma_std": 88.18,
+        "unique_colors_256": 14823,
+        "palette_distance": 0.0458,
+        "mean_rgb": [
+          157,
+          82,
+          70
+        ],
+        "ahash": 9223831089427193791,
+        "dhash": 14313764091769488526,
+        "text_band_edge_density": 0.0349,
+        "pixdiff_nearest": [
+          [
+            "dancehall",
+            37.07
+          ],
+          [
+            "chicago-drill",
+            38.04
+          ],
+          [
+            "hard-trance",
+            38.15
+          ]
+        ]
+      }
+    },
+    "hard-rock": {
+      "flags": [],
+      "metrics": {
+        "bytes": 300681,
+        "luma_mean": 110.34,
+        "luma_std": 80.7,
+        "unique_colors_256": 18726,
+        "palette_distance": 0.0644,
+        "mean_rgb": [
+          154,
+          95,
+          75
+        ],
+        "ahash": 16226770181391773181,
+        "dhash": 17480890027728856614,
+        "text_band_edge_density": 0.0192,
+        "pixdiff_nearest": [
+          [
+            "afro-house",
+            44.38
+          ],
+          [
+            "sambass",
+            46.57
+          ],
+          [
+            "electro",
+            51.41
+          ]
+        ]
+      }
+    },
+    "hard-techno": {
+      "flags": [],
+      "metrics": {
+        "bytes": 307739,
+        "luma_mean": 113.08,
+        "luma_std": 72.45,
+        "unique_colors_256": 21084,
+        "palette_distance": 0.0715,
+        "mean_rgb": [
+          170,
+          92,
+          72
+        ],
+        "ahash": 17299178320424011013,
+        "dhash": 4222266017657959602,
+        "text_band_edge_density": 0.0319,
+        "pixdiff_nearest": [
+          [
+            "idm",
+            40.37
+          ],
+          [
+            "eurodance",
+            45.0
+          ],
+          [
+            "peak-time-techno",
+            46.07
+          ]
+        ]
+      }
+    },
+    "hard-trance": {
+      "flags": [],
+      "metrics": {
+        "bytes": 331092,
+        "luma_mean": 94.0,
+        "luma_std": 79.95,
+        "unique_colors_256": 19343,
+        "palette_distance": 0.0316,
+        "mean_rgb": [
+          143,
+          76,
+          59
+        ],
+        "ahash": 72092985038671871,
+        "dhash": 14568778213962711307,
+        "text_band_edge_density": 0.0415,
+        "pixdiff_nearest": [
+          [
+            "happy-hardcore",
+            36.91
+          ],
+          [
+            "hard-bop",
+            38.15
+          ],
+          [
+            "edm-trap",
+            38.25
+          ]
+        ]
+      }
+    },
+    "hard-trap": {
+      "flags": [],
+      "metrics": {
+        "bytes": 363839,
+        "luma_mean": 92.75,
+        "luma_std": 72.71,
+        "unique_colors_256": 21744,
+        "palette_distance": 0.0605,
+        "mean_rgb": [
+          117,
+          85,
+          72
+        ],
+        "ahash": 9259612768561465343,
+        "dhash": 12596124963048698789,
+        "text_band_edge_density": 0.0294,
+        "pixdiff_nearest": [
+          [
+            "thrash-metal",
+            35.4
+          ],
+          [
+            "salsa",
+            37.74
+          ],
+          [
+            "afrobeat",
+            38.43
+          ]
+        ]
+      }
+    },
+    "hardcore-gabber": {
+      "flags": [],
+      "metrics": {
+        "bytes": 328494,
+        "luma_mean": 96.9,
+        "luma_std": 72.17,
+        "unique_colors_256": 19181,
+        "palette_distance": 0.0388,
+        "mean_rgb": [
+          160,
+          74,
+          52
+        ],
+        "ahash": 9295607554069070335,
+        "dhash": 15758819505126149810,
+        "text_band_edge_density": 0.0457,
+        "pixdiff_nearest": [
+          [
+            "speedbass",
+            32.36
+          ],
+          [
+            "euro-trance",
+            35.15
+          ],
+          [
+            "vocal-trance",
+            37.44
+          ]
+        ]
+      }
+    },
+    "hardstyle": {
+      "flags": [],
+      "metrics": {
+        "bytes": 323760,
+        "luma_mean": 97.98,
+        "luma_std": 75.82,
+        "unique_colors_256": 14287,
+        "palette_distance": 0.0376,
+        "mean_rgb": [
+          159,
+          74,
+          59
+        ],
+        "ahash": 36036506536054559,
+        "dhash": 10586942929808499397,
+        "text_band_edge_density": 0.1707,
+        "pixdiff_nearest": [
+          [
+            "j-pop",
+            34.23
+          ],
+          [
+            "eurodance",
+            34.63
+          ],
+          [
+            "tech-house",
+            39.43
+          ]
+        ]
+      }
+    },
+    "heavy-metal": {
+      "flags": [],
+      "metrics": {
+        "bytes": 329744,
+        "luma_mean": 93.39,
+        "luma_std": 73.97,
+        "unique_colors_256": 17193,
+        "palette_distance": 0.045,
+        "mean_rgb": [
+          134,
+          79,
+          62
+        ],
+        "ahash": 9259401946455803807,
+        "dhash": 12013023066896132489,
+        "text_band_edge_density": 0.0246,
+        "pixdiff_nearest": [
+          [
+            "eurodance",
+            37.6
+          ],
+          [
+            "grime",
+            39.19
+          ],
+          [
+            "salsa",
+            39.47
+          ]
+        ]
+      }
+    },
+    "hybrid-trap": {
+      "flags": [],
+      "metrics": {
+        "bytes": 301560,
+        "luma_mean": 86.92,
+        "luma_std": 77.7,
+        "unique_colors_256": 19496,
+        "palette_distance": 0.031,
+        "mean_rgb": [
+          141,
+          66,
+          54
+        ],
+        "ahash": 82234736857128703,
+        "dhash": 16155175936346083237,
+        "text_band_edge_density": 0.0156,
+        "pixdiff_nearest": [
+          [
+            "thrash-metal",
+            45.53
+          ],
+          [
+            "neurofunk",
+            46.2
+          ],
+          [
+            "salsa",
+            46.49
+          ]
+        ]
+      }
+    },
+    "idm": {
+      "flags": [],
+      "metrics": {
+        "bytes": 369156,
+        "luma_mean": 122.06,
+        "luma_std": 78.49,
+        "unique_colors_256": 21054,
+        "palette_distance": 0.0911,
+        "mean_rgb": [
+          173,
+          104,
+          82
+        ],
+        "ahash": 72909745732126495,
+        "dhash": 14180007496978125187,
+        "text_band_edge_density": 0.155,
+        "pixdiff_nearest": [
+          [
+            "metalcore",
+            36.06
+          ],
+          [
+            "wave",
+            37.97
+          ],
+          [
+            "eurodance",
+            38.54
+          ]
+        ]
+      }
+    },
+    "industrial-techno": {
+      "flags": [],
+      "metrics": {
+        "bytes": 367814,
+        "luma_mean": 82.73,
+        "luma_std": 67.5,
+        "unique_colors_256": 25904,
+        "palette_distance": 0.0556,
+        "mean_rgb": [
+          129,
+          65,
+          50
+        ],
+        "ahash": 18411139278054929663,
+        "dhash": 11152290042135351954,
+        "text_band_edge_density": 0.0829,
+        "pixdiff_nearest": [
+          [
+            "jersey-drill",
+            28.23
+          ],
+          [
+            "dub",
+            28.83
+          ],
+          [
+            "brooklyn-drill",
+            29.96
+          ]
+        ]
+      }
+    },
+    "j-pop": {
+      "flags": [],
+      "metrics": {
+        "bytes": 292585,
+        "luma_mean": 103.75,
+        "luma_std": 86.44,
+        "unique_colors_256": 24453,
+        "palette_distance": 0.046,
+        "mean_rgb": [
+          157,
+          82,
+          70
+        ],
+        "ahash": 32019436211983,
+        "dhash": 10535492709587132563,
+        "text_band_edge_density": 0.0264,
+        "pixdiff_nearest": [
+          [
+            "eurodance",
+            33.09
+          ],
+          [
+            "hardstyle",
+            34.23
+          ],
+          [
+            "breakcore",
+            39.39
+          ]
+        ]
+      }
+    },
+    "jazz-fusion": {
+      "flags": [],
+      "metrics": {
+        "bytes": 306480,
+        "luma_mean": 103.52,
+        "luma_std": 78.52,
+        "unique_colors_256": 17472,
+        "palette_distance": 0.0507,
+        "mean_rgb": [
+          151,
+          87,
+          66
+        ],
+        "ahash": 18431095837108275195,
+        "dhash": 13974428528540025084,
+        "text_band_edge_density": 0.0793,
+        "pixdiff_nearest": [
+          [
+            "grunge",
+            25.73
+          ],
+          [
+            "big-beat",
+            41.03
+          ],
+          [
+            "industrial-techno",
+            41.91
+          ]
+        ]
+      }
+    },
+    "jersey-club": {
+      "flags": [],
+      "metrics": {
+        "bytes": 261085,
+        "luma_mean": 84.78,
+        "luma_std": 74.65,
+        "unique_colors_256": 16654,
+        "palette_distance": 0.0352,
+        "mean_rgb": [
+          139,
+          64,
+          52
+        ],
+        "ahash": 9475728160160779513,
+        "dhash": 17363248634592138924,
+        "text_band_edge_density": 0.0222,
+        "pixdiff_nearest": [
+          [
+            "k-pop",
+            36.02
+          ],
+          [
+            "chicago-blues",
+            36.48
+          ],
+          [
+            "edm-trap",
+            36.54
+          ]
+        ]
+      }
+    },
+    "jersey-drill": {
+      "flags": [],
+      "metrics": {
+        "bytes": 336629,
+        "luma_mean": 79.28,
+        "luma_std": 66.62,
+        "unique_colors_256": 22140,
+        "palette_distance": 0.0562,
+        "mean_rgb": [
+          128,
+          61,
+          48
+        ],
+        "ahash": 10606966148258039807,
+        "dhash": 10995803132026989228,
+        "text_band_edge_density": 0.0337,
+        "pixdiff_nearest": [
+          [
+            "industrial-techno",
+            28.23
+          ],
+          [
+            "chillstep",
+            33.75
+          ],
+          [
+            "east-coast-hip-hop",
+            33.91
+          ]
+        ]
+      }
+    },
+    "jump-up": {
+      "flags": [],
+      "metrics": {
+        "bytes": 290811,
+        "luma_mean": 94.82,
+        "luma_std": 85.98,
+        "unique_colors_256": 13958,
+        "palette_distance": 0.0439,
+        "mean_rgb": [
+          137,
+          80,
+          62
+        ],
+        "ahash": 11326836193551817215,
+        "dhash": 10285837452515659436,
+        "text_band_edge_density": 0.0072,
+        "pixdiff_nearest": [
+          [
+            "dub",
+            31.83
+          ],
+          [
+            "progressive-rock",
+            35.61
+          ],
+          [
+            "electro-house",
+            37.84
+          ]
+        ]
+      }
+    },
+    "jungle": {
+      "flags": [],
+      "metrics": {
+        "bytes": 304243,
+        "luma_mean": 69.49,
+        "luma_std": 71.84,
+        "unique_colors_256": 18038,
+        "palette_distance": 0.0707,
+        "mean_rgb": [
+          118,
+          51,
+          40
+        ],
+        "ahash": 12788245472232048095,
+        "dhash": 11110042261306127086,
+        "text_band_edge_density": 0.0319,
+        "pixdiff_nearest": [
+          [
+            "dubstep",
+            33.97
+          ],
+          [
+            "synth-pop",
+            35.25
+          ],
+          [
+            "brooklyn-drill",
+            36.64
+          ]
+        ]
+      }
+    },
+    "k-pop": {
+      "flags": [],
+      "metrics": {
+        "bytes": 299117,
+        "luma_mean": 93.13,
+        "luma_std": 77.8,
+        "unique_colors_256": 22984,
+        "palette_distance": 0.0261,
+        "mean_rgb": [
+          143,
+          74,
+          60
+        ],
+        "ahash": 11064374032236773881,
+        "dhash": 14881835617831132332,
+        "text_band_edge_density": 0.0331,
+        "pixdiff_nearest": [
+          [
+            "contemporary-rnb",
+            34.63
+          ],
+          [
+            "jersey-club",
+            36.02
+          ],
+          [
+            "chillstep",
+            36.21
+          ]
+        ]
+      }
+    },
+    "kawaii-future-bass": {
+      "flags": [],
+      "metrics": {
+        "bytes": 233446,
+        "luma_mean": 150.8,
+        "luma_std": 77.93,
+        "unique_colors_256": 21706,
+        "palette_distance": 0.1515,
+        "mean_rgb": [
+          215,
+          125,
+          114
+        ],
+        "ahash": 289357441059995455,
+        "dhash": 10639383052140778293,
+        "text_band_edge_density": 0.0367,
+        "pixdiff_nearest": [
+          [
+            "minimal-techno",
+            53.87
+          ],
+          [
+            "microhouse",
+            54.21
+          ],
+          [
+            "metalcore",
+            54.56
+          ]
+        ]
+      }
+    },
+    "kuduro": {
+      "flags": [],
+      "metrics": {
+        "bytes": 358847,
+        "luma_mean": 106.14,
+        "luma_std": 74.3,
+        "unique_colors_256": 21940,
+        "palette_distance": 0.0553,
+        "mean_rgb": [
+          149,
+          91,
+          71
+        ],
+        "ahash": 18190920991088247559,
+        "dhash": 14859690114546527360,
+        "text_band_edge_density": 0.0463,
+        "pixdiff_nearest": [
+          [
+            "blues-rock",
+            48.76
+          ],
+          [
+            "thrash-metal",
+            50.09
+          ],
+          [
+            "reggae",
+            50.55
+          ]
+        ]
+      }
+    },
+    "liquid-dnb": {
+      "flags": [],
+      "metrics": {
+        "bytes": 268992,
+        "luma_mean": 79.51,
+        "luma_std": 75.91,
+        "unique_colors_256": 22358,
+        "palette_distance": 0.0371,
+        "mean_rgb": [
+          137,
+          57,
+          48
+        ],
+        "ahash": 13346470480588091839,
+        "dhash": 11428616994288735890,
+        "text_band_edge_density": 0.0144,
+        "pixdiff_nearest": [
+          [
+            "jungle",
+            37.95
+          ],
+          [
+            "dubstep",
+            41.59
+          ],
+          [
+            "synth-pop",
+            42.1
+          ]
+        ]
+      }
+    },
+    "lofi-hip-hop": {
+      "flags": [],
+      "metrics": {
+        "bytes": 308050,
+        "luma_mean": 88.48,
+        "luma_std": 78.19,
+        "unique_colors_256": 17786,
+        "palette_distance": 0.0658,
+        "mean_rgb": [
+          129,
+          74,
+          53
+        ],
+        "ahash": 6954712453097842679,
+        "dhash": 4176611171881890104,
+        "text_band_edge_density": 0.0391,
+        "pixdiff_nearest": [
+          [
+            "east-coast-hip-hop",
+            51.63
+          ],
+          [
+            "chillstep",
+            52.74
+          ],
+          [
+            "jersey-drill",
+            54.98
+          ]
+        ]
+      }
+    },
+    "lofi-house": {
+      "flags": [],
+      "metrics": {
+        "bytes": 269368,
+        "luma_mean": 117.9,
+        "luma_std": 83.65,
+        "unique_colors_256": 16312,
+        "palette_distance": 0.082,
+        "mean_rgb": [
+          164,
+          102,
+          81
+        ],
+        "ahash": 16843886474599827455,
+        "dhash": 17792795191264968837,
+        "text_band_edge_density": 0.0198,
+        "pixdiff_nearest": [
+          [
+            "post-punk",
+            42.17
+          ],
+          [
+            "big-beat",
+            43.17
+          ],
+          [
+            "dancehall",
+            43.62
+          ]
+        ]
+      }
+    },
+    "math-rock": {
+      "flags": [],
+      "metrics": {
+        "bytes": 365363,
+        "luma_mean": 113.31,
+        "luma_std": 86.18,
+        "unique_colors_256": 21507,
+        "palette_distance": 0.0723,
+        "mean_rgb": [
+          156,
+          99,
+          78
+        ],
+        "ahash": 9223373192252309503,
+        "dhash": 16351101525753335858,
+        "text_band_edge_density": 0.0877,
+        "pixdiff_nearest": [
+          [
+            "eurodance",
+            37.31
+          ],
+          [
+            "metalcore",
+            40.16
+          ],
+          [
+            "chiptune",
+            41.23
+          ]
+        ]
+      }
+    },
+    "melodic-dubstep": {
+      "flags": [],
+      "metrics": {
+        "bytes": 316238,
+        "luma_mean": 67.89,
+        "luma_std": 71.02,
+        "unique_colors_256": 19543,
+        "palette_distance": 0.0794,
+        "mean_rgb": [
+          113,
+          51,
+          39
+        ],
+        "ahash": 14375631957516411391,
+        "dhash": 15774638960401365148,
+        "text_band_edge_density": 0.0042,
+        "pixdiff_nearest": [
+          [
+            "brooklyn-drill",
+            29.95
+          ],
+          [
+            "neo-soul",
+            30.42
+          ],
+          [
+            "new-wave",
+            33.44
+          ]
+        ]
+      }
+    },
+    "melodic-house": {
+      "flags": [],
+      "metrics": {
+        "bytes": 260723,
+        "luma_mean": 69.32,
+        "luma_std": 64.82,
+        "unique_colors_256": 25456,
+        "palette_distance": 0.1103,
+        "mean_rgb": [
+          99,
+          59,
+          43
+        ],
+        "ahash": 13948071922860094199,
+        "dhash": 16617949339622497240,
+        "text_band_edge_density": 0.0126,
+        "pixdiff_nearest": [
+          [
+            "brooklyn-drill",
+            32.46
+          ],
+          [
+            "deep-house",
+            33.42
+          ],
+          [
+            "trip-hop",
+            33.68
+          ]
+        ]
+      }
+    },
+    "metalcore": {
+      "flags": [],
+      "metrics": {
+        "bytes": 326341,
+        "luma_mean": 117.87,
+        "luma_std": 79.84,
+        "unique_colors_256": 15877,
+        "palette_distance": 0.079,
+        "mean_rgb": [
+          171,
+          98,
+          83
+        ],
+        "ahash": 362261606498254719,
+        "dhash": 7255528317540374587,
+        "text_band_edge_density": 0.1004,
+        "pixdiff_nearest": [
+          [
+            "idm",
+            36.06
+          ],
+          [
+            "math-rock",
+            40.16
+          ],
+          [
+            "minimal-techno",
+            41.08
+          ]
+        ]
+      }
+    },
+    "microhouse": {
+      "flags": [],
+      "metrics": {
+        "bytes": 212911,
+        "luma_mean": 133.63,
+        "luma_std": 85.98,
+        "unique_colors_256": 12117,
+        "palette_distance": 0.1185,
+        "mean_rgb": [
+          188,
+          115,
+          90
+        ],
+        "ahash": 939289724182273855,
+        "dhash": 16637583390446897809,
+        "text_band_edge_density": 0.0361,
+        "pixdiff_nearest": [
+          [
+            "minimal-techno",
+            39.63
+          ],
+          [
+            "wave",
+            40.36
+          ],
+          [
+            "idm",
+            42.81
+          ]
+        ]
+      }
+    },
+    "minimal-techno": {
+      "flags": [],
+      "metrics": {
+        "bytes": 232511,
+        "luma_mean": 142.15,
+        "luma_std": 83.61,
+        "unique_colors_256": 10331,
+        "palette_distance": 0.1383,
+        "mean_rgb": [
+          213,
+          115,
+          95
+        ],
+        "ahash": 4543858258557214527,
+        "dhash": 704727273498052377,
+        "text_band_edge_density": 0.0613,
+        "pixdiff_nearest": [
+          [
+            "vaporwave",
+            36.97
+          ],
+          [
+            "wave",
+            39.22
+          ],
+          [
+            "microhouse",
+            39.63
+          ]
+        ]
+      }
+    },
+    "modal-jazz": {
+      "flags": [],
+      "metrics": {
+        "bytes": 221775,
+        "luma_mean": 119.37,
+        "luma_std": 94.34,
+        "unique_colors_256": 11859,
+        "palette_distance": 0.0843,
+        "mean_rgb": [
+          162,
+          105,
+          85
+        ],
+        "ahash": 17293823681617141759,
+        "dhash": 4236995101192193688,
+        "text_band_edge_density": 0.021,
+        "pixdiff_nearest": [
+          [
+            "chicago-drill",
+            40.44
+          ],
+          [
+            "eurodance",
+            41.38
+          ],
+          [
+            "hard-bop",
+            41.45
+          ]
+        ]
+      }
+    },
+    "moombahton": {
+      "flags": [],
+      "metrics": {
+        "bytes": 419640,
+        "luma_mean": 97.93,
+        "luma_std": 79.72,
+        "unique_colors_256": 27915,
+        "palette_distance": 0.0362,
+        "mean_rgb": [
+          139,
+          83,
+          68
+        ],
+        "ahash": 8087339187453098225,
+        "dhash": 6779784505391762618,
+        "text_band_edge_density": 0.0559,
+        "pixdiff_nearest": [
+          [
+            "brostep",
+            46.78
+          ],
+          [
+            "sambass",
+            48.64
+          ],
+          [
+            "hardcore-gabber",
+            49.09
+          ]
+        ]
+      }
+    },
+    "motown": {
+      "flags": [],
+      "metrics": {
+        "bytes": 276977,
+        "luma_mean": 91.87,
+        "luma_std": 77.14,
+        "unique_colors_256": 16562,
+        "palette_distance": 0.0255,
+        "mean_rgb": [
+          150,
+          70,
+          54
+        ],
+        "ahash": 1210569502904156923,
+        "dhash": 9972768271978711444,
+        "text_band_edge_density": 0.0367,
+        "pixdiff_nearest": [
+          [
+            "chicago-blues",
+            41.96
+          ],
+          [
+            "acid-house",
+            43.12
+          ],
+          [
+            "jersey-club",
+            43.5
+          ]
+        ]
+      }
+    },
+    "neo-soul": {
+      "flags": [],
+      "metrics": {
+        "bytes": 256200,
+        "luma_mean": 69.05,
+        "luma_std": 69.89,
+        "unique_colors_256": 21456,
+        "palette_distance": 0.0808,
+        "mean_rgb": [
+          115,
+          52,
+          38
+        ],
+        "ahash": 16681475534878257663,
+        "dhash": 13452971780506294962,
+        "text_band_edge_density": 0.009,
+        "pixdiff_nearest": [
+          [
+            "brooklyn-drill",
+            29.21
+          ],
+          [
+            "melodic-dubstep",
+            30.42
+          ],
+          [
+            "dub",
+            33.29
+          ]
+        ]
+      }
+    },
+    "neurofunk": {
+      "flags": [],
+      "metrics": {
+        "bytes": 321344,
+        "luma_mean": 87.4,
+        "luma_std": 74.03,
+        "unique_colors_256": 19997,
+        "palette_distance": 0.0383,
+        "mean_rgb": [
+          141,
+          68,
+          52
+        ],
+        "ahash": 72058698276507639,
+        "dhash": 11000245021126861721,
+        "text_band_edge_density": 0.0228,
+        "pixdiff_nearest": [
+          [
+            "salsa",
+            36.23
+          ],
+          [
+            "traditional-jazz",
+            40.61
+          ],
+          [
+            "heavy-metal",
+            41.54
+          ]
+        ]
+      }
+    },
+    "new-wave": {
+      "flags": [],
+      "metrics": {
+        "bytes": 285763,
+        "luma_mean": 75.96,
+        "luma_std": 72.09,
+        "unique_colors_256": 21876,
+        "palette_distance": 0.0437,
+        "mean_rgb": [
+          131,
+          54,
+          46
+        ],
+        "ahash": 16249128749507379711,
+        "dhash": 12876071661376287386,
+        "text_band_edge_density": 0.0102,
+        "pixdiff_nearest": [
+          [
+            "speedbass",
+            32.87
+          ],
+          [
+            "melodic-dubstep",
+            33.44
+          ],
+          [
+            "brooklyn-drill",
+            34.26
+          ]
+        ]
+      }
+    },
+    "nu-disco-house": {
+      "flags": [],
+      "metrics": {
+        "bytes": 351608,
+        "luma_mean": 77.59,
+        "luma_std": 72.09,
+        "unique_colors_256": 25571,
+        "palette_distance": 0.0665,
+        "mean_rgb": [
+          123,
+          61,
+          46
+        ],
+        "ahash": 11067769276680734969,
+        "dhash": 14613770271646459548,
+        "text_band_edge_density": 0.0132,
+        "pixdiff_nearest": [
+          [
+            "goa-trance",
+            32.1
+          ],
+          [
+            "brooklyn-drill",
+            32.6
+          ],
+          [
+            "melodic-dubstep",
+            35.88
+          ]
+        ]
+      }
+    },
+    "old-school-hip-hop": {
+      "flags": [],
+      "metrics": {
+        "bytes": 310084,
+        "luma_mean": 126.62,
+        "luma_std": 81.72,
+        "unique_colors_256": 19833,
+        "palette_distance": 0.1012,
+        "mean_rgb": [
+          174,
+          110,
+          89
+        ],
+        "ahash": 2271926378377186687,
+        "dhash": 9410549412235608706,
+        "text_band_edge_density": 0.0144,
+        "pixdiff_nearest": [
+          [
+            "lofi-house",
+            46.83
+          ],
+          [
+            "chicago-drill",
+            47.74
+          ],
+          [
+            "tearout-dubstep",
+            48.17
+          ]
+        ]
+      }
+    },
+    "peak-time-techno": {
+      "flags": [],
+      "metrics": {
+        "bytes": 227316,
+        "luma_mean": 83.41,
+        "luma_std": 70.65,
+        "unique_colors_256": 12856,
+        "palette_distance": 0.0178,
+        "mean_rgb": [
+          152,
+          56,
+          47
+        ],
+        "ahash": 9259556455815021503,
+        "dhash": 17792216512790107290,
+        "text_band_edge_density": 0.006,
+        "pixdiff_nearest": [
+          [
+            "riddim",
+            32.44
+          ],
+          [
+            "smooth-jazz",
+            35.44
+          ],
+          [
+            "french-house",
+            35.91
+          ]
+        ]
+      }
+    },
+    "phonk": {
+      "flags": [],
+      "metrics": {
+        "bytes": 216103,
+        "luma_mean": 84.39,
+        "luma_std": 76.57,
+        "unique_colors_256": 15353,
+        "palette_distance": 0.0283,
+        "mean_rgb": [
+          128,
+          67,
+          61
+        ],
+        "ahash": 9331891092208060407,
+        "dhash": 10584273547705883289,
+        "text_band_edge_density": 0.0048,
+        "pixdiff_nearest": [
+          [
+            "chillstep",
+            31.23
+          ],
+          [
+            "techstep",
+            34.5
+          ],
+          [
+            "jersey-drill",
+            36.22
+          ]
+        ]
+      }
+    },
+    "post-dubstep": {
+      "flags": [],
+      "metrics": {
+        "bytes": 206916,
+        "luma_mean": 102.51,
+        "luma_std": 87.69,
+        "unique_colors_256": 9704,
+        "palette_distance": 0.045,
+        "mean_rgb": [
+          156,
+          82,
+          69
+        ],
+        "ahash": 17131835410134304767,
+        "dhash": 7685030640526340777,
+        "text_band_edge_density": 0.0114,
+        "pixdiff_nearest": [
+          [
+            "2-step-garage",
+            35.54
+          ],
+          [
+            "electro",
+            40.25
+          ],
+          [
+            "free-jazz",
+            40.41
+          ]
+        ]
+      }
+    },
+    "post-punk": {
+      "flags": [],
+      "metrics": {
+        "bytes": 267953,
+        "luma_mean": 118.18,
+        "luma_std": 74.98,
+        "unique_colors_256": 14373,
+        "palette_distance": 0.082,
+        "mean_rgb": [
+          169,
+          100,
+          80
+        ],
+        "ahash": 16699841111946104591,
+        "dhash": 17350940703731525031,
+        "text_band_edge_density": 0.0,
+        "pixdiff_nearest": [
+          [
+            "lofi-house",
+            42.17
+          ],
+          [
+            "big-beat",
+            42.89
+          ],
+          [
+            "dancehall",
+            42.89
+          ]
+        ]
+      }
+    },
+    "progressive-house": {
+      "flags": [],
+      "metrics": {
+        "bytes": 189660,
+        "luma_mean": 75.68,
+        "luma_std": 80.58,
+        "unique_colors_256": 10192,
+        "palette_distance": 0.05,
+        "mean_rgb": [
+          126,
+          57,
+          48
+        ],
+        "ahash": 16647003076158407135,
+        "dhash": 17339886096345877186,
+        "text_band_edge_density": 0.0192,
+        "pixdiff_nearest": [
+          [
+            "neo-soul",
+            42.28
+          ],
+          [
+            "dub-techno",
+            44.75
+          ],
+          [
+            "speed-garage",
+            48.38
+          ]
+        ]
+      }
+    },
+    "progressive-rock": {
+      "flags": [],
+      "metrics": {
+        "bytes": 334767,
+        "luma_mean": 93.1,
+        "luma_std": 81.2,
+        "unique_colors_256": 17344,
+        "palette_distance": 0.0443,
+        "mean_rgb": [
+          136,
+          78,
+          60
+        ],
+        "ahash": 9584645739161907711,
+        "dhash": 9408207253977348778,
+        "text_band_edge_density": 0.006,
+        "pixdiff_nearest": [
+          [
+            "industrial-techno",
+            35.27
+          ],
+          [
+            "jump-up",
+            35.61
+          ],
+          [
+            "speedbass",
+            37.0
+          ]
+        ]
+      }
+    },
+    "progressive-trance": {
+      "flags": [],
+      "metrics": {
+        "bytes": 315368,
+        "luma_mean": 85.46,
+        "luma_std": 80.54,
+        "unique_colors_256": 15177,
+        "palette_distance": 0.0544,
+        "mean_rgb": [
+          125,
+          71,
+          57
+        ],
+        "ahash": 72539861177707967,
+        "dhash": 16190602854647374989,
+        "text_band_edge_density": 0.0252,
+        "pixdiff_nearest": [
+          [
+            "chillstep",
+            39.51
+          ],
+          [
+            "goa-trance",
+            40.8
+          ],
+          [
+            "chicago-blues",
+            43.32
+          ]
+        ]
+      }
+    },
+    "psytrance": {
+      "flags": [],
+      "metrics": {
+        "bytes": 331012,
+        "luma_mean": 67.46,
+        "luma_std": 67.5,
+        "unique_colors_256": 22600,
+        "palette_distance": 0.0855,
+        "mean_rgb": [
+          103,
+          55,
+          45
+        ],
+        "ahash": 932521652401256673,
+        "dhash": 11978669864153157302,
+        "text_band_edge_density": 0.0174,
+        "pixdiff_nearest": [
+          [
+            "trip-hop",
+            31.92
+          ],
+          [
+            "dubstep",
+            32.94
+          ],
+          [
+            "deep-house",
+            34.75
+          ]
+        ]
+      }
+    },
+    "punk-rock": {
+      "flags": [],
+      "metrics": {
+        "bytes": 350996,
+        "luma_mean": 100.78,
+        "luma_std": 80.02,
+        "unique_colors_256": 18262,
+        "palette_distance": 0.0431,
+        "mean_rgb": [
+          144,
+          86,
+          69
+        ],
+        "ahash": 16149969939616775422,
+        "dhash": 7400147066742017567,
+        "text_band_edge_density": 0.0325,
+        "pixdiff_nearest": [
+          [
+            "future-bass",
+            35.82
+          ],
+          [
+            "traditional-pop",
+            40.46
+          ],
+          [
+            "reggae",
+            41.57
+          ]
+        ]
+      }
+    },
+    "ragga-jungle": {
+      "flags": [],
+      "metrics": {
+        "bytes": 309414,
+        "luma_mean": 100.56,
+        "luma_std": 84.65,
+        "unique_colors_256": 18577,
+        "palette_distance": 0.0391,
+        "mean_rgb": [
+          146,
+          84,
+          72
+        ],
+        "ahash": 9295570924706695679,
+        "dhash": 12145907704486003876,
+        "text_band_edge_density": 0.0325,
+        "pixdiff_nearest": [
+          [
+            "ambient-dub",
+            32.13
+          ],
+          [
+            "eurodance",
+            33.19
+          ],
+          [
+            "happy-hardcore",
+            36.17
+          ]
+        ]
+      }
+    },
+    "raw-techno": {
+      "flags": [],
+      "metrics": {
+        "bytes": 305984,
+        "luma_mean": 73.78,
+        "luma_std": 71.49,
+        "unique_colors_256": 20689,
+        "palette_distance": 0.0746,
+        "mean_rgb": [
+          114,
+          59,
+          47
+        ],
+        "ahash": 16222116050943193597,
+        "dhash": 8267173557521915054,
+        "text_band_edge_density": 0.0156,
+        "pixdiff_nearest": [
+          [
+            "brooklyn-drill",
+            29.99
+          ],
+          [
+            "melodic-dubstep",
+            34.38
+          ],
+          [
+            "trip-hop",
+            34.68
+          ]
+        ]
+      }
+    },
+    "reggae": {
+      "flags": [],
+      "metrics": {
+        "bytes": 360199,
+        "luma_mean": 104.9,
+        "luma_std": 74.91,
+        "unique_colors_256": 19103,
+        "palette_distance": 0.0538,
+        "mean_rgb": [
+          160,
+          85,
+          65
+        ],
+        "ahash": 16533154592985647551,
+        "dhash": 8842987968585049228,
+        "text_band_edge_density": 0.0673,
+        "pixdiff_nearest": [
+          [
+            "texas-blues",
+            34.55
+          ],
+          [
+            "dancehall",
+            34.83
+          ],
+          [
+            "jersey-drill",
+            37.22
+          ]
+        ]
+      }
+    },
+    "reggaeton": {
+      "flags": [],
+      "metrics": {
+        "bytes": 293125,
+        "luma_mean": 86.92,
+        "luma_std": 78.22,
+        "unique_colors_256": 19394,
+        "palette_distance": 0.0203,
+        "mean_rgb": [
+          155,
+          60,
+          47
+        ],
+        "ahash": 4107600829996794879,
+        "dhash": 10275125949889743014,
+        "text_band_edge_density": 0.0114,
+        "pixdiff_nearest": [
+          [
+            "boom-bap",
+            39.16
+          ],
+          [
+            "smooth-jazz",
+            39.42
+          ],
+          [
+            "acid-house",
+            40.24
+          ]
+        ]
+      }
+    },
+    "riddim": {
+      "flags": [],
+      "metrics": {
+        "bytes": 242136,
+        "luma_mean": 87.58,
+        "luma_std": 81.03,
+        "unique_colors_256": 12357,
+        "palette_distance": 0.0125,
+        "mean_rgb": [
+          145,
+          65,
+          58
+        ],
+        "ahash": 9223424847983347703,
+        "dhash": 16338670798770508176,
+        "text_band_edge_density": 0.0138,
+        "pixdiff_nearest": [
+          [
+            "peak-time-techno",
+            32.44
+          ],
+          [
+            "smooth-jazz",
+            33.82
+          ],
+          [
+            "glitch-hop",
+            36.52
+          ]
+        ]
+      }
+    },
+    "rock-and-roll": {
+      "flags": [],
+      "metrics": {
+        "bytes": 305987,
+        "luma_mean": 97.22,
+        "luma_std": 74.43,
+        "unique_colors_256": 15981,
+        "palette_distance": 0.0355,
+        "mean_rgb": [
+          154,
+          75,
+          58
+        ],
+        "ahash": 33015666777869,
+        "dhash": 15010475230987603622,
+        "text_band_edge_density": 0.0096,
+        "pixdiff_nearest": [
+          [
+            "peak-time-techno",
+            42.09
+          ],
+          [
+            "eurodance",
+            42.67
+          ],
+          [
+            "j-pop",
+            45.12
+          ]
+        ]
+      }
+    },
+    "salsa": {
+      "flags": [],
+      "metrics": {
+        "bytes": 340408,
+        "luma_mean": 83.44,
+        "luma_std": 75.44,
+        "unique_colors_256": 22798,
+        "palette_distance": 0.0525,
+        "mean_rgb": [
+          129,
+          67,
+          52
+        ],
+        "ahash": 9259546938889373695,
+        "dhash": 16335333995860951969,
+        "text_band_edge_density": 0.0511,
+        "pixdiff_nearest": [
+          [
+            "thrash-metal",
+            31.43
+          ],
+          [
+            "afrobeat",
+            32.3
+          ],
+          [
+            "smooth-jazz",
+            35.75
+          ]
+        ]
+      }
+    },
+    "samba": {
+      "flags": [],
+      "metrics": {
+        "bytes": 400380,
+        "luma_mean": 97.13,
+        "luma_std": 76.35,
+        "unique_colors_256": 25018,
+        "palette_distance": 0.0355,
+        "mean_rgb": [
+          138,
+          83,
+          66
+        ],
+        "ahash": 1736247957814183823,
+        "dhash": 16973277875879317649,
+        "text_band_edge_density": 0.0655,
+        "pixdiff_nearest": [
+          [
+            "acid-techno",
+            42.28
+          ],
+          [
+            "hard-trap",
+            45.56
+          ],
+          [
+            "jersey-drill",
+            46.19
+          ]
+        ]
+      }
+    },
+    "sambass": {
+      "flags": [],
+      "metrics": {
+        "bytes": 345081,
+        "luma_mean": 90.16,
+        "luma_std": 75.9,
+        "unique_colors_256": 21882,
+        "palette_distance": 0.0532,
+        "mean_rgb": [
+          131,
+          76,
+          58
+        ],
+        "ahash": 9295430386833289727,
+        "dhash": 12441926901090156094,
+        "text_band_edge_density": 0.0264,
+        "pixdiff_nearest": [
+          [
+            "neo-soul",
+            38.96
+          ],
+          [
+            "industrial-techno",
+            41.9
+          ],
+          [
+            "jump-up",
+            42.01
+          ]
+        ]
+      }
+    },
+    "schranz": {
+      "flags": [],
+      "metrics": {
+        "bytes": 336911,
+        "luma_mean": 74.14,
+        "luma_std": 72.06,
+        "unique_colors_256": 20327,
+        "palette_distance": 0.0624,
+        "mean_rgb": [
+          114,
+          59,
+          51
+        ],
+        "ahash": 16645322476045698047,
+        "dhash": 3094708022888994968,
+        "text_band_edge_density": 0.0361,
+        "pixdiff_nearest": [
+          [
+            "chillstep",
+            33.5
+          ],
+          [
+            "brooklyn-drill",
+            35.21
+          ],
+          [
+            "industrial-techno",
+            35.49
+          ]
+        ]
+      }
+    },
+    "shoe-gaze": {
+      "flags": [],
+      "metrics": {
+        "bytes": 339283,
+        "luma_mean": 115.65,
+        "luma_std": 80.9,
+        "unique_colors_256": 15273,
+        "palette_distance": 0.0737,
+        "mean_rgb": [
+          168,
+          96,
+          81
+        ],
+        "ahash": 18382455128730272993,
+        "dhash": 9767406875478042294,
+        "text_band_edge_density": 0.009,
+        "pixdiff_nearest": [
+          [
+            "tropical-house",
+            45.63
+          ],
+          [
+            "disco",
+            48.87
+          ],
+          [
+            "texas-blues",
+            49.43
+          ]
+        ]
+      }
+    },
+    "smooth-jazz": {
+      "flags": [],
+      "metrics": {
+        "bytes": 260358,
+        "luma_mean": 90.51,
+        "luma_std": 79.57,
+        "unique_colors_256": 18223,
+        "palette_distance": 0.0379,
+        "mean_rgb": [
+          144,
+          71,
+          53
+        ],
+        "ahash": 9295443402814883839,
+        "dhash": 16342026907635911081,
+        "text_band_edge_density": 0.0108,
+        "pixdiff_nearest": [
+          [
+            "chicago-blues",
+            32.54
+          ],
+          [
+            "riddim",
+            33.82
+          ],
+          [
+            "peak-time-techno",
+            35.44
+          ]
+        ]
+      }
+    },
+    "soul": {
+      "flags": [],
+      "metrics": {
+        "bytes": 306182,
+        "luma_mean": 90.75,
+        "luma_std": 76.3,
+        "unique_colors_256": 22322,
+        "palette_distance": 0.0509,
+        "mean_rgb": [
+          138,
+          74,
+          53
+        ],
+        "ahash": 14952093568511346687,
+        "dhash": 16349444295978292113,
+        "text_band_edge_density": 0.0319,
+        "pixdiff_nearest": [
+          [
+            "thrash-metal",
+            36.14
+          ],
+          [
+            "speedbass",
+            36.46
+          ],
+          [
+            "new-wave",
+            39.58
+          ]
+        ]
+      }
+    },
+    "southern-hip-hop": {
+      "flags": [],
+      "metrics": {
+        "bytes": 310565,
+        "luma_mean": 110.65,
+        "luma_std": 84.83,
+        "unique_colors_256": 22539,
+        "palette_distance": 0.0629,
+        "mean_rgb": [
+          151,
+          96,
+          81
+        ],
+        "ahash": 17347893870880556687,
+        "dhash": 18085979905826851763,
+        "text_band_edge_density": 0.0144,
+        "pixdiff_nearest": [
+          [
+            "hard-trap",
+            47.0
+          ],
+          [
+            "electro-house",
+            48.5
+          ],
+          [
+            "blues-rock",
+            48.65
+          ]
+        ]
+      }
+    },
+    "speed-garage": {
+      "flags": [],
+      "metrics": {
+        "bytes": 323778,
+        "luma_mean": 80.33,
+        "luma_std": 68.66,
+        "unique_colors_256": 22481,
+        "palette_distance": 0.0488,
+        "mean_rgb": [
+          129,
+          62,
+          50
+        ],
+        "ahash": 9363407495523305471,
+        "dhash": 10677089980673860264,
+        "text_band_edge_density": 0.0258,
+        "pixdiff_nearest": [
+          [
+            "neo-soul",
+            37.45
+          ],
+          [
+            "jungle",
+            41.1
+          ],
+          [
+            "dream-trance",
+            41.29
+          ]
+        ]
+      }
+    },
+    "speedbass": {
+      "flags": [],
+      "metrics": {
+        "bytes": 319668,
+        "luma_mean": 84.12,
+        "luma_std": 71.67,
+        "unique_colors_256": 21509,
+        "palette_distance": 0.0344,
+        "mean_rgb": [
+          147,
+          60,
+          46
+        ],
+        "ahash": 9331882795506580991,
+        "dhash": 17219769063674910386,
+        "text_band_edge_density": 0.012,
+        "pixdiff_nearest": [
+          [
+            "hardcore-gabber",
+            32.36
+          ],
+          [
+            "new-wave",
+            32.87
+          ],
+          [
+            "brooklyn-drill",
+            32.97
+          ]
+        ]
+      }
+    },
+    "synth-pop": {
+      "flags": [],
+      "metrics": {
+        "bytes": 294083,
+        "luma_mean": 70.82,
+        "luma_std": 68.0,
+        "unique_colors_256": 20942,
+        "palette_distance": 0.0733,
+        "mean_rgb": [
+          116,
+          54,
+          42
+        ],
+        "ahash": 14815926609236784383,
+        "dhash": 16629148990919318171,
+        "text_band_edge_density": 0.015,
+        "pixdiff_nearest": [
+          [
+            "dubstep",
+            28.64
+          ],
+          [
+            "chicago-blues",
+            30.11
+          ],
+          [
+            "deep-house",
+            30.6
+          ]
+        ]
+      }
+    },
+    "synthwave": {
+      "flags": [],
+      "metrics": {
+        "bytes": 235669,
+        "luma_mean": 102.51,
+        "luma_std": 83.92,
+        "unique_colors_256": 14131,
+        "palette_distance": 0.0467,
+        "mean_rgb": [
+          155,
+          83,
+          67
+        ],
+        "ahash": 1121608528050586559,
+        "dhash": 9411670690407684249,
+        "text_band_edge_density": 0.0186,
+        "pixdiff_nearest": [
+          [
+            "ambient-dub",
+            37.69
+          ],
+          [
+            "ragga-jungle",
+            40.83
+          ],
+          [
+            "dancehall",
+            42.74
+          ]
+        ]
+      }
+    },
+    "tearout-dubstep": {
+      "flags": [],
+      "metrics": {
+        "bytes": 352758,
+        "luma_mean": 112.19,
+        "luma_std": 76.94,
+        "unique_colors_256": 20806,
+        "palette_distance": 0.0669,
+        "mean_rgb": [
+          155,
+          97,
+          81
+        ],
+        "ahash": 72903261844356895,
+        "dhash": 12444735180753374411,
+        "text_band_edge_density": 0.0288,
+        "pixdiff_nearest": [
+          [
+            "breakcore",
+            36.46
+          ],
+          [
+            "grime",
+            40.25
+          ],
+          [
+            "glitch-hop",
+            40.77
+          ]
+        ]
+      }
+    },
+    "tech-house": {
+      "flags": [],
+      "metrics": {
+        "bytes": 238197,
+        "luma_mean": 93.01,
+        "luma_std": 84.33,
+        "unique_colors_256": 11993,
+        "palette_distance": 0.0322,
+        "mean_rgb": [
+          144,
+          74,
+          57
+        ],
+        "ahash": 262983327551,
+        "dhash": 15188047340126700172,
+        "text_band_edge_density": 0.0306,
+        "pixdiff_nearest": [
+          [
+            "breakcore",
+            38.68
+          ],
+          [
+            "hardstyle",
+            39.43
+          ],
+          [
+            "detroit-techno",
+            43.51
+          ]
+        ]
+      }
+    },
+    "tech-trance": {
+      "flags": [],
+      "metrics": {
+        "bytes": 353756,
+        "luma_mean": 90.25,
+        "luma_std": 83.48,
+        "unique_colors_256": 19771,
+        "palette_distance": 0.0384,
+        "mean_rgb": [
+          132,
+          75,
+          62
+        ],
+        "ahash": 9295570985239092479,
+        "dhash": 9990886961001105050,
+        "text_band_edge_density": 0.0276,
+        "pixdiff_nearest": [
+          [
+            "disco",
+            35.98
+          ],
+          [
+            "k-pop",
+            36.89
+          ],
+          [
+            "industrial-techno",
+            37.76
+          ]
+        ]
+      }
+    },
+    "techstep": {
+      "flags": [],
+      "metrics": {
+        "bytes": 243186,
+        "luma_mean": 79.25,
+        "luma_std": 79.02,
+        "unique_colors_256": 11737,
+        "palette_distance": 0.0716,
+        "mean_rgb": [
+          117,
+          66,
+          51
+        ],
+        "ahash": 9331891160924389883,
+        "dhash": 11720282468341029112,
+        "text_band_edge_density": 0.0126,
+        "pixdiff_nearest": [
+          [
+            "phonk",
+            34.5
+          ],
+          [
+            "death-metal",
+            36.13
+          ],
+          [
+            "brooklyn-drill",
+            40.32
+          ]
+        ]
+      }
+    },
+    "texas-blues": {
+      "flags": [],
+      "metrics": {
+        "bytes": 317238,
+        "luma_mean": 92.44,
+        "luma_std": 68.56,
+        "unique_colors_256": 18423,
+        "palette_distance": 0.0246,
+        "mean_rgb": [
+          149,
+          71,
+          57
+        ],
+        "ahash": 18442409285666636001,
+        "dhash": 11140090895528999096,
+        "text_band_edge_density": 0.0727,
+        "pixdiff_nearest": [
+          [
+            "reggae",
+            34.55
+          ],
+          [
+            "industrial-techno",
+            34.65
+          ],
+          [
+            "k-pop",
+            36.26
+          ]
+        ]
+      }
+    },
+    "thrash-metal": {
+      "flags": [],
+      "metrics": {
+        "bytes": 408119,
+        "luma_mean": 81.49,
+        "luma_std": 72.81,
+        "unique_colors_256": 21592,
+        "palette_distance": 0.0469,
+        "mean_rgb": [
+          125,
+          65,
+          55
+        ],
+        "ahash": 10196290845767468031,
+        "dhash": 16615642485893662867,
+        "text_band_edge_density": 0.0835,
+        "pixdiff_nearest": [
+          [
+            "afrobeat",
+            27.73
+          ],
+          [
+            "salsa",
+            31.43
+          ],
+          [
+            "synth-pop",
+            33.52
+          ]
+        ]
+      }
+    },
+    "traditional-jazz": {
+      "flags": [],
+      "metrics": {
+        "bytes": 323076,
+        "luma_mean": 98.29,
+        "luma_std": 78.21,
+        "unique_colors_256": 22476,
+        "palette_distance": 0.0398,
+        "mean_rgb": [
+          150,
+          80,
+          59
+        ],
+        "ahash": 218291547472138167,
+        "dhash": 10430495740651803537,
+        "text_band_edge_density": 0.0589,
+        "pixdiff_nearest": [
+          [
+            "neurofunk",
+            40.61
+          ],
+          [
+            "cool-jazz",
+            42.85
+          ],
+          [
+            "soul",
+            43.9
+          ]
+        ]
+      }
+    },
+    "traditional-pop": {
+      "flags": [],
+      "metrics": {
+        "bytes": 251324,
+        "luma_mean": 91.91,
+        "luma_std": 81.38,
+        "unique_colors_256": 16239,
+        "palette_distance": 0.0437,
+        "mean_rgb": [
+          146,
+          73,
+          51
+        ],
+        "ahash": 9229165066140032255,
+        "dhash": 16038121653537789646,
+        "text_band_edge_density": 0.0126,
+        "pixdiff_nearest": [
+          [
+            "future-bass",
+            39.49
+          ],
+          [
+            "punk-rock",
+            40.46
+          ],
+          [
+            "bachata",
+            43.05
+          ]
+        ]
+      }
+    },
+    "trap-rap": {
+      "flags": [],
+      "metrics": {
+        "bytes": 310655,
+        "luma_mean": 70.83,
+        "luma_std": 72.75,
+        "unique_colors_256": 18962,
+        "palette_distance": 0.0843,
+        "mean_rgb": [
+          105,
+          58,
+          47
+        ],
+        "ahash": 13799523545323241887,
+        "dhash": 10574703466850870988,
+        "text_band_edge_density": 0.0096,
+        "pixdiff_nearest": [
+          [
+            "brooklyn-drill",
+            33.4
+          ],
+          [
+            "industrial-techno",
+            33.75
+          ],
+          [
+            "trip-hop",
+            36.97
+          ]
+        ]
+      }
+    },
+    "trip-hop": {
+      "flags": [],
+      "metrics": {
+        "bytes": 269797,
+        "luma_mean": 66.64,
+        "luma_std": 61.35,
+        "unique_colors_256": 19831,
+        "palette_distance": 0.085,
+        "mean_rgb": [
+          109,
+          51,
+          39
+        ],
+        "ahash": 14087402058516253945,
+        "dhash": 16773908353789392558,
+        "text_band_edge_density": 0.0114,
+        "pixdiff_nearest": [
+          [
+            "synth-pop",
+            30.94
+          ],
+          [
+            "brooklyn-drill",
+            31.08
+          ],
+          [
+            "psytrance",
+            31.92
+          ]
+        ]
+      }
+    },
+    "tropical-house": {
+      "flags": [],
+      "metrics": {
+        "bytes": 330535,
+        "luma_mean": 103.15,
+        "luma_std": 77.4,
+        "unique_colors_256": 21730,
+        "palette_distance": 0.0487,
+        "mean_rgb": [
+          155,
+          84,
+          66
+        ],
+        "ahash": 18411701029692346367,
+        "dhash": 11004808253194539403,
+        "text_band_edge_density": 0.0072,
+        "pixdiff_nearest": [
+          [
+            "2-step-garage",
+            42.21
+          ],
+          [
+            "death-metal",
+            43.07
+          ],
+          [
+            "soul",
+            43.52
+          ]
+        ]
+      }
+    },
+    "uk-drill": {
+      "flags": [],
+      "metrics": {
+        "bytes": 223620,
+        "luma_mean": 64.6,
+        "luma_std": 73.25,
+        "unique_colors_256": 10513,
+        "palette_distance": 0.0797,
+        "mean_rgb": [
+          110,
+          47,
+          38
+        ],
+        "ahash": 157246337023,
+        "dhash": 12868637991706735269,
+        "text_band_edge_density": 0.0294,
+        "pixdiff_nearest": [
+          [
+            "salsa",
+            38.34
+          ],
+          [
+            "acid-jazz",
+            41.19
+          ],
+          [
+            "deep-house",
+            41.61
+          ]
+        ]
+      }
+    },
+    "uk-funky": {
+      "flags": [],
+      "metrics": {
+        "bytes": 260020,
+        "luma_mean": 94.26,
+        "luma_std": 81.42,
+        "unique_colors_256": 15885,
+        "palette_distance": 0.0292,
+        "mean_rgb": [
+          151,
+          73,
+          58
+        ],
+        "ahash": 11611158965773175293,
+        "dhash": 13013576516386065558,
+        "text_band_edge_density": 0.0306,
+        "pixdiff_nearest": [
+          [
+            "jersey-drill",
+            44.32
+          ],
+          [
+            "goa-trance",
+            45.67
+          ],
+          [
+            "k-pop",
+            46.42
+          ]
+        ]
+      }
+    },
+    "uk-garage": {
+      "flags": [],
+      "metrics": {
+        "bytes": 258489,
+        "luma_mean": 69.58,
+        "luma_std": 73.36,
+        "unique_colors_256": 13422,
+        "palette_distance": 0.0702,
+        "mean_rgb": [
+          111,
+          54,
+          46
+        ],
+        "ahash": 2241963035264582892,
+        "dhash": 9981919366062447542,
+        "text_band_edge_density": 0.0174,
+        "pixdiff_nearest": [
+          [
+            "deep-house",
+            41.41
+          ],
+          [
+            "synth-pop",
+            41.45
+          ],
+          [
+            "dubstep",
+            41.76
+          ]
+        ]
+      }
+    },
+    "uplifting-trance": {
+      "flags": [],
+      "metrics": {
+        "bytes": 308524,
+        "luma_mean": 110.03,
+        "luma_std": 81.87,
+        "unique_colors_256": 18299,
+        "palette_distance": 0.0651,
+        "mean_rgb": [
+          165,
+          90,
+          71
+        ],
+        "ahash": 54291560720171907,
+        "dhash": 12463914522671036860,
+        "text_band_edge_density": 0.0475,
+        "pixdiff_nearest": [
+          [
+            "boom-bap",
+            37.02
+          ],
+          [
+            "happy-hardcore",
+            39.38
+          ],
+          [
+            "blues-rock",
+            39.96
+          ]
+        ]
+      }
+    },
+    "vaporwave": {
+      "flags": [],
+      "metrics": {
+        "bytes": 219564,
+        "luma_mean": 147.59,
+        "luma_std": 76.83,
+        "unique_colors_256": 15450,
+        "palette_distance": 0.1451,
+        "mean_rgb": [
+          206,
+          126,
+          110
+        ],
+        "ahash": 18430703311507623743,
+        "dhash": 14727564395385308555,
+        "text_band_edge_density": 0.0012,
+        "pixdiff_nearest": [
+          [
+            "minimal-techno",
+            36.97
+          ],
+          [
+            "wave",
+            38.22
+          ],
+          [
+            "chillwave",
+            38.48
+          ]
+        ]
+      }
+    },
+    "vocal-trance": {
+      "flags": [],
+      "metrics": {
+        "bytes": 263351,
+        "luma_mean": 97.96,
+        "luma_std": 76.66,
+        "unique_colors_256": 19351,
+        "palette_distance": 0.0386,
+        "mean_rgb": [
+          158,
+          75,
+          58
+        ],
+        "ahash": 9295610670636437247,
+        "dhash": 16334756726450856601,
+        "text_band_edge_density": 0.0084,
+        "pixdiff_nearest": [
+          [
+            "speedbass",
+            34.72
+          ],
+          [
+            "hardcore-gabber",
+            37.44
+          ],
+          [
+            "euro-trance",
+            39.53
+          ]
+        ]
+      }
+    },
+    "wave": {
+      "flags": [],
+      "metrics": {
+        "bytes": 227544,
+        "luma_mean": 129.26,
+        "luma_std": 75.65,
+        "unique_colors_256": 13745,
+        "palette_distance": 0.0995,
+        "mean_rgb": [
+          171,
+          113,
+          102
+        ],
+        "ahash": 9154418377144864543,
+        "dhash": 2999609496163279757,
+        "text_band_edge_density": 0.0066,
+        "pixdiff_nearest": [
+          [
+            "idm",
+            37.97
+          ],
+          [
+            "vaporwave",
+            38.22
+          ],
+          [
+            "minimal-techno",
+            39.22
+          ]
+        ]
+      }
+    },
+    "west-coast-hip-hop": {
+      "flags": [],
+      "metrics": {
+        "bytes": 319140,
+        "luma_mean": 123.52,
+        "luma_std": 82.44,
+        "unique_colors_256": 19618,
+        "palette_distance": 0.0939,
+        "mean_rgb": [
+          175,
+          106,
+          87
+        ],
+        "ahash": 18232542728948619199,
+        "dhash": 17217710837885229449,
+        "text_band_edge_density": 0.0294,
+        "pixdiff_nearest": [
+          [
+            "vaporwave",
+            45.54
+          ],
+          [
+            "chicago-drill",
+            47.04
+          ],
+          [
+            "blues-rock",
+            47.13
+          ]
+        ]
+      }
+    }
+  }
+}
