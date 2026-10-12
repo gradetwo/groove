@@ -10,9 +10,13 @@
  *
  * It is written to be able to go red: on the pre-change tree the cold count is **2** (the direct `parseManifest` plus
  * the one inside `catalogueFromManifestText`), and a lost cache makes every later call add another. It covers more
- * than the audit's single fixture — no registry, one registered library, a *second* library registered between
- * calls (so `readUserLibraries` is still per call), and that second library being unmeasurable (visible, and visibly
- * absent from the catalogue).
+ * than the audit's single fixture, in one process and one call log: no registry, one registered library, and then a
+ * second registration between calls whose library is unmeasurable (visible, and visibly absent from the catalogue).
+ *
+ * ⚠️ Deliberately **no `vi.resetModules()` per shape**: that resets the module registry under the async mock factory
+ * and the re-import can race back to the real `parseManifest` (`mockClear is not a function` under load, seen when
+ * this file ran beside others). One process, delta assertions — the cache is a per-process fact and this is how it is
+ * actually used.
  */
 import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -25,6 +29,10 @@ vi.mock("../../src/data/sampleManifest", async (importOriginal) => {
   return { ...actual, parseManifest: vi.fn(actual.parseManifest) };
 });
 
+import { listSampleLibraries } from "../../mcp/instruments";
+import { writeUserLibraries } from "../../mcp/sampleLibraries";
+import * as manifest from "../../src/data/sampleManifest";
+
 const library = (over: Partial<UserSoundLibrary> = {}): UserSoundLibrary => ({
   id: "my-strings",
   name: "My Strings",
@@ -36,79 +44,45 @@ const library = (over: Partial<UserSoundLibrary> = {}): UserSoundLibrary => ({
   ...over,
 });
 
-/** A fresh module graph, so every shape starts with a cold parse cache and a zeroed counter. */
-const fresh = async () => {
-  vi.resetModules();
-  const instruments = await import("../../mcp/instruments");
-  const manifest = await import("../../src/data/sampleManifest");
-  const sampleLibraries = await import("../../mcp/sampleLibraries");
-  const parseManifest = vi.mocked(manifest.parseManifest);
-  // `vi.resetModules` rebuilds `mcp/instruments` (and its caches) but the mocked parser is one `vi.fn` for the file,
-  // so its call log has to be cleared by hand or every test counts the previous one's parses.
-  parseManifest.mockClear();
-  return {
-    listSampleLibraries: instruments.listSampleLibraries,
-    parseManifest,
-    writeUserLibraries: sampleLibraries.writeUserLibraries,
-  };
-};
-
 beforeEach(() => {
   process.env.GROOVE_MCP_LIBRARIES = path.join(mkdtempSync(path.join(tmpdir(), "groove-parse-")), "libs.json");
 });
 
 describe("list_sample_libraries parses the manifest once", () => {
-  it("parses once for the process, not twice per call, with no user library registered", async () => {
-    const { listSampleLibraries, parseManifest } = await fresh();
+  it("parses once for the process, not once per call, across every registry shape", () => {
+    const parses = () => vi.mocked(manifest.parseManifest).mock.calls.length;
 
+    // Shape 1 — nothing registered. ⭐ The criterion: one parse for the cold call (two means the catalogue build
+    // re-parsed the 4.0 MB text).
     const first = listSampleLibraries();
     expect(first.libraries.length).toBeGreaterThan(0);
-    const afterFirst = parseManifest.mock.calls.length;
+    expect(first.libraries.every((row) => row.source === "built-in")).toBe(true);
+    expect(parses()).toBe(1);
+
+    // And a second call adds nothing: a lost cache makes this 2, 3, 4, …
     listSampleLibraries();
-    const afterSecond = parseManifest.mock.calls.length;
+    expect(parses()).toBe(1);
 
-    // ⭐ The criterion: one parse for the cold call — two means the catalogue build re-parsed the 4.0 MB text.
-    expect(afterFirst).toBe(1);
-    // And the second call adds nothing: a lost cache makes this 2, 3, 4, …
-    expect(afterSecond).toBe(afterFirst);
-  });
-
-  it("parses once with one registered library, and still lists it", async () => {
-    const { listSampleLibraries, parseManifest, writeUserLibraries } = await fresh();
+    // Shape 2 — one registered library, read from the registry on this call.
     writeUserLibraries([library()]);
-
-    const first = listSampleLibraries();
-    const mine = first.libraries.find((row) => row.id === "my-strings");
+    const withOne = listSampleLibraries();
+    const mine = withOne.libraries.find((row) => row.id === "my-strings");
     expect(mine?.source).toBe("user");
     expect(mine?.instruments).toBeGreaterThan(0);
-    const afterFirst = parseManifest.mock.calls.length;
-    listSampleLibraries();
+    expect(parses()).toBe(1);
 
-    expect(afterFirst).toBe(1);
-    expect(parseManifest.mock.calls.length).toBe(afterFirst);
-  });
-
-  it("re-reads the registry between calls, including an unmeasurable library, without re-parsing", async () => {
-    const { listSampleLibraries, parseManifest, writeUserLibraries } = await fresh();
-
-    // A first, ordinary listing warms the parse cache…
-    const before = listSampleLibraries();
-    expect(before.libraries.some((row) => row.id === "my-brass")).toBe(false);
-    const afterWarm = parseManifest.mock.calls.length;
-
-    // …and a library registered *between* calls must take effect on the next one: the parse is cached, the registry
-    // is not. This is the shape the audit did not cover (a second library, with no measured duration).
-    writeUserLibraries([library({ id: "my-brass", name: "My Brass", durationSeconds: undefined, sourceUrl: "https://example.test/brass" })]);
-    const after = listSampleLibraries();
-    const brass = after.libraries.find((row) => row.id === "my-brass");
-
+    // Shape 3 — a second registration *between* calls, and it is unmeasurable: it must appear, be marked as the
+    // caller's own, and be visibly not in the catalogue — while the parse is still the one cold parse.
+    writeUserLibraries([
+      library(),
+      library({ id: "my-brass", name: "My Brass", durationSeconds: undefined, sourceUrl: "https://example.test/brass" }),
+    ]);
+    const withBrass = listSampleLibraries();
+    const brass = withBrass.libraries.find((row) => row.id === "my-brass");
     expect(brass?.source).toBe("user");
-    // Visible and visibly not reachable, rather than hidden: no duration means no catalogue entry.
     expect(brass?.instruments).toBe(0);
     expect(brass?.problems.join(" ")).toContain("no measured duration");
-    expect(after.libraries.some((row) => row.source === "built-in")).toBe(true);
-    // ⭐ Registering does not invalidate the manifest parse: still exactly the one cold parse.
-    expect(parseManifest.mock.calls.length).toBe(afterWarm);
-    expect(afterWarm).toBe(1);
+    expect(withBrass.libraries.some((row) => row.source === "built-in")).toBe(true);
+    expect(parses()).toBe(1);
   });
 });

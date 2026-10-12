@@ -36,9 +36,24 @@ type Sizes = {
  *
  * Written out rather than raised wholesale, because "the numbers went up" is only acceptable when it says **why** — the same
  * rule the dead-export budget follows.
+ *
+ * ⭐ **Re-measured again on 2026-10-12, when `mcp/instruments.ts` crossed six hundred for the first time.**
+ *
+ * The file grew **581 → 613** lines (612 by `wc -l`; this script splits on every newline) in `427b5d2`
+ * (`perf(mcp): parse the 4 MB manifest once per call, not twice`): the `parsedManifest()` memo and its note, the
+ * two-branch catalogue selection in `list_sample_libraries`, and the `prepared` parse threaded into
+ * `catalogueFromManifestText`. At `bc33c5f`, immediately before that commit, it was **581** and no other file was
+ * near the boundary, so the crossing was this change and not unrelated drift. `atLeast600` therefore moves
+ * 48 → **49**. The file counted 503 lines at `4a71254`; the rest of its growth since then is the already-merged
+ * catalogue-cache work (559 at `ed923ca`, 581 by the identity-key fix).
+ *
+ * The other four buckets were re-measured at `427b5d2` and did **not** move (31 / 25 / 13 / 6), so they are
+ * deliberately left where they were. `mcp/instruments.ts` is also being edited by other agents in this session, so
+ * 613 is a snapshot — the count is the measurement, and this date and reason are what make a later move explicable
+ * rather than silent.
  */
 const CAPS: Record<string, number> = {
-  atLeast600: 48,
+  atLeast600: 49,
   atLeast800: 31,
   atLeast1000: 25,
   atLeast1500: 13,
