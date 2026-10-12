@@ -233,7 +233,7 @@ export const PhosphorOscilloscope: React.FC<PhosphorOscilloscopeProps> = ({
     ctx.fillStyle = canvasRgba(paletteRef.current.ground);
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-    render();
+    requestAnimationFrame(render);
 
     return () => {
       cancelAnimationFrame(animationFrameId);

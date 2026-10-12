@@ -203,7 +203,7 @@ export const OscilloscopeWaveform: React.FC<OscilloscopeWaveformProps> = ({
       ctx.restore();
     };
 
-    render();
+    requestAnimationFrame(render);
 
     return () => {
       active = false;
