@@ -9,6 +9,10 @@ pnpm-debug.log*
 node_modules
 dist
 dist-ssr
+# ⭐ Scratch builds made by the performance probes (each 282 MB). They belong in /tmp; ignoring them here
+# because a bare `dist` entry does not cover `dist-attr`/`dist-lcp`, and a stray `git add -A` would commit 564 MB.
+dist-attr/
+dist-lcp/
 *.local
 
 # Editor
