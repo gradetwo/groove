@@ -44,8 +44,8 @@ type Sizes = {
  * two-branch catalogue selection in `list_sample_libraries`, and the `prepared` parse threaded into
  * `catalogueFromManifestText`. At `bc33c5f`, immediately before that commit, it was **581** and no other file was
  * near the boundary, so the crossing was this change and not unrelated drift. `atLeast600` therefore moves
- * 48 → **49**. The file counted 503 lines at `4a71254`; the rest of its growth since then is the already-merged
- * catalogue-cache work (559 at `ed923ca`, 581 by the identity-key fix).
+ * 48 → **49**. The file counted **502 lines by `wc -l`** at `4a71254` (503 by this script's split); the rest of its
+ * growth since then is the already-merged catalogue-cache work (559 at `ed923ca`, 581 by the identity-key fix).
  *
  * The other four buckets were re-measured at `427b5d2` and did **not** move (31 / 25 / 13 / 6), so they are
  * deliberately left where they were. `mcp/instruments.ts` is also being edited by other agents in this session, so
