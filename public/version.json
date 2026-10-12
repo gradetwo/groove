@@ -1,23 +1,23 @@
 {
-  "version": "2.37.1",
+  "version": "2.37.2",
   "releaseDate": "2026-10-12",
   "changelogCount": 10,
   "latest": {
-    "version": "2.37.1",
+    "version": "2.37.2",
     "date": "2026-10-12",
     "category": "refactor",
     "title": {
-      "zh": "性能：MCP 缓存、手机列表与首屏字体",
-      "en": "Performance: MCP caches, a windowed phone list, and the first-paint font"
+      "zh": "性能：卷帘 ghost 层与 Explore 列表",
+      "en": "Performance: the roll's ghost layer, and the Explore list"
     },
     "highlights": [
       {
-        "zh": "MCP：catalogue 改 O(1) 命中（4.12→0.20 ms）、示例每曲风只建一次（2896→4.6 ms）、4 MB manifest 两遍解析改一遍（203→3.2 ms），输出逐字节一致。",
-        "en": "MCP: the catalogue is memoised (4.12 to 0.20 ms), examples are built once per genre (2896 to 4.6 ms) and the 4 MB manifest is parsed once, not twice (203 to 3.2 ms), byte-identical."
+        "zh": "PianoRollLane 的循环 ghost 层不再逐音符扫描全部音符，改问已建索引：768 音符 585→25 ms、1500 音符 1572→48 ms，结果逐一相同。",
+        "en": "The roll's looped ghost layer no longer scans every note per ghost note but asks the index it already builds: 768 notes 585 to 25 ms, 1500 notes 1572 to 48 ms, with identical results."
       },
       {
-        "zh": "手机选曲列表窗口化（159→24 行）；字体移出首屏关键路径（中位 FCP 3536→2448 ms）；性能装置不再\"手机失败却退出 0\"。",
-        "en": "The phone genre picker windows its rows (159 to 24); the font leaves the critical path (median FCP 3536 to 2448 ms); the perf harness no longer fails the mobile profile and exits 0."
+        "zh": "Explore 列表改为增量窗口：159→24 张卡、DOM 6495→1095 节点、中位渲染 800→151 ms；分组计数仍读全量，稳态终值不变。",
+        "en": "The Explore list now windows its cards: 159 to 24 on first paint, 6495 to 1095 DOM nodes, median render 800 to 151 ms; group counts still read the full list and the steady state is unchanged."
       }
     ],
     "truncated": false
