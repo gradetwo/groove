@@ -76,10 +76,14 @@ export const PhosphorOscilloscope: React.FC<PhosphorOscilloscopeProps> = ({
     const dataArray = new Float32Array(bufferLength);
 
     let lastRender = 0;
+    /** The palette the last frame painted with: a skin change must repaint at once, not wait out the 25 ms floor. */
+    let lastPalette = paletteRef.current;
     const render = (now: number) => {
       animationFrameId = requestAnimationFrame(render);
-      if (now - lastRender < 25) return;
+      const paletteChanged = paletteRef.current !== lastPalette;
+      if (!paletteChanged && now - lastRender < 25) return;
       lastRender = now;
+      lastPalette = paletteRef.current;
       const width = canvas.width;
       const height = canvas.height;
       /** The palette resolved for this skin; read per frame but *resolved* only on mount / skin / resize. */
@@ -233,7 +237,7 @@ export const PhosphorOscilloscope: React.FC<PhosphorOscilloscopeProps> = ({
     ctx.fillStyle = canvasRgba(paletteRef.current.ground);
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-    requestAnimationFrame(render);
+    render(performance.now());
 
     return () => {
       cancelAnimationFrame(animationFrameId);

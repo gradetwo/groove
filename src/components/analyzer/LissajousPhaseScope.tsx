@@ -225,7 +225,7 @@ export const LissajousPhaseScope: React.FC<LissajousPhaseScopeProps> = ({
       setBalance(currentBal);
     };
 
-    requestAnimationFrame(render);
+    render(performance.now());
 
     return () => {
       active = false;
