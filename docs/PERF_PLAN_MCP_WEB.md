@@ -28,7 +28,8 @@ an idle machine before anyone treats the last digits as a target. The render, CP
 
 | step | wall | reply | RSS |
 | --- | --- | --- | --- |
-| `list_arrangement_instruments` (the first call a creator makes) | **180.4 s**, identical on a repeat → **no cache** | **96 KB** | 121 MB |
+| `list_arrangement_instruments` (the first call a creator makes) | ~~**180.4 s**~~ ✗ harness artifact (see `21438f6`); **re-measured 603 / 661 / 621 ms** cold, **≈40 ms** for a second call in one session | 123 442 B | 121 MB |
+| ↳ *why the old number was wrong* | the 180 s watchdog in `scripts/mcp_call.mjs` was never cleared, so the process idled to its expiry (`user+sys` ≈ 0.5 s) | — | — |
 | create / tempo / bars / rename / asset / add track | 2–7 ms each | small | ~102 MB |
 | `add_arrangement_notes` × 10 (2,096 notes) | 13–64 ms each | 130 KB → **541 KB, 3.46 MB total** | 102 → 121 MB |
 | `describe_arrangement` | 5 ms | 1.2 KB (plain text) | — |
