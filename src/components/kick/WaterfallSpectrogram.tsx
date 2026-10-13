@@ -43,15 +43,23 @@ export const WaterfallSpectrogram: React.FC<WaterfallSpectrogramProps> = ({
   const historyRef = useRef<Uint8Array[]>([]);
   const maxHistory = 60;
   const shockRef = useRef(0);
+  /** ⚡ Bridges the hit effect to the render loop's local `kickStart` (the loop parks itself when idle). */
+  const kickStartRef = useRef<(() => void) | null>(null);
 
   useEffect(() => {
     if (lastHitTime > 0) {
       shockRef.current = 1.0;
+      // ⚡ A hit restarts the (possibly idle-stopped) loop — see the render loop below.
+      kickStartRef.current?.();
     }
   }, [lastHitTime]);
 
   useEffect(() => {
-    let animationFrameId: number;
+    let animationFrameId: number | null = null;
+    let running = false;
+    let lastFrame = 0;
+    /** ⚡ Consecutive silent frames; past this budget with no shock left, the loop parks itself. */
+    let silentFrames = 0;
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext("2d");
@@ -59,9 +67,16 @@ export const WaterfallSpectrogram: React.FC<WaterfallSpectrogramProps> = ({
 
     const binCount = analyser ? analyser.frequencyBinCount : 512;
     const freqData = new Uint8Array(binCount);
+    /** ⚡ The 128-bin slice is reused across frames (was: one `new Uint8Array(128)` per frame at 60fps). */
+    const slice = new Uint8Array(128);
 
-    const render = () => {
-      animationFrameId = requestAnimationFrame(render);
+    const draw = (now: number) => {
+      // ⚡ ~30fps cap: a scrolling waterfall reads identically at half the frame budget.
+      if (now - lastFrame < 33) {
+        animationFrameId = requestAnimationFrame(draw);
+        return;
+      }
+      lastFrame = now;
       const width = canvas.width;
       const height = canvas.height;
       /** The palette resolved for this skin; read per frame but *resolved* only on mount / skin / resize. */
@@ -71,17 +86,20 @@ export const WaterfallSpectrogram: React.FC<WaterfallSpectrogramProps> = ({
       const shock = shockRef.current;
 
       // Sample current frequency slice
+      let frameSilent = true;
       if (analyser) {
         analyser.getByteFrequencyData(freqData);
         // Only keep lower half of bins (0 to ~11kHz) where kick energy lives
-        const slice = new Uint8Array(128);
         for (let i = 0; i < 128; i++) {
           slice[i] = freqData[i];
+          if (freqData[i] >= 4) frameSilent = false;
         }
         historyRef.current.unshift(slice);
         if (historyRef.current.length > maxHistory) {
           historyRef.current.pop();
         }
+      } else {
+        frameSilent = true;
       }
 
       // Clear with the skin's ground
@@ -192,12 +210,41 @@ export const WaterfallSpectrogram: React.FC<WaterfallSpectrogramProps> = ({
       }
 
       ctx.restore();
+
+      /**
+       * ⚡ Performance fix (2026-10-13 audit): the loop re-armed itself at display refresh rate from mount — 60fps
+       * of full-waterfall repaint, `unshift` and allocation even on a page nobody was playing. Now: throttled to
+       * ~30fps (a scrolling waterfall reads identically), the slice buffer is reused, and after ~1.5s of pure
+       * silence with no shock flash left the loop parks itself; the next hit (`lastHitTime`) restarts it.
+       */
+      if (frameSilent && shock <= 0.05) {
+        silentFrames += 1;
+      } else {
+        silentFrames = 0;
+      }
+      if (silentFrames > 45) {
+        running = false;
+        animationFrameId = null;
+        return;
+      }
+      animationFrameId = requestAnimationFrame(draw);
     };
 
-    render();
+    const kickStart = () => {
+      if (running) return;
+      running = true;
+      silentFrames = 0;
+      lastFrame = 0;
+      animationFrameId = requestAnimationFrame(draw);
+    };
+    kickStartRef.current = kickStart;
+
+    kickStart();
 
     return () => {
-      cancelAnimationFrame(animationFrameId);
+      running = false;
+      if (animationFrameId !== null) cancelAnimationFrame(animationFrameId);
+      kickStartRef.current = null;
     };
   }, [analyser]);
 

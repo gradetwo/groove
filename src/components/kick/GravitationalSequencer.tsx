@@ -88,6 +88,65 @@ export const GravitationalSequencer: React.FC<GravitationalSequencerProps> = ({
   const stepsRef = useRef(steps);
   stepsRef.current = steps;
 
+  // Canvas ripple animation loop
+  /**
+   * ⚡ Performance fix (2026-10-13 audit): the loop used to re-arm itself unconditionally from mount, clearing and
+   * repainting at display refresh rate even when nothing was playing and no ripple existed — an idle Kick page cost
+   * a full 60fps canvas pass forever. The loop now runs only while there is work: `kickStartRippleLoop` restarts it
+   * whenever a ripple lands, and it stops itself once the last ring has faded. Same frame budget while playing.
+   */
+  const rippleLoopRef = useRef<number | null>(null);
+  const kickStartRippleLoop = useCallback(() => {
+    if (rippleLoopRef.current !== null) return; // already running
+    if (typeof requestAnimationFrame === "undefined") return;
+    const canvas = rippleCanvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+
+    const render = () => {
+      rippleLoopRef.current = null;
+      const width = canvas.width;
+      const height = canvas.height;
+
+      ctx.clearRect(0, 0, width, height);
+
+      // Render expanding ripples
+      for (let i = ripplesRef.current.length - 1; i >= 0; i--) {
+        const rip = ripplesRef.current[i];
+        rip.radius += 2.5;
+        rip.alpha *= 0.94;
+
+        ctx.save();
+        ctx.strokeStyle = rip.color;
+        ctx.globalAlpha = Math.max(0, rip.alpha);
+        ctx.lineWidth = 1.5;
+
+        // Concentric shockwave circle
+        ctx.beginPath();
+        ctx.arc(rip.x, rip.y, rip.radius, 0, Math.PI * 2);
+        ctx.stroke();
+
+        // Secondary inner echo
+        if (rip.radius > 15) {
+          ctx.beginPath();
+          ctx.arc(rip.x, rip.y, rip.radius * 0.6, 0, Math.PI * 2);
+          ctx.stroke();
+        }
+        ctx.restore();
+
+        if (rip.alpha < 0.02 || rip.radius > rip.maxRadius) {
+          ripplesRef.current.splice(i, 1);
+        }
+      }
+
+      if (ripplesRef.current.length > 0) {
+        rippleLoopRef.current = requestAnimationFrame(render);
+      }
+    };
+
+    rippleLoopRef.current = requestAnimationFrame(render);
+  }, []);
   // Add ripple shockwave
   const triggerRipple = useCallback((stepIdx: number, vel: number) => {
     const canvas = rippleCanvasRef.current;
@@ -113,7 +172,8 @@ export const GravitationalSequencer: React.FC<GravitationalSequencerProps> = ({
       alpha: 1.0,
       color,
     });
-  }, [engine]);
+    kickStartRippleLoop();
+  }, [engine, kickStartRippleLoop]);
 
   // Tick scheduler
   const stepDurationMs = (60 / bpm) / 4 * 1000;
@@ -160,54 +220,6 @@ export const GravitationalSequencer: React.FC<GravitationalSequencerProps> = ({
     };
   }, [isPlaying, bpm, engine, triggerRipple]);
 
-  // Canvas ripple animation loop
-  useEffect(() => {
-    let animId: number;
-    const canvas = rippleCanvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
-
-    const render = () => {
-      animId = requestAnimationFrame(render);
-      const width = canvas.width;
-      const height = canvas.height;
-
-      ctx.clearRect(0, 0, width, height);
-
-      // Render expanding ripples
-      for (let i = ripplesRef.current.length - 1; i >= 0; i--) {
-        const rip = ripplesRef.current[i];
-        rip.radius += 2.5;
-        rip.alpha *= 0.94;
-
-        ctx.save();
-        ctx.strokeStyle = rip.color;
-        ctx.globalAlpha = Math.max(0, rip.alpha);
-        ctx.lineWidth = 1.5;
-
-        // Concentric shockwave circle
-        ctx.beginPath();
-        ctx.arc(rip.x, rip.y, rip.radius, 0, Math.PI * 2);
-        ctx.stroke();
-
-        // Secondary inner echo
-        if (rip.radius > 15) {
-          ctx.beginPath();
-          ctx.arc(rip.x, rip.y, rip.radius * 0.6, 0, Math.PI * 2);
-          ctx.stroke();
-        }
-        ctx.restore();
-
-        if (rip.alpha < 0.02 || rip.radius > rip.maxRadius) {
-          ripplesRef.current.splice(i, 1);
-        }
-      }
-    };
-
-    render();
-    return () => cancelAnimationFrame(animId);
-  }, []);
 
   const handleTogglePlay = () => {
     if (!isPlaying) {

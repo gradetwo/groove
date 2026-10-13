@@ -70,9 +70,48 @@ export const LissajousPhaseScope: React.FC<LissajousPhaseScopeProps> = ({
     const timeDataL = new Float32Array(bufLen);
     const timeDataR = new Float32Array(bufLen);
 
+    /** ⚡ Last values handed to React, so a static mix does not re-render the readouts 40 times a second. */
+    const lastValues = { r: 1, w: 0, b: 0 };
+
+    /** The static frame an idle scope draws exactly once before stopping the loop. */
+    const drawIdleSpot = () => {
+      const canvas = canvasRef.current;
+      if (!canvas) return;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) return;
+      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      const width = canvas.width / dpr;
+      const height = canvas.height / dpr;
+      if (width <= 0 || height <= 0) return;
+      const cx = width / 2;
+      const cy = height / 2;
+      ctx.save();
+      ctx.scale(dpr, dpr);
+      ctx.clearRect(0, 0, width, height);
+      ctx.fillStyle = "rgba(7, 8, 12, 1)";
+      ctx.fillRect(0, 0, width, height);
+      ctx.fillStyle = "rgba(245, 183, 61, 0.4)";
+      ctx.beginPath();
+      ctx.arc(cx, cy, 3, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    };
+
     let lastRender = 0;
     const render = (now: number) => {
       if (!active) return;
+      /**
+       * ⚡ Performance fix (2026-10-13 audit): the loop re-armed itself unconditionally and ran three `setState`
+       * calls per drawn frame, so an idle scope (transport stopped) kept re-rendering the whole component at ~40fps
+       * forever, and a playing one did the same through React even when the numbers had not moved. Now: idle draws
+       * its static phosphor spot once and stops (prop changes restart the effect), and the numbers only go to React
+       * when they have actually changed enough to matter for a readout.
+       */
+      if (!isPlaying) {
+        // Draw the idle central spot once, then stop scheduling — same contract as `Header.tsx`'s idle bars.
+        drawIdleSpot();
+        return;
+      }
       animFrameRef.current = requestAnimationFrame(render);
       if (now - lastRender < 25) return;
       lastRender = now;
@@ -220,9 +259,23 @@ export const LissajousPhaseScope: React.FC<LissajousPhaseScopeProps> = ({
 
       ctx.restore();
 
-      setCorrelation(currentR);
-      setStereoWidth(currentWidth);
-      setBalance(currentBal);
+      /**
+       * ⚡ Only hand React new numbers when they have moved enough for the readout to change (2 decimals of the
+       * correlation meter, 1 of the width/balance bars). Without this the playing scope re-rendered the whole
+       * component ~40 times a second even when the mix was static — measured as the dominant re-render source on
+       * the analyzer page during playback.
+       */
+      const rDelta = Math.abs(currentR - lastValues.r);
+      const wDelta = Math.abs(currentWidth - lastValues.w);
+      const bDelta = Math.abs(currentBal - lastValues.b);
+      if (rDelta > 0.005 || wDelta > 0.005 || bDelta > 0.005) {
+        lastValues.r = currentR;
+        lastValues.w = currentWidth;
+        lastValues.b = currentBal;
+        setCorrelation(currentR);
+        setStereoWidth(currentWidth);
+        setBalance(currentBal);
+      }
     };
 
     render(performance.now());

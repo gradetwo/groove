@@ -643,7 +643,22 @@ export async function prepareOfflineAudioLanes(input: PrepareOfflineAudioLanesIn
   const total = wanted.size;
   input.onProgress?.({ loaded, total });
 
-  for (const event of wanted.values()) {
+  /**
+   * ⚡ **Performance fix (2026-10-13 audit): the warm-up loads concurrently, with a bound.**
+   *
+   * This loop used to `await` one recording at a time, so a cold render's total fetch latency was the **sum** of every
+   * request's RTT + download + decode — measured by `mcp/render/sampleCache.ts`'s own header at 134 requests for one
+   * three-bar render, and none of that work depends on its neighbour. The result of a render is byte-identical: the
+   * loader's per-recording promise cache already deduplicates, each recording is independent, and progress is now
+   * counted on completion rather than on start order. The bound (6) keeps a cold SFZ program from opening an
+   * unbounded number of sockets against the sample mirror — wide enough to keep the pipe full, narrow enough that
+   * the mirror and the caller's own host are not stampeded.
+   */
+  const events = [...wanted.values()];
+  const WARM_UP_CONCURRENCY = 6;
+  let cursor = 0;
+
+  const loadOne = async (event: OfflineAudioLaneEvent): Promise<void> => {
     try {
       if (event.pitch === undefined) {
         await input.loader.load(event.assetId);
@@ -655,7 +670,16 @@ export async function prepareOfflineAudioLanes(input: PrepareOfflineAudioLanesIn
       problems.push(`${event.assetId}${event.pitch === undefined ? "" : ` note ${event.pitch}`}: ${error instanceof Error ? error.message : String(error)}`);
     }
     input.onProgress?.({ loaded, total });
-  }
+  };
+
+  const workers = Array.from({ length: Math.min(WARM_UP_CONCURRENCY, events.length) }, async () => {
+    while (cursor < events.length) {
+      const event = events[cursor]!;
+      cursor += 1;
+      await loadOne(event);
+    }
+  });
+  await Promise.all(workers);
 
   return { loaded, total, ready: problems.length === 0, empty: total === 0, problems };
 }

@@ -70,7 +70,14 @@ export const OscilloscopeWaveform: React.FC<OscilloscopeWaveformProps> = ({
     let lastRender = 0;
     const render = (now: number) => {
       if (!active) return;
-      animFrameRef.current = requestAnimationFrame(render);
+      /**
+       * ⚡ (2026-10-13 audit) One re-arm per executed callback, and only while the scope has signal to draw: idle
+       * draws its static graticule once and the loop stops (prop changes restart the effect). The old version
+       * re-armed unconditionally at the top and idled at ~40fps forever.
+       */
+      if (analyserL && analyserR && isPlaying) {
+        animFrameRef.current = requestAnimationFrame(render);
+      }
       if (now - lastRender < 25) return;
       lastRender = now;
 

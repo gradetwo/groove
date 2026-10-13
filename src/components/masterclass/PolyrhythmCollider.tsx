@@ -35,6 +35,9 @@ export const PolyrhythmCollider: React.FC<PolyrhythmColliderProps> = ({
   const [activeNodeA, setActiveNodeA] = useState<number | null>(null);
   const [activeNodeB, setActiveNodeB] = useState<number | null>(null);
   const [collisionFlash, setCollisionFlash] = useState(false);
+  /** ⚡ The needles are written straight to the DOM every frame; React state only seeds their first mount. */
+  const needleARef = useRef<SVGLineElement | null>(null);
+  const needleBRef = useRef<SVGLineElement | null>(null);
 
   const startTimeRef = useRef<number | null>(null);
   const animFrameRef = useRef<number | null>(null);
@@ -73,7 +76,27 @@ export const PolyrhythmCollider: React.FC<PolyrhythmColliderProps> = ({
       // Rotation angles in radians
       const angleA = progress * 2 * Math.PI;
       const angleB = progress * 2 * Math.PI;
-      setAnimAngles({ angleA, angleB });
+      /**
+       * ⚡ Performance fix (2026-10-13 audit): the angles used to go through `setAnimAngles` — a fresh object every
+       * frame, so React never bailed out and this 558-line component (both rings, every node, the SVG geometry)
+       * re-rendered at display refresh rate for as long as the collider played. The needle positions are pure
+       * geometry of the value, so they are written straight to the two `<line>` elements here; `animAngles` state
+       * only seeds a freshly mounted needle (angle 0) and is no longer touched per frame.
+       */
+      const needleAX = center + radiusA * Math.cos(angleA - Math.PI / 2);
+      const needleAY = center + radiusA * Math.sin(angleA - Math.PI / 2);
+      const needleBX = center + radiusB * Math.cos(angleB - Math.PI / 2);
+      const needleBY = center + radiusB * Math.sin(angleB - Math.PI / 2);
+      const lineA = needleARef.current;
+      if (lineA) {
+        lineA.setAttribute("x2", String(needleAX));
+        lineA.setAttribute("y2", String(needleAY));
+      }
+      const lineB = needleBRef.current;
+      if (lineB) {
+        lineB.setAttribute("x2", String(needleBX));
+        lineB.setAttribute("y2", String(needleBY));
+      }
 
       // Step check for Voice A
       const stepIndexA = Math.floor(progress * ratioA);
@@ -323,6 +346,7 @@ export const PolyrhythmCollider: React.FC<PolyrhythmColliderProps> = ({
             {isPlaying && (
               <>
                 <line
+                  ref={needleARef}
                   x1={center}
                   y1={center}
                   x2={needleAX}
@@ -333,6 +357,7 @@ export const PolyrhythmCollider: React.FC<PolyrhythmColliderProps> = ({
                   filter="url(#glow)"
                 />
                 <line
+                  ref={needleBRef}
                   x1={center}
                   y1={center}
                   x2={needleBX}

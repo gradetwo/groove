@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState, useCallback } from "react";
+import React, { useEffect, useRef, useState, useCallback, useMemo } from "react";
 import {
   frequencyToX,
   xToFrequency,
@@ -123,12 +123,25 @@ export const WaterfallSpectrogram: React.FC<WaterfallSpectrogramProps> = ({
    * ⭐ **The skin's panel, read from the token rather than from a list of skin names** (finding S5). The analyzer's band
    * labels were the authored dark-panel colours drawn as text, which measured 1.55:1–2.54:1 on the paper skins; an empty
    * value (a test environment, or a skin that declares none) keeps the authored colour, which is today's behaviour.
+   *
+   * ⚡ Performance fix (2026-10-13 audit): this used to run `getComputedStyle` in the component body, i.e. on **every
+   * render** — and before the same audit stopped the per-frame `setBandEnergies`, that meant a forced style recalculation
+   * at display refresh rate (layout thrash). A skin swap remounts the themed trees, so reading the token once per
+   * mounted theme keeps the same value for a fraction of the cost.
    */
-  const panelToken = typeof window === "undefined" ? undefined : getComputedStyle(document.documentElement).getPropertyValue("--d-panel");
+  const panelToken = useMemo(
+    () => (typeof window === "undefined" ? undefined : getComputedStyle(document.documentElement).getPropertyValue("--d-panel")),
+    // The token is read once per mounted theme; a skin swap remounts the themed trees, so this is enough.
+    [theme]
+  );
 
   const containerRef = useRef<HTMLDivElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const animFrameRef = useRef<number | null>(null);
+  /** ⚡ Reused per-frame buffers: one Uint8Array + one ImageData + one curve array instead of 60 allocations a second. */
+  const freqDataRef = useRef<Uint8Array<ArrayBuffer> | null>(null);
+  const sliceImgRef = useRef<{ ctx: CanvasRenderingContext2D; img: ImageData } | null>(null);
+  const curveYRef = useRef<number[] | null>(null);
 
   // Peak hold buffer across display width
   const peakHoldRef = useRef<Float32Array | null>(null);
@@ -140,6 +153,8 @@ export const WaterfallSpectrogram: React.FC<WaterfallSpectrogramProps> = ({
 
   const [hoverInfo, setHoverInfo] = useState<HoverInfo | null>(null);
   const [bandEnergies, setBandEnergies] = useState<number[]>([0, 0, 0, 0, 0, 0, 0]);
+  /** ⚡ Last value handed to `setBandEnergies`, so the per-frame path can skip unchanged React state. */
+  const bandEnergiesRef = useRef<number[]>([0, 0, 0, 0, 0, 0, 0]);
 
   // Handle canvas sizing with devicePixelRatio
   const updateCanvasSize = useCallback(() => {
@@ -184,7 +199,6 @@ export const WaterfallSpectrogram: React.FC<WaterfallSpectrogramProps> = ({
 
     const render = () => {
       if (!active) return;
-      animFrameRef.current = requestAnimationFrame(render);
 
       const canvas = canvasRef.current;
       if (!canvas) return;
@@ -199,9 +213,13 @@ export const WaterfallSpectrogram: React.FC<WaterfallSpectrogramProps> = ({
       const spectrumHeight = Math.floor(height * 0.42);
       const waterfallHeight = height - spectrumHeight;
 
-      // Extract frequency data from analyser
+      // Extract frequency data from analyser — into a buffer reused across frames (was: one allocation per frame).
       const binCount = analyser ? analyser.frequencyBinCount : 1024;
-      const freqData = new Uint8Array(binCount);
+      let freqData = freqDataRef.current;
+      if (!freqData || freqData.length !== binCount) {
+        freqData = new Uint8Array(binCount);
+        freqDataRef.current = freqData;
+      }
       if (analyser && isPlaying && !isFrozen) {
         analyser.getByteFrequencyData(freqData);
       }
@@ -272,7 +290,7 @@ export const WaterfallSpectrogram: React.FC<WaterfallSpectrogramProps> = ({
       }
 
       // 4. Sample and Map Frequency Curve (Logarithmic Interpolation)
-      const curveY: number[] = new Array(Math.floor(width));
+      // ⚡ curveY is the reused array from below (was: a fresh `Array(width)` every frame).
       let maxVal = 0;
       let maxFreq = 0;
 
@@ -280,11 +298,20 @@ export const WaterfallSpectrogram: React.FC<WaterfallSpectrogramProps> = ({
       const bandSums = [0, 0, 0, 0, 0, 0, 0];
       const bandCounts = [0, 0, 0, 0, 0, 0, 0];
 
-      // Newest waterfall slice pixels
-      const sliceImg = ctx.createImageData(Math.floor(width), 2);
+      // Newest waterfall slice pixels — one ImageData reused while the width is unchanged (was: one per frame).
+      const wFloor = Math.floor(width);
+      let sliceImg = sliceImgRef.current?.img;
+      if (!sliceImg || sliceImg.width !== wFloor || sliceImgRef.current?.ctx !== ctx) {
+        sliceImg = ctx.createImageData(wFloor, 2);
+        sliceImgRef.current = { ctx, img: sliceImg };
+      }
       const imgData = sliceImg.data;
 
-      const wFloor = Math.floor(width);
+      let curveY = curveYRef.current;
+      if (!curveY || curveY.length !== wFloor) {
+        curveY = new Array<number>(wFloor);
+        curveYRef.current = curveY;
+      }
       for (let x = 0; x < wFloor; x++) {
         const freq = xToFrequency(x, 20, 20000, width);
         const binIndex = (freq / nyquist) * binCount;
@@ -418,11 +445,24 @@ export const WaterfallSpectrogram: React.FC<WaterfallSpectrogramProps> = ({
       }
 
       // Update band energy states periodically (for UI gauges)
+      // ⚡ Performance fix (2026-10-13 audit): this used to `setBandEnergies` with a fresh array on **every frame**,
+      // which React can never bail out of — a full component re-render (and, through the token read above, a style
+      // recalculation) at display refresh rate even with transport stopped. Compare first; set only on change.
       const calculatedBands = bandSums.map((sum, i) => {
         const count = bandCounts[i] || 1;
         return Math.min(100, Math.round((sum / count) * 100));
       });
-      setBandEnergies(calculatedBands);
+      const previous = bandEnergiesRef.current;
+      let bandsChanged = previous.length !== calculatedBands.length;
+      if (!bandsChanged) {
+        for (let i = 0; i < calculatedBands.length; i++) {
+          if (previous[i] !== calculatedBands[i]) { bandsChanged = true; break; }
+        }
+      }
+      if (bandsChanged) {
+        bandEnergiesRef.current = calculatedBands;
+        setBandEnergies(calculatedBands);
+      }
 
       // 7. Draw Divider Line Between Spectrum and Waterfall
       ctx.strokeStyle = "rgba(245, 183, 61, 0.35)";
@@ -433,6 +473,17 @@ export const WaterfallSpectrogram: React.FC<WaterfallSpectrogramProps> = ({
       ctx.stroke();
 
       ctx.restore();
+
+      /**
+       * ⚡ Performance fix (2026-10-13 audit): the loop used to re-arm itself unconditionally, so a paused or frozen
+       * analyzer still cleared grids, rebuilt ImageData and redrew at 60fps — the direct "open the analyzer page and
+       * the phone warms up" path. Same contract as `Header.tsx`'s idle bars: while playing, one frame per vsync;
+       * while idle, draw the static frame once and stop scheduling. Prop changes re-run this effect, which restarts
+       * the loop, so resuming playback re-arms itself.
+       */
+      if (isPlaying && !isFrozen) {
+        animFrameRef.current = requestAnimationFrame(render);
+      }
     };
 
     render();
