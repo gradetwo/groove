@@ -137,11 +137,20 @@ function stepDotPosition(
  *
  * The reference shows progress as `(step + fraction) / 16`; keeping it here means the progress bar
  * and the disc angle can never disagree.
+ *
+ * ⭐ **The step is reduced modulo the loop.** Two clocks feed this: the engine's, which returns a step already inside
+ * the pattern, and the phone's clip clock, which returns the step since **the clip began** because a clip plays for
+ * its own length rather than looping a pattern. Un-reduced, the clip's step exceeded `totalSteps` after the first loop
+ * and the bar sat pinned at 100 % — measured on a 16.6 s / 124 BPM record: the bar filled at **1.94 s** and never
+ * moved again (owner, 2026-10-13). The disc's own hit highlight already reduced the step this way (`fireStep` takes
+ * `clock.step % totalSteps`), so the rail was the only reader missing it; the engine's clock is unaffected because its
+ * step is already in range.
  */
 export function loopProgress(step: number, fraction: number, totalSteps = 16): number {
   if (totalSteps <= 0) return 0;
   const clamped = Math.min(1, Math.max(0, fraction));
-  return Math.min(1, Math.max(0, (step + clamped) / totalSteps));
+  const withinLoop = ((step % totalSteps) + totalSteps) % totalSteps;
+  return Math.min(1, Math.max(0, (withinLoop + clamped) / totalSteps));
 }
 
 /** The three play modes the left-hand button cycles, in order. */

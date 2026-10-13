@@ -386,6 +386,11 @@ export function MobileApp({
     const stepDuration = 15 / bpm;
     // `currentTime` already advances at `playbackRate` — it is the record position, so scaling by rate again doubled it.
     const totalStepsElapsed = audio.currentTime / stepDuration;
+    /**
+     * An ever-growing step is what this returns, and that is fine for both readers: the record's hit highlight wraps
+     * it (`fireStep` takes `clock.step % totalSteps`), and the progress rail wraps it in `loopProgress`. The rail did
+     * not, so it filled during the first loop and stayed pinned at 100 % — see that function's note.
+     */
     const step = Math.floor(totalStepsElapsed);
     const fraction = Math.min(1, Math.max(0, totalStepsElapsed - step));
     return { step, fraction };
