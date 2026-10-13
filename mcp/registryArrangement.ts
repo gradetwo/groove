@@ -37,7 +37,7 @@ import { instrumentsByPart } from "./toolKit";
 
 import { setMcpArrangementTempo, setMcpArrangementTimeSignature } from "./arrangement";
 
-import { setMcpArrangementBars, setMcpArrangementTempoMap, setMcpTrackGain } from "./arrangement";
+import { setMcpArrangementBars, setMcpArrangementTempoMap, setMcpTrackAutomation, setMcpTrackGain } from "./arrangement";
 import { catalogueAssetById, listSampleLibraries, nearestCatalogueAssetIds } from "./instruments";
 import { inspectSfzAt } from "./sfzInspectRemote";
 
@@ -975,6 +975,36 @@ export const ARRANGEMENT_TOOLS: ToolDefinition[] = [
     handler: (args) => {
       try {
         return setMcpTrackGain(String(args.arrangementId), String(args.trackId), Number(args.gainDb));
+      } catch (error) {
+        return failure((error as Error).message);
+      }
+    },
+  },
+  {
+    name: "set_arrangement_track_automation",
+    title: "Set a track's level curve",
+    description:
+      "A track's level as a curve: points of `{ atBeats, value }`, where `value` is dB (0 unity, clamped to −60…+6) and `atBeats` is beats from the start. Between two points the line is straight; outside them the curve holds its value rather than extrapolating. An empty list removes the curve, and the track's own `gainDb` then stands. This is the only way to ask for a fade — setting one level per step is the work it replaces.",
+    readOnly: false,
+    inputSchema: {
+      arrangementId: z.string(),
+      trackId: z.string(),
+      points: z
+        .array(
+          z.object({
+            atBeats: z.number().min(0).describe("beats from the arrangement's start"),
+            value: z.number().min(-60).max(6).describe("dB at that position; 0 is unity"),
+          })
+        )
+        .describe("the curve, in any order; an empty list removes it"),
+    },
+    handler: (args) => {
+      try {
+        return setMcpTrackAutomation(
+          String(args.arrangementId),
+          String(args.trackId),
+          (args.points as Array<{ atBeats: number; value: number }>) ?? []
+        );
       } catch (error) {
         return failure((error as Error).message);
       }

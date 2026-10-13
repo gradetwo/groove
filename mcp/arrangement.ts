@@ -45,6 +45,7 @@ import {
   setArrangementTempoMap,
   setTrackFlag,
   setArrangementTimeSignature,
+  setTrackAutomation,
   setTrackGain,
   setTrackNoteLength,
   setTrackNoteVelocity,
@@ -1625,6 +1626,26 @@ export function setMcpArrangementBars(arrangementId: string, bars: number): Arra
 /** A track's level in dB (0 = unity), or its place in the stereo field (−1 left, 0 centre, 1 right). */
 export function setMcpTrackGain(arrangementId: string, trackId: string, gainDb: number): ArrangementEditResult {
   return edit(arrangementId, (arrangement) => refuseUnknownTrack(arrangement, trackId, () => setTrackGain(arrangement, trackId, gainDb)));
+}
+
+/**
+ * ⭐ **A track's level as a curve**, which is the one thing `setMcpTrackGain` cannot say.
+ *
+ * The interface draws a fade over the arrangement; a protocol caller that could only set one number would have to fake
+ * the same fade by writing a level per step, which is the work `docs/DAW_GAP_ARRANGEMENT.md` §8 recorded as the cost of
+ * not having automation. The points are the model's own (`atBeats`, `value` in dB) and `setTrackAutomation` normalises
+ * them, so a client cannot store a lane the renderer reads differently.
+ */
+export function setMcpTrackAutomation(
+  arrangementId: string,
+  trackId: string,
+  points: Array<{ atBeats: number; value: number }>
+): ArrangementEditResult {
+  return edit(arrangementId, (arrangement) =>
+    refuseUnknownTrack(arrangement, trackId, () =>
+      setTrackAutomation(arrangement, trackId, { parameter: "gainDb", points })
+    )
+  );
 }
 
 export function setMcpTrackPan(arrangementId: string, trackId: string, pan: number): ArrangementEditResult {
