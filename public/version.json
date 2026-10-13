@@ -1,23 +1,23 @@
 {
-  "version": "2.40.0",
+  "version": "2.41.0",
   "releaseDate": "2026-10-13",
   "changelogCount": 10,
   "latest": {
-    "version": "2.40.0",
+    "version": "2.41.0",
     "date": "2026-10-14",
     "category": "feature",
     "title": {
-      "zh": "编排：轨道音量可有连续包络，渐强渐弱不必再切分段",
-      "en": "Arrangement: a track's level can be a continuous envelope, so a fade is not cut into pieces"
+      "zh": "编排：音量包络有了可画的车道，点/拖/方向键都能改",
+      "en": "Arrangement: the level curve has a lane you can draw on — click, drag or nudge it"
     },
     "highlights": [
       {
-        "zh": "按 docs/DAW_GAP_ARRANGEMENT.md §8 第 4 项做：点用拍、值用 dB，区间外保持平直（外推会越过 +6 dB 上限），两点之间直线；曲线在编译期展开成每步增益，活引擎与离线渲染共用一份。",
-        "en": "Built as docs/DAW_GAP_ARRANGEMENT.md §8's fourth item: points in beats, values in dB, flat outside the points (extrapolating would pass the +6 dB ceiling) and straight between them; the compile expands it to a per-step gain shared by the live engine and the offline renderer."
+        "zh": "轨道头新增 ∿ 开关，打开后该轨下方出现一条曲线：按拍画点、拖动改点、方向键微调（Shift 加大步长），空车道按一下即加第一个点。",
+        "en": "A ∿ toggle in the track header opens that track's curve below the lanes: click to add a point, drag to move one, arrow keys to nudge (Shift for a larger step). A press on an empty lane adds the first point."
       },
       {
-        "zh": "顺带修一处真 bug：活引擎把推子钳在 1.0，而编译一直能写到 2.0（+6 dB）、离线混音也认，同一工程在房间里比在文件里更轻。",
-        "en": "A real bug went with it: the live engine clamped the fader at 1.0 while the compile has always been able to write 2.0 (+6 dB) and the offline mixer honoured it, so a project was quieter in the room than in the file."
+        "zh": "一次手势只写一次模型：拖动期间曲线留在组件内，松手才提交整条曲线，所以一个拖动就是一个撤销步（不是每个像素一步）。",
+        "en": "One gesture writes the model once: the curve stays in the component while the pointer is down and the whole curve is committed on release, so a drag is a single undo step rather than one per pixel."
       }
     ],
     "truncated": false
