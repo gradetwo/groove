@@ -288,6 +288,7 @@ export class AudioEngine {
   private resumeStep: number | null = null;
   private nextStepTime: number = 0;
   private scheduleTimerId: any = null;
+  private lastSchedulerTickMs = 0; // the 40 ms watchdog reads this to fire on a stall, not as a second clock
   private stepQueue: Array<{ step: number; time: number; activeTracks: number[] }> = [];
   /** A-07: hard cap so a hidden tab (rAF paused) cannot grow this without bound. */
   private static readonly MAX_STEP_QUEUE = 128;
@@ -2007,11 +2008,9 @@ export class AudioEngine {
     const rate = this.ctx ? this.ctx.sampleRate : 44100;
     this.workletClock.start(this.lookaheadMs, rate);
 
-    // Watchdog backup interval ensures scheduling loop keeps running without any stalls
+    // A stall only: the primary tick is 20 ms, so 100 ms of silence means it stopped, not that it is slow.
     this.scheduleTimerId = setInterval(() => {
-      if (this.isPlaying) {
-        this.schedulerLoop();
-      }
+      if (this.isPlaying && performance.now() - this.lastSchedulerTickMs >= 100) this.schedulerLoop();
     }, 40);
   }
 
@@ -2096,6 +2095,7 @@ export class AudioEngine {
 
   private schedulerLoop(): void {
     if (!this.ctx || !this.isPlaying || !this.pattern) return;
+    this.lastSchedulerTickMs = performance.now();
 
     const stepDur = this.getStepDuration();
     // A preview plays the scope's own range, not the pattern or the transport loop.
