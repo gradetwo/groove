@@ -304,6 +304,8 @@ export const commonMessages = {
   mobile_clip_compare: { en: "Compare", zh: "对比" },
   mobile_clip_pitch_note: { en: "pitch follows the speed, like a record", zh: "变速即变调，像唱片一样" },
   mobile_clip_missing: { en: "No clip for this genre yet", zh: "这个曲风还没有片段" },
+  /** The browser refused `play()` (iOS outside the gesture, or a clip that will not load) — say so rather than go quiet. */
+  mobile_player_status_failed: { en: "Could not play — tap play to retry", zh: "无法播放 —— 点播放重试" },
   instrument_auditioning: {
     en: "Auditioning {name}",
     zh: "正在试听 {name}",

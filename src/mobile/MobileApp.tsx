@@ -22,6 +22,7 @@ import { useCoverWarmupBothSizes } from "../hooks/useCoverWarmup";
 import { MOBILE_MODULE_PLAN_KEYS, usesClipPlayback, type MobileModule } from "./mobileModules";
 import { GENRE_INDEX, loadGenre } from "./mobileGenreData";
 import { nextGenreForMode, nextPlayMode, normalisePlayMode, type PlayMode } from "./vinyl/vinylMath";
+import { nextClipToWarm } from "./clipPrefetch";
 import type { VinylClock } from "./vinyl/VinylCanvas";
 import "./mobile.css";
 /**
@@ -215,6 +216,8 @@ export function MobileApp({
   /** ⭐ Modules but jam and explore play the rendered clip (owner, 2026-10-11). */
   const clipMode = usesClipPlayback(module);
   const [clipGenreId, setClipGenreId] = useState<string | null>(null);
+  /** A clip whose `play()` the browser refused, so the player can say so instead of only going quiet. */
+  const [clipFailed, setClipFailed] = useState(false);
   const clipAudioRef = useRef<HTMLAudioElement | null>(null);
 
   const stopClipAudio = useCallback(() => {
@@ -241,7 +244,13 @@ export function MobileApp({
    */
   const onClipPlayFailed = useCallback(() => {
     setClipGenreId(null);
+    setClipFailed(true);
   }, []);
+
+  // A new attempt supersedes the last failure, so the notice cannot outlive the press that retries it.
+  useEffect(() => {
+    if (clipGenreId) setClipFailed(false);
+  }, [clipGenreId]);
 
   useEffect(() => () => { stopAudition(); stopClipAudio(); }, [stopAudition, stopClipAudio]);
 
@@ -463,6 +472,7 @@ export function MobileApp({
                * would say "idle" while the MP3 was playing (owner, 2026-10-11).
                */
               isPlaying={clipMode ? clipGenreId === genreId : playingGenreId === genreId}
+              playFailed={clipMode && clipFailed}
               playMode={playMode}
               readClock={currentReadClock}
               onTogglePlay={(id: string) => handleToggleAudition(id)}
@@ -533,6 +543,8 @@ export function MobileApp({
         <div className="px-4 pb-2" data-testid="mobile-clip-bar-slot">
           <MobileClipPlayer
             genreId={clipGenreId}
+            /* ⭐ The genre the queue moves to, warmed while this one plays: an advance becomes a cache hit. */
+            upNextGenreId={nextClipToWarm(playMode, clipGenreId, GENRE_INDEX)}
             autoPlay
             onPlayFailed={onClipPlayFailed}
             onAudioRef={(el) => {

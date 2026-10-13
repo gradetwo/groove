@@ -67,9 +67,16 @@ const CAPS: Record<string, number> = {
    * audit's own ⚡ comments carrying its measurements. The owner's instruction was to keep the change and record
    * the raise rather than delete that evidence. The other four buckets did not move.
    *
-   * **This number may only go down from here**, and both raises above are on the record rather than silent.
+   * ⭐ **Re-measured on 2026-10-13 (51 → 52): `src/mobile/MobileApp.tsx` crossed six hundred, and the owner raised
+   * the cap rather than have the design bent to fit it.** The file gained the clip-failure state and its reset (the
+   * phone shell stopped claiming a sound the browser refused), the `onPlayFailed` wiring, and the one line that asks for
+   * the up-next genre so its clip is warmed during the current record — 599 → 611 lines. His words for that last one:
+   * 「这个预算可以上调」. Worth recording that the growth is the *wiring*; the prefetch itself lives in its own module
+   * (`src/mobile/clipPrefetch.ts`, 195 lines, uncapped).
+   *
+   * **This number may only go down from here**, and all three raises above are on the record rather than silent.
    */
-  atLeast600: 51,
+  atLeast600: 52,
   atLeast800: 31,
   atLeast1000: 25,
   atLeast1500: 13,

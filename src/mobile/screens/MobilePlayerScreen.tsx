@@ -57,6 +57,8 @@ export interface MobilePlayerScreenProps {
   onScrubSound?: (velocity: number) => void;
   onScrubSoundEnd?: () => void;
   isPlaying: boolean;
+  /** The browser refused the clip's `play()` (or it would not load), so the status line says why instead of "idle". */
+  playFailed?: boolean;
   playMode: PlayMode;
   readClock: () => VinylClock | null;
   /** Play/pause a genre *by id*: the shell resolves the record (the phone browses by index). */
@@ -135,6 +137,7 @@ function PlayerForGenre({
   onScrubSound,
   onScrubSoundEnd,
   isPlaying,
+  playFailed = false,
   playMode,
   readClock,
   onTogglePlay,
@@ -231,7 +234,18 @@ function PlayerForGenre({
   }, [genre]);
 
   const accent = CATEGORY_SWATCH[genre.category];
-  const status = isPlaying ? (dropping ? t("mobile_player_status_dropping") : t("mobile_player_status_playing")) : t("mobile_player_status_idle");
+  /**
+   * ⭐ **A refused clip says so, because "idle" would be the same word as never having pressed play.** The shell clears
+   * `clipGenreId` on the refusal, so `isPlaying` is false and the bare idle wording would hide the failure entirely —
+   * which is the "no error anywhere" half of the 2026-10-13 report. The failure wins over the transport state.
+   */
+  const status = playFailed
+    ? t("mobile_player_status_failed")
+    : isPlaying
+      ? dropping
+        ? t("mobile_player_status_dropping")
+        : t("mobile_player_status_playing")
+      : t("mobile_player_status_idle");
   const mmss = `${String(Math.floor(elapsed / 60)).padStart(2, "0")}:${String(Math.floor(elapsed % 60)).padStart(2, "0")}`;
 
   return (
