@@ -25048,3 +25048,144 @@ describe("the grid's editing actions", () => {
     · 星系页 ✓：**没有**试听控件 ⇒ 没有 testid ✓（实测 0 个 ✓，也不是遗漏 ✓）；
     · 详情页 ✓：`button:has-text('Audition Pre-cut Clip')` ✓ / `Audition Drums Only` ✓；
     · 对比页 ✓：`button:has-text('Full Band · Clip')` ✓ 与 `button[title*='Phase-locked']`（同步合成 ✓）。
+
+## 四百零一、🧭 **接手 2026-10-13 交接：能力表两处"名字骗人"已修 + 判据补上，其余按原样归档**（2026-10-13 ✓）
+
+> 来源：交接文件 `HANDOVER.md`（**未跟踪**，本节落地后已删 ✓）。**只写本会话亲手测过的** ✓；没测的一律标"未测" ✓，不含估计值 ✓。
+
+### 1. 本会话做完并验证的（**已提交 `23fef4c` 于 `dev`，尚未推送** ✓）
+
+```
+**标的 ✓**：`src/platform/surfaceCapabilities.ts` 的 `CAPABILITY_MODULES` —— 它是"能力 ↔ 实现它的模块"的**唯一链接** ✓。
+**病根 ✓**：既有判据只问"这个路径**存在**吗" ✓（`surfaceCapabilities.test.ts` 的 `names a real module…`）。
+   ⇒ **没人渲染的模块照样"存在"** ✓ ⇒ 这张表可以**悄悄过期而判据一直绿** ✓。这次它真的过期了 ✓，**两处** ✓。
+
+**修正一 ✓**：`piano-roll` 原指 `src/components/sequencer/PianoRollLane` ⇒ 改为 `src/components/arrangement/PianoRollV2`。
+  实测依据 ✓：`PianoRollLane` 在**生产代码里零 importer** ✓（除它自己的文件与 `src/test/pianoRollLane.test.tsx` ✓）；
+  studio 真正渲染的是 `PianoRollV2` ✓ —— `ArrangementViewV2.tsx:79` import ✓、`:2119` 渲染 ✓。
+  与 `arrangement` 那一处**一模一样的修正先例** ✓（该文件自己的注释里记着 ✓）。
+**修正二 ✓（交接文档没写，本次实测新发现 ✓）**：`project-hub-multitrack` 原指
+  `src/components/sequencer/ProjectHubModal` ⇒ 改为 `src/components/arrangement/NewProjectPanelV2`。
+  实测依据 ✓：`ProjectHubModal` **同样零生产 importer** ✓（`git log -S` 显示自 `2a93098` 之后无人调用 ✓）；
+  它原本负责的"排列项目流"现在是 `NewProjectPanelV2` ✓（`ArrangementViewV2.tsx` import 并渲染 ✓）。
+  ⚠️ **后果已明说、没有糊过去 ✓**：这一条与 `arrangement` 现在指向**同一个模块** ✓ —— 因为项目流已并入排列编辑器、
+  **不再有自己的一块界面** ✓。要不要把该能力**合并/删条**是产品判断 ✓，本次只把"名不副实"改成"名副其实" ✓。
+
+**判据 ✓（新增一条，且能红 ✓）**：`src/test/surfaceCapabilities.test.ts` 的
+  `imports every module it names, so the map cannot quietly go stale` ✓。
+  它走**真实生产 import 图** ✓（排除 `src/test/**` 与 `*.test.ts(x)` ✓ ⇒ "测试里 import 了"**不能**顶替"应用在用" ✓），
+  断言每个被声明的模块**至少有一个生产 importer** ✓。
+  ⭐ **解析必须按精确路径、不能用子串匹配 ✓**：import 说明符是**相对于写它的那个文件**的 ✓（`../components/…` ✓），
+  而表里存的是**仓根相对路径** ✓（`src/…` ✓）—— 拿存的字符串去 grep，**会把每一个模块都判成死 ✓**（我第一版就是这么错的 ✓，见下）。
+  红读数 ✓（修复前）：`piano-roll names src/components/sequencer/PianoRollLane, which no production file imports — the map has gone stale` ✓；
+  修一处后**立刻轮到第二处红** ✓（说明它不是一律放过 ✓）；两处都修后 **8/8 绿** ✓。
+
+**变红证明 ✓**：把 `piano-roll` **改回**旧路径 ⇒ 该条立刻红 ✓（`expected [] to not have a length of +0` ✓），
+  再还原 ⇒ `cmp` 证明文件与注入前**逐字节相同** ✓。
+
+**门禁 ✓（本机实测，都有退出码 ✓）**：`tsc --noEmit` 0 ✓；`vitest run` **713 文件通过 / 5298 用例通过（3 文件 24 用例 skip）**，退出 0 ✓；
+  `eslint` 两个改动文件 0 ✓；`check:budget` / `check:file-sizes` / `check:dead-exports` / `check:module-boundaries` 全 0 ✓；
+  `docs:check`（BACKLOG 头声明 v2.38.1 ✓，3439 个跟踪文件无冲突标记 ✓）/ `check:docs:refs` 全 0 ✓。
+**接手时复核的现状 ✓**：工作仓 `/home/crow/music/groove-int`（是 `/home/crow/music/groove` 的 **worktree** ✓，分支 `dev` ✓）当时
+  `HEAD = origin/dev = c762f59` ✓、工作树只剩未跟踪的 `HANDOVER.md` ✓；远端 CI 最近 5 次 `dev` 推送**全部 completed/success** ✓；
+  线上 `https://groove.wangda.today/version.json` = **2.38.1** ✓；封面取真实文件名（如 `acid-house.jpg`）**200 image/jpeg** ✓；`/m` 200 ✓。
+  ⚠️ `/tmp/dev5179.pid` 陈旧 ✓（15759 已死 ✓，5179 无监听 ✓）。
+```
+
+### 2. ⚠️ **量具的错会伪装成被测对象的结论 —— 本会话又踩一次**（照实记 ✓）
+
+```
+**我第一版判据把"每一个模块"都判成 DEAD ✓**，其中包含**明知在用**的 `ArrangementViewV2` ✓。
+  ⇒ 如果我不做对照就直接采信 ✓，就会得出"这张表整个是死的"这种**完全错误的结论** ✓。
+**根因 ✓**：拿表里存的**仓根相对**路径（`src/components/…` ✓）去 grep 源码里的 **import 说明符** ✓，
+  而说明符写成 `../components/…` ✓（相对**导入方文件** ✓）⇒ **字符串永远不出现** ✓，全部假阴 ✓。
+**规矩（与既有纪律同一族 ✓）**：**先证明量具 ✓** —— 每一版观测脚本都要带 **正/负对照** ✓。
+  本次对照 ✓：`ConsolePanel` ✓、`ArrangementViewV2` ✓（**已知在用** ⇒ 必须 LIVE ✓）；
+  `PianoRollLane` ✓、`ProjectHubModal` ✓（**已知无人用** ⇒ 必须 DEAD ✓）—— 四个都对上，读数才可采信 ✓。
+```
+
+### 3. 仍未测（**照实列，不含猜测** ✓ —— 以下原样承接交接文件 ✓）
+
+```
+· **全选 / marquee** 那条编辑路径的重建量（写入 ✓ / 拖动 ✓ / 缩放 ✓ 三条已覆盖 ✓，此条未测 ✓）。
+· **加轨的计时那一半** ✓：评估报告里的 **2,196–2,835 ms** ✓、**11 帧超 32 ms** ✓ ⇒ 仓内已注明
+  `MutationObserver` **看不到**"React 复用节点但整树重渲染" ✓ ⇒ **未复现、也未声称修好** ✓。
+· 混音器 ✓、**排列区域层** ✓、桌面曲风/封面网格的 DOM ✓（未测 ✓）。
+· **4K 视口**下的 roll cell 数 ✓（按公式外推约 **16,000** ✓，**是外推不是读数** ✓）。
+· 两个未窗口化的 picker ✓（`InstrumentPicker.tsx` ✓、`CatalogueRecordingPicker.tsx` ✓）：无窗口化命中 ✓，
+  但目录只有 **60–92 件** ✓ ⇒ **没有测出问题，所以当时没改** ✓（先量再决定 ✓）。
+· **真机** ✓：WebCodecs A/B 收益 ✓、`AudioContext` 未 `suspend()` 的 idle 耗电 ✓ ⇒ **本机没有真机，测不到** ✓
+  （可行性已查 ✓：`AudioDecoder` 在 Safari iOS 26 支持 ✓、Firefox for Android 不支持 ✓、官方标"有限可用" ✓
+   ⇒ 只能特性检测 + `<audio>` 回退 ✓）。
+```
+
+### 4. 已被证伪 / 已排除的假设（**别再重复试** ✓ —— 原样承接 ✓）
+
+```
+· ❌「鋼琴卷簾沒有虛擬化」——**做过** ✓。真实 128 小节 / 46 轨作品 ⇒ roll-cell **恒定 6,027** ✓（= 123 步 × 49 行 ✓）；
+  卷帘内一次编辑 **added 1 / removed 0 / records 1** ✓（观测根 = `[data-testid='piano-roll-v2']` ✓，先断言包含关系再采信 ✓）。
+· ❌「把 `deriveNoteMiniatures` 按 notes 引用记忆化能修缩略图 churn」——**实测无改善（仍 817）** ✓，**已回退** ✓。
+  病根是 key 含下标 ✓；数组引用稳定性与它正交 ✓。
+· ❌「轨道列表没有窗口化 ⇒ 需要做」——**前人已覆盖** ✓：`src/test/arrangementTrackAddChurn.test.tsx`
+  （`:122` 预算 ✓、`:126` "does not rebuild the DOM of the tracks already on screen" ✓）。**不要重复做** ✓。
+· ❌「舊 profiler 的 bars 循环给出不同规模的读数」——它**从没改过 bars** ✓，四行是同一次测量 ✓。
+```
+
+### 5. 顺手可修、本次**没动**的小问题（需点头；承接交接文件 §6-2 ✓）
+
+```
+⚠️ `pianoRollDomBudget.test.tsx` 的 `≤3,000` 走的是 **jsdom 默认窗口**路径 ✓（`clientWidth = 0` ⇒ `DEFAULT_VISIBLE_STEPS` ✓），
+  而真实浏览器走 `ceil(clientWidth/12)+8` ✓ —— 真实路径已由 `0e58d76` 补钉 ✓，但**两者口径不同** ✓，
+  值得在文件里写清 ✓（**本次没有改动那条既有阈值** ✓）。
+```
+
+### 6. 环境与工具（**下一个 session 直接用** ✓ —— 原样承接 ✓）
+
+```
+· `agy/*` 是**外部真实工程** ✓：接手那一程**全程只读** ✓（只 `setInputFiles` 读了一次
+  `works/cybernetics…/cybernetic_horizon.mid` ✓）。**要改先征得同意** ✓。
+  可用的真实负载 ✓：`agy/works/cybernetic_horizon/cybernetic_horizon.mid`（7 KB ✓，46 轨 / 128 小节 ✓，
+  经 studio 自己的导入入口可用 ✓）。
+· ⭐ 探针 ✓：`scratch/dom-probe.mjs`（**未入库** ✓，`.gitignore` 忽略 ✓；支持 `VIEWPORT_W=<px>` ✓、`PORT=<port>` ✓）。
+  它做 ✓：关首次提示 → 按 `^track-[a-z]+-\d+-header$` 正则选真轨道头 → bars 缩放实验 → 分解（步列 × 音高行）→
+  真实 MIDI 导入 → 找最密轨 → **卷帘内 scoped mutation 计数（带 rootInfo 断言 ✓）** + **body 归属观测（最近 testid 祖先 ✓）** +
+  **DOM 实例存活检验（打标记 + `isConnected` ✓）**。
+  跑法 ✓：`nohup npx vite --port 5179 --strictPort &`（pidfile 写 `/tmp/dev5179.pid` ✓），
+  然后 `PORT=5179 node scratch/dom-probe.mjs` ✓。
+  ⚠️ 收尾要**按 pidfile 杀** ✓（`kill $(cat /tmp/dev5179.pid)` ✓），**不要** `pkill -f` ✓。
+  ⚠️ `/tmp/dev5179.pid` 已陈旧 ✓（进程已退 ✓），下个 session 可删掉再起 ✓。
+```
+
+### 7. 已知陷阱（**都踩过，别重踩** ✓ —— 原样承接 ✓）
+
+```
+1. **量具的错误会伪装成被测对象的结论** ✓。同类失误那一程 **6 次** ✓（忘关首次提示 ✓ / 点错轨道头 ✓ / `:not()` 无效 ✓ /
+   观测节点取错祖先（假 0）✓ / 观测放宽到 `body` 把别处 churn 记到卷帘头上 ✓ / 祖先行走条件写反 ✓）。
+   ⇒ 规矩 ✓：**先证明量具，再相信数字** ✓（打印并断言观测根确实包含被测节点 ✓）。**本会话又加一例 ✓（见 §2 ✓）。**
+2. **两套独立口径互证**才下结论 ✓（变更计数 + DOM 实例存活 ✓）。
+3. **红证明**要在**一条命令里** patch → 跑 → 还原 → 复跑 ✓，并用 `git diff --stat` 证明产品文件回到 HEAD ✓。
+4. **jsdom 与真实浏览器是两条路径** ✓：jsdom `clientWidth = 0` ⇒ 走 `DEFAULT_VISIBLE_STEPS` 分支 ✓；
+   真实浏览器走 `ceil(clientWidth/12)+8` ✓。写判据要**喂真实宽度** ✓，不要写依赖视口的常量阈值 ✓。
+5. `MutationObserver` **看不到**"React 复用节点但整树重渲染" ✓ ⇒ 计时/掉帧那一半它测不到 ✓
+   （仓内 `arrangementTrackAddChurn.test.tsx` 已写明 ✓）。
+6. **只暂存自己的路径** ✓，提交前核 `git diff --cached --stat` ✓（曾有代理的暂存被并发提交卷走过 ✓）。
+7. ⚠️ `git commit -m "…"` 里**别嵌双引号** ✓：嵌过一次，消息被截断 ✓，还在仓库根留下一个空文件 `no` ✓（已删 ✓）。
+   用 `git commit -F -` + heredoc ✓。
+8. `PianoRollLane.tsx` 卡在 `fileSizeBudget` 上限 **3264 行**且注释写明"只许下降" ✓ ⇒ 改动要么净零/负行数 ✓、要么放新文件 ✓；
+   （`ArrangementLaneV2.tsx` 323 行 ✓、`PianoRollV2.tsx` 545 行 ✓，**都不在**那份预算表里 ✓）。
+   ⭐ **本会话量到的相关事实 ✓**：该文件（3263 行 ✓）如今**在生产代码里零 importer** ✓ —— 它是**预算表锁住的死代码** ✓；
+   要不要删/怎么删是产品判断 ✓，**本次没动它** ✓（删它属于"改产品"而非"改声明" ✓）。
+```
+
+### 8. 发版固定检查（**各项都踩过一次** ✓ —— 原样承接 ✓）
+
+```
+· changelog `category` 必须是枚举 **`feature|audio|fix|refactor|docs`** 之一 ✓。
+· 片段清单要按新版本**重盖** ✓，并且 **`git add public/genre-clips.json`** ✓（"本地磁盘绿 ≠ git 内容绿" ✓）。
+· `release.sh` 要求 `HEAD` **已在 `origin/dev`** 上 ✓（推送失败要重推后再发 ✓）。
+· 流程 ✓：`SKIP_LOCAL_GATE=1 bash scripts/release.sh` ⇒ 远端 CI 权威 ⇒ deploy ⇒ main ⇒ tag ⇒
+  线上 `version.json` 确认 ⇒ 复验封面 `image/jpeg` + 手机 `/m` ✓。
+· **纪律** ✓：先量后改 ✓ · 每个数字带**可复现命令 + 数据规模 + 机器负载标注** ✓ · 未测标"未测" ✓ ·
+  每项改动配**能红判据 + 变红读数** ✓（墙钟不作门禁 ✓）· **无效改动必须回退** ✓ · **不伪造读数** ✓ ·
+  **不绕过 CI** ✓ · **不假发布** ✓ · 只暂存自己路径 ✓ · 杀进程只用 pidfile/显式 PID ✓ · **有在飞工作时不标完成** ✓。
+```
