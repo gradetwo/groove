@@ -3,7 +3,7 @@ import { render } from "@testing-library/react";
 import React from "react";
 import { ArrangementLaneV2 } from "../components/arrangement/ArrangementLaneV2";
 import { LanguageProvider } from "../i18n/LanguageContext";
-import { addTrackNote, createArrangement, moveTrackNote } from "../data/arrangementEdits";
+import { addTrackNote, createArrangement, moveTrackNote, setTrackNoteLength } from "../data/arrangementEdits";
 
 /**
  * ⭐ **A miniature note element must survive an edit to its own track.**
@@ -74,5 +74,24 @@ describe("the arrangement miniature's note elements", () => {
       replaced,
       `dragging one note replaced ${replaced} of ${drawnBefore.length} miniature elements; only the moved note may be replaced`
     ).toBeLessThanOrEqual(1);
+  });
+
+  it("⭐ keeps the same elements when one note is resized, because its identity did not change", () => {
+    // Resizing changes the note's length and therefore its width, but not who it is. A key built from the note's
+    // identity must survive it; a key built from anything that the edit moves would not.
+    const before = createArrangement("miniature-resize");
+    const trackId = before.tracks[0]!.id;
+    const { container, rerender } = render(lane(before));
+
+    const miniature = container.querySelector("[data-testid^='arrangement-miniature-']")!;
+    const drawnBefore = [...miniature.querySelectorAll("[data-miniature='note']")];
+    expect(drawnBefore.length).toBeGreaterThan(1);
+
+    const first = before.notesByTrack![trackId]![0]!;
+    const resized = setTrackNoteLength(before, trackId, { pitch: first.pitch, startBeats: first.startBeats }, 3);
+    rerender(lane(resized));
+
+    const replaced = drawnBefore.length - drawnBefore.filter((element) => element.isConnected).length;
+    expect(replaced, `resizing one note replaced ${replaced} of ${drawnBefore.length} miniature elements`).toBe(0);
   });
 });
