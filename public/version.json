@@ -7,21 +7,17 @@
     "date": "2026-10-13",
     "category": "feature",
     "title": {
-      "zh": "手机片段：拒不播放时说出来，并把下一首先取好",
-      "en": "Phone clips: say when playback was refused, and fetch the next record early"
+      "zh": "手机片段：拒绝播放要说出来，下一首先取好",
+      "en": "Phone clips: a refusal is said out loud, and the next record is fetched early"
     },
     "highlights": [
       {
-        "zh": "被拒绝的播放不再假装在响：浏览器在双指手势之外拒绝 play()（iOS）或片段地址取不到时，界面原本会一直显示「播放中」且没有任何提示。现在播放器会回报这次拒绝，外壳清掉正在播放的状态，状态行改为「无法播放 —— 点播放重试」。",
-        "en": "A refused play() no longer pretends to be playing: when the browser rejects it outside the gesture (iOS), or the clip will not load, the record, the bar and the timer used to keep reporting playback with nothing on screen to say otherwise. The player now reports the refusal, the shell clears the playing state, and the status line reads \"Could not play — tap play to retry\"."
+        "zh": "浏览器拒绝 play() 或片段取不到时，界面原本一直显示「播放中」且无提示；现在状态行报「无法播放 —— 点播放重试」。",
+        "en": "When the browser refused play() or the clip would not load, the shell kept showing \"playing\" with nothing on screen to say otherwise; the status line now reads \"Could not play — tap play to retry\"."
       },
       {
-        "zh": "切歌不再现拉：播放器原本只预取「你正在听的这一首」，所以唱片放完切到下一首时，那 400 KB 是当下才走网络的。现在外壳把队列要去的下一首交给播放器，在当前这首还在播时预取，切歌变成缓存命中（repeat-one 不预取，因为没有下一首）。",
-        "en": "Switching records no longer waits on the network: the player used to prefetch only the clip in front of you, so an advance pulled the next ~400 KB at the moment it was needed. The shell now hands the player the genre the queue moves to, its clip is warmed while the current record plays, and the advance becomes a cache hit (repeat-one warms nothing, because nothing is next)."
-      },
-      {
-        "zh": "顺带修掉两处：切歌后经过时间不重置（计时器依赖只有 isPlaying，而切歌时它一直为真），以及唱片指针位置在非 1 倍速下翻倍（currentTime 已按播放速率走，却又乘了一次 rate）。",
-        "en": "Two bugs went with them: the elapsed timer did not reset when the record changed (it was keyed on isPlaying, which stays true), and the needle position doubled at any speed but 1.0 (currentTime already advances at playbackRate, and was multiplied by it again)."
+        "zh": "切歌不再现拉：当前这首播放时预取队列的下一首，切歌成为缓存命中（repeat-one 不预取）。",
+        "en": "Switching records no longer waits on the network: the queue's next clip is warmed while the current one plays, so an advance is a cache hit (repeat-one warms nothing)."
       }
     ],
     "truncated": false
