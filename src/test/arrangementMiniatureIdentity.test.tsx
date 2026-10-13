@@ -3,7 +3,7 @@ import { render } from "@testing-library/react";
 import React from "react";
 import { ArrangementLaneV2 } from "../components/arrangement/ArrangementLaneV2";
 import { LanguageProvider } from "../i18n/LanguageContext";
-import { addTrackNote, createArrangement } from "../data/arrangementEdits";
+import { addTrackNote, createArrangement, moveTrackNote } from "../data/arrangementEdits";
 
 /**
  * ⭐ **A miniature note element must survive an edit to its own track.**
@@ -45,5 +45,34 @@ describe("the arrangement miniature's note elements", () => {
       survived,
       `every miniature note element drawn before the edit must still be the one on screen; ${drawnBefore.length - survived} of ${drawnBefore.length} were replaced`
     ).toBe(drawnBefore.length);
+  });
+
+  it("⭐ replaces only the moved note when one note is dragged, whatever the array order does", () => {
+    // The same bug class as the index-bearing key: a key derived from a value that changes on the edit replaces the
+    // element, and an array that reorders can replace its neighbours too. Moving one note may legitimately replace
+    // that one element; it must not replace the others.
+    const before = createArrangement("miniature-move");
+    const trackId = before.tracks[0]!.id;
+    const { container, rerender } = render(lane(before));
+
+    const miniature = container.querySelector("[data-testid^='arrangement-miniature-']")!;
+    const drawnBefore = [...miniature.querySelectorAll("[data-miniature='note']")];
+    expect(drawnBefore.length, "the starter content gives the miniature notes to draw").toBeGreaterThan(1);
+
+    const first = before.notesByTrack![trackId]![0]!;
+    const moved = moveTrackNote(
+      before,
+      trackId,
+      { pitch: first.pitch, startBeats: first.startBeats },
+      { pitch: first.pitch, startBeats: first.startBeats + 1 }
+    );
+    rerender(lane(moved));
+
+    const survived = drawnBefore.filter((element) => element.isConnected).length;
+    const replaced = drawnBefore.length - survived;
+    expect(
+      replaced,
+      `dragging one note replaced ${replaced} of ${drawnBefore.length} miniature elements; only the moved note may be replaced`
+    ).toBeLessThanOrEqual(1);
   });
 });
