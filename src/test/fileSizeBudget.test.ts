@@ -58,9 +58,18 @@ const CAPS: Record<string, number> = {
    * gained the windowed card list — `shown`/`EXPLORE_FIRST_CHUNK`, the focus-aware `visibleGenres` memo, the
    * `visibleIds` set the groups filter by, and the comment that explains why the focused card must stay in the
    * window — 581 → 650 lines. Its new gate (`exploreListWindow.test.tsx`, 5 cases) lives in a test file and does not
-   * count here. The other buckets are untouched, and this number may only go down from here.
+   * count here. The other buckets are untouched.
+   *
+   * ⭐ **Re-measured on 2026-10-13 (50 → 51): `src/components/analyzer/WaterfallSpectrogram.tsx` crossed six
+   * hundred, raised by the owner's decision on the perf audit's Batch B.** The file gained the idle-stop on its
+   * render loop, the reused per-frame buffers (`freqDataRef`, `sliceImgRef`, `curveYRef`), the `useMemo` over the
+   * skin's panel token, and the compare-before-`setBandEnergies` guard — 577 → 628 lines, of which 21 are the
+   * audit's own ⚡ comments carrying its measurements. The owner's instruction was to keep the change and record
+   * the raise rather than delete that evidence. The other four buckets did not move.
+   *
+   * **This number may only go down from here**, and both raises above are on the record rather than silent.
    */
-  atLeast600: 50,
+  atLeast600: 51,
   atLeast800: 31,
   atLeast1000: 25,
   atLeast1500: 13,
@@ -95,7 +104,22 @@ const FILE_CAPS: Record<string, number> = {
    */
   "src/views/CompareView.tsx": 1887,
   "src/components/help/HelpCenterModal.tsx": 1687,
-  "mcp/render/worker.ts": 1653,
+  /**
+   * ⭐ **Raised 1653 → 1661 on 2026-10-13, by the owner's decision on the perf audit's Batch B.**
+   *
+   * `ensurePage` had no in-flight guard, so two concurrent render calls (the SDK serves requests concurrently) each
+   * spawned their own Vite + Chromium and the second overwrote `state.child/browser/page`, leaking the first
+   * process tree — the exact residue `installRendererLifecycle` exists to prevent. The fix needs a module-level
+   * in-flight promise plus the liveness check moved into the guarded path to run once rather than per caller.
+   *
+   * **This is a net addition, not a comment budget.** The single-flight itself is ~9 lines, and the audit's own ⚡
+   * prose in this file was compressed to its shortest honest form first (four comment lines total, two trailing
+   * the declarations they explain) — it cannot be trimmed into the old cap without deleting either the guard or
+   * the evidence. The owner chose to keep the fix and record the raise.
+   *
+   * **This number may only go down from here.**
+   */
+  "mcp/render/worker.ts": 1661,
   "src/views/ChordProgressionsView.tsx": 1559,
 };
 
