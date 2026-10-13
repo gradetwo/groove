@@ -31,10 +31,14 @@ browsers once: `npx playwright install --with-deps chromium firefox webkit`.
 
 ## Six skins
 
-The desktop is a full workstation, and it is the only surface: the separate thumb-first phone shell was
-cut, so a phone browser gets this same UI. Six skins re-dress it, and the desktop's tokens are generated
-from the six palette sheets (`scripts/desktop_skins.mjs`). Switch them in **Settings → Interface →
-Appearance**:
+The desktop is the full workstation — the sequencer, the arrangement editor and the export paths live here
+and nowhere else. A phone gets the thumb-first shell at **`/m`** instead (opening the root on a phone
+redirects there): its own Home / Jam / Challenge / Explore / More modules, built around the pre-cut genre
+clips rather than the live engine. That shell *was* cut in October 2026 and then built again around the clip
+player, so older notes calling the phone "the same desktop UI" are stale.
+
+Six skins re-dress the desktop, and its tokens are generated from the six palette sheets
+(`scripts/desktop_skins.mjs`). Switch them in **Settings → Interface → Appearance**:
 
 | | | |
 |---|---|---|
