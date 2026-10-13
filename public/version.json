@@ -1,23 +1,23 @@
 {
-  "version": "2.39.0",
+  "version": "2.39.1",
   "releaseDate": "2026-10-13",
   "changelogCount": 10,
   "latest": {
-    "version": "2.39.0",
+    "version": "2.39.1",
     "date": "2026-10-13",
-    "category": "feature",
+    "category": "fix",
     "title": {
-      "zh": "手机片段：拒绝播放要说出来，下一首先取好",
-      "en": "Phone clips: a refusal is said out loud, and the next record is fetched early"
+      "zh": "手机片段：音频主机写错，159 条全指向解析不了的域名",
+      "en": "Phone clips: all 159 audio addresses named a host that does not resolve"
     },
     "highlights": [
       {
-        "zh": "浏览器拒绝 play() 或片段取不到时，界面原本一直显示「播放中」且无提示；现在状态行报「无法播放 —— 点播放重试」。",
-        "en": "When the browser refused play() or the clip would not load, the shell kept showing \"playing\" with nothing on screen to say otherwise; the status line now reads \"Could not play — tap play to retry\"."
+        "zh": "自 v2.37.6 起片段清单的主机写成 r2mirror.wangda.today（DNS 解析不了），正确是 r2mirror.groove.wangda.today，所以手机壳一首也放不出，只是安静。159 条已重指。",
+        "en": "Since v2.37.6 the clip manifest named r2mirror.wangda.today, which does not resolve; the mirror is r2mirror.groove.wangda.today, so the phone shell could not play a single clip — the only symptom was silence. All 159 are re-pointed."
       },
       {
-        "zh": "切歌不再现拉：当前这首播放时预取队列的下一首，切歌成为缓存命中（repeat-one 不预取）。",
-        "en": "Switching records no longer waits on the network: the queue's next clip is warmed while the current one plays, so an advance is a cache hit (repeat-one warms nothing)."
+        "zh": "发版门禁新增片段清单检查：上传前比对每条片段的主机与所配置镜像，不一致就拒绝发布。",
+        "en": "The deploy gate now checks the clip manifest too: before anything is uploaded, every clip's host is compared against the configured mirror and a mismatch refuses the release."
       }
     ],
     "truncated": false
