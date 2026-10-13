@@ -431,3 +431,38 @@
 | **U-12** | 全界面 49 项功能按键与图标深度图解词典与实操要领 | v2.0.45 | `npx vitest run src/test/helpCenterModal.test.tsx` |
 
 > 本批次的已知回归：`src/test/CompareViewPresets.test.tsx` 的 2 条用例计时超时（5000ms），在 v1.16.3 基线上即为红色（见 E-03 之后并入的 compare 用例）；`npx vitest run` 当前为 **407 passed / 2 failed（共 409）**。
+
+---
+
+## Phase 7 · 2026-10-13 交接批次（**当前基线 v2.38.1**）
+
+> **来源**：那份未跟踪的交接文件 `HANDOVER.md`，已整理进 `docs/OPEN_WORK.md` **§四百零一**（原文随后删除；
+> `OPEN_WORK.md` §四百零一.9 保留了那段提交台账，那些 SHA 此前只存在于交接文件里）。
+> **说明**：本节只登记**仍未做**的事；已完成的修正与判据见 `OPEN_WORK.md` §四百零一.1（本会话 `23fef4c`）。
+
+| 任务 ID | 任务名称 | 状态 | 验证命令 |
+|---|---|---|---|
+| **S-01** | 能力表两处"名字骗人"已修 + 判据补上（`CAPABILITY_MODULES` 的 `piano-roll`、`project-hub-multitrack`） | 已完成（`23fef4c`，`dev` **未推送**） | `npx vitest run src/test/surfaceCapabilities.test.ts` |
+| **S-02** | 删除 `src/components/sequencer/PianoRollLane.tsx`：**3,263 行**、生产代码**零 importer** ⇒ 产品侧是死代码，**但它不是"删一个文件"** —— 三个门禁把它钉在案上，见下方说明 | **未做 · 比原判复杂** | `grep -rn "PianoRollLane" src --include=*.ts --include=*.tsx \| grep -v '^src/test/' \| grep -v 'PianoRollLane.tsx:'` ⇒ 只剩 `surfaceCapabilities.ts` 里我写的注释文字 |
+| **S-03** | `project-hub-multitrack` 与 `arrangement` 现在指向同一模块 ⇒ 决定该能力**保留合并还是删条** | **未做**（产品判断） | `npx vitest run src/test/surfaceCapabilities.test.ts` |
+| **S-04** | `pianoRollDomBudget.test.tsx` 的 `≤3,000` 走 jsdom 默认窗口路径，与真实浏览器 `ceil(clientWidth/12)+8` **口径不同**，需在文件里写清 | **未做**（本会话没改那条既有阈值） | `npx vitest run src/test/pianoRollDomBudget.test.tsx` |
+| **S-05** | **全选 / marquee** 编辑路径的重建量（写入 / 拖动 / 缩放三条已覆盖） | **未做 · 未测** | 需真实浏览器探针（`scratch/dom-probe.mjs`，见 §四百零一.6） |
+| **S-06** | 加轨的**计时**那一半：报告里的 2,196–2,835 ms、11 帧超 32 ms | **未复现 · 未声称修好**（`MutationObserver` 看不到整树重渲染） | 需计时口径，非变更计数 |
+| **S-07** | **4K 视口**下的 roll cell 数（按公式外推约 16,000，**是外推不是读数**） | **未测** | `VIEWPORT_W=3840` 跑 `scratch/dom-probe.mjs` |
+| **S-08** | 两个未窗口化 picker（`InstrumentPicker.tsx`、`CatalogueRecordingPicker.tsx`）；目录仅 60–92 件 ⇒ **没测出问题所以没改** | **先量再决定** | 需真实目录规模 + 渲染计时 |
+| **S-09** | 真机项：WebCodecs A/B 收益、`AudioContext` 未 `suspend()` 的 idle 耗电 | **本机测不到**（无真机；`AudioDecoder` Safari iOS 26 支持、Firefox for Android 不支持） | 只能特性检测 + `<audio>` 回退 |
+
+> **本节口径**：标"未测"的**不含估计值**；外推一律写明是外推。`S-02` 的 3,263 行、`S-07` 的 16,000、`S-08` 的 60–92
+> 都是本会话实测或原样承接的读数，命令见 `docs/OPEN_WORK.md` §四百零一。
+
+### S-02 为什么比"删掉它"复杂（**本会话实测，别低估**）
+
+```
+`PianoRollLane.tsx` 的产品侧确实是死的 ✓（生产零 importer ✓），但它被**三个门禁引用** ✓：
+  · `src/test/fileSizeBudget.test.ts:80` **把它钉在 3264 行预算里** ✓（`:7` 的注释写它 3241 行，注释已比事实旧 22 行 ✓）；
+  · `src/test/readabilityAudit.test.ts:123` 把它列成**可读性审计的豁免项** ✓；
+  · `src/test/pianoRollLane.test.tsx`（17 处 ✓）与 `src/test/pianoRollGhostLookup.test.tsx`（4 处 ✓）**直接渲染它** ✓。
+⇒ **删除它 = 同时改预算表 + 审计豁免表 + 删两大块测试** ✓（那些测试**仍在为一棵树已无人渲染的组件保绿** ✓）。
+⇒ 所以本会话**只量不动** ✓：这是产品判断（要不要连测试一起删 ✓），不是"顺手清理" ✓。
+```
+
