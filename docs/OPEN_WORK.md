@@ -25210,3 +25210,40 @@ describe("the grid's editing actions", () => {
 
 更早（同一目标内）还有 **v2.37.7** ✓（`b30c882` 修复 + `5a97c5b` 发版 ✓）：预取与媒体元素抢同一条片段的竞态 ✓ ⇒
   线上同一探针 `clipsRequested` **2 条 → 1 条** ✓。
+
+## 四百零二、🎹 **自动化车道交付（两版）+ 一处未修的测试抖动**（2026-10-14 ✓）
+
+```
+**规划依据 ✓**：`docs/DAW_GAP_ARRANGEMENT.md` §8 第 4 项「先做『一条轨一个参数』的连续包络」（成本 M–L ✓）。
+**分两版交付 ✓**：
+  · **v2.40.0**（`a3c42f4`/`399bc1f`/`db0ffee`/`10c8405`/`490ec2e` ✓）：`src/data/automation.ts` 的包络求值 ✓、
+    `TrackV2.automation` + 可撤销命令 ✓、编译期展开 `volumeByStep` ✓、引擎每步 `setValueAtTime` ✓、
+    MCP 工具 `set_arrangement_track_automation` ✓。
+  · **v2.41.0**（`9ab136a` ✓）：`AutomationLaneV2` 车道 ✓ + 轨道头 `∿` 开关 ✓ + 视图接线 ✓。
+**三条被反复踩的判据都做了红证明 ✓**：区间外**保持**（变异成外推后读数 **+12 dB** ✓，越过 +6 dB 上限 ✓）／
+  引擎忽略曲线则**排程数 0** ✓／拖动期间写模型则**一次拖动写 2 次** ✓。
+**顺带修掉的真 bug ✓**：活引擎把推子钳在 1.0 ✓，而 `arrangementCompile` 一直能写到 2.0（+6 dB）✓、离线混音也认 ✓
+  ⇒ 同一工程在房间里比在文件里更轻 ✓。
+**两处门禁在我提交前就拦住了我 ✓**（值得记下来，因为它们的设计目的正是如此 ✓）：
+  ① `mcpCoverage.test.ts`：改了模型却没有 MCP 工具 ✓（它自己的注释写明「同一个守卫正是让 `setTrackRegion`
+     变成工具而不是豁免的原因」✓）⇒ 我**加工具**而不是加豁免 ✓；
+  ② `featureAlignmentCoverage.test.ts`：注册表声明了工具，`docs/FEATURE_ALIGNMENT.md` 没写 ✓。
+**限制（明说，不藏 ✓）**：`AutomationLaneV2` 的四拍一小节是**本车道的常量** ✓ ⇒ 3/4 或 5/4 段落目前按四拍画 ✓；
+  点**还不能删除** ✓（下一个手势 ✓）。
+
+### ⚠️ 一处**未修**的测试抖动（留给下一个 session ✓，不是我这次改动引入的 ✓）
+
+```
+`src/test/mobileClipProgress.test.tsx` 的
+  「⭐ clamps a press beyond either end to 0 and to the duration」在这一天里**偶发失败 1 次** ✓：
+  `expected +0 to be 200` ✓ —— 即 `seekToRatio` 早退 ✓。
+**根因已定位 ✓（代码层面 ✓）**：`MobileClipPlayer.tsx:143-149` 的 `seekToRatio` 在
+  `audio.duration` 不是有限正数时**直接 return** ✓；而该测试的 `armClock`（`:64` ✓）是在
+  `mountPlayer`（`:84` ✓）**之后**才给 `<audio>` 装上 `duration` getter 的 ✓ ⇒ 存在一个窗口 ✓。
+**"不是我引入的"如何证明 ✓**：该文件在**同一棵树上单独跑 3/3 全绿** ✓；它属于手机片段模块 ✓，
+  与本次改的 `src/components/arrangement/**` 无交集 ✓；同一天 v2.41.0 之前的全量跑是绿的 ✓，
+  之后的全量跑才偶发一次 ✓ ⇒ 判定为**既有的顺序/时序抖动** ✓。
+**没做的原因 ✓**：我没有定位到**污染源** ✓（只定位到可被污染的窗口 ✓），按本仓纪律不假装修好 ✓。
+**下一个 session 的入口 ✓**：要么在 `armClock` 之前把 duration 定好 ✓（让窗口不存在 ✓），
+  要么找出跨文件的顺序依赖 ✓（同一文件内的共享 `playMock` 是首要嫌疑 ✓）。
+```
