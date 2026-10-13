@@ -20,6 +20,7 @@
  */
 import { spawnSync } from "node:child_process";
 import { sampleRootVerdict } from "./lib/sampleRoot.mjs";
+import { clipManifestVerdict } from "./lib/clipManifest.mjs";
 import fs from "node:fs";
 import path from "node:path";
 
@@ -260,6 +261,29 @@ if (!sampleRootCheck.ok) {
       "\u274c the built app cannot reach its samples \u2014 nothing has been deployed.",
       `   ${sampleRootCheck.reason}`,
       `   Read ${sampleRootCheck.scriptsRead ?? 0} built script(s) under dist/, including lazy chunks.`,
+      "",
+    ].join("\n")
+  );
+  process.exit(1);
+}
+
+/**
+ * ⭐ **And the same question for the phone shell's clips, which is a different manifest and a different failure.**
+ *
+ * The check above passes as long as the mirror root reached the bundle — which it did on `v2.37.6`, while all 159 clip
+ * URLs in `public/genre-clips.json` pointed at a host that does not resolve. A clip manifest is *generated* with a
+ * `--base`, so the way this breaks is a wrong base in one release commit, and no existing step read those URLs.
+ */
+const clipManifestPath = path.join(ROOT, "public", "genre-clips.json");
+const clipManifestCheck = clipManifestVerdict({
+  manifestText: fs.existsSync(clipManifestPath) ? fs.readFileSync(clipManifestPath, "utf8") : "",
+  root: configuredSampleRoot
+});
+if (!clipManifestCheck.ok) {
+  console.error(
+    [
+      "\u274c the phone shell's clips do not point at the configured mirror \u2014 nothing has been deployed.",
+      `   ${clipManifestCheck.reason}`,
       "",
     ].join("\n")
   );

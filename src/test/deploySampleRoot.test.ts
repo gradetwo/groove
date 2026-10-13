@@ -17,6 +17,8 @@ import { fileURLToPath } from "node:url";
 import { readFileSync } from "node:fs";
 import { describe, it, expect, afterEach } from "vitest";
 import { sampleRootVerdict, builtScripts } from "../../scripts/lib/sampleRoot.mjs";
+import { clipManifestVerdict } from "../../scripts/lib/clipManifest.mjs";
+import { existsSync } from "node:fs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
 const dirs: string[] = [];
@@ -73,5 +75,76 @@ describe("the sample-root guard", () => {
     expect(spawn, "the wrangler spawn is present").toBeGreaterThan(-1);
     expect(guard, "and it runs before anything is uploaded").toBeLessThan(spawn);
     expect(deploy, "and it says what it checked, including lazy chunks").toContain("including lazy chunks");
+  });
+});
+
+/**
+ * ⭐ **And the same guard for the phone shell's clips — the release that got past the check above.**
+ *
+ * `v2.37.6` (`68b6407`, 2026-10-12) re-stamped all 159 clip URLs with the base `https://r2mirror.wangda.today`; the
+ * mirror is `https://r2mirror.groove.wangda.today`, and the wrong host does not resolve at all. Every step passed —
+ * including the sample-root guard, because that one reads `public/samples/manifest.json`, whose paths come from
+ * upstream source repositories and never name this mirror. The phone shell shipped 159 dead URLs and the only symptom
+ * was silence.
+ *
+ * The manifest is *generated* with `--base`, so the failure mode is a wrong base in a release commit, and the way to
+ * make that impossible is to compare it against the root the build inlines.
+ */
+const WRONG_MIRROR = "https://r2mirror.wangda.today";
+
+const clipManifest = (host: string): string =>
+  JSON.stringify({ bars: 8, clips: [{ genreId: "chicago-house", url: `${host}/clips/chicago-house.mp3` }] });
+
+/** The root the build would inline, from the environment or the gitignored local env file. */
+function configuredRoot(): string {
+  const fromEnv = (process.env.VITE_SAMPLE_ROOT ?? "").trim();
+  if (fromEnv) return fromEnv;
+  if (!existsSync(path.join(ROOT, ".env.local"))) return "";
+  const line = readFileSync(path.join(ROOT, ".env.local"), "utf8")
+    .split("\n")
+    .find((candidate) => candidate.startsWith("VITE_SAMPLE_ROOT="));
+  return line ? line.slice("VITE_SAMPLE_ROOT=".length).trim() : "";
+}
+
+describe("the clip-manifest guard", () => {
+  it("⭐ refuses the manifest that shipped: a host other than the configured mirror", () => {
+    const verdict = clipManifestVerdict({ manifestText: clipManifest(WRONG_MIRROR), root: ROOT_VALUE });
+    expect(verdict.ok, "the broken manifest must be refused").toBe(false);
+    expect(verdict.reason, "the message names the host it found").toContain(WRONG_MIRROR);
+    expect(verdict.reason, "and the host it wanted").toContain(ROOT_VALUE);
+    expect(verdict.reason, "and says how to repair it rather than leaving 159 lines by hand").toContain("--base");
+  });
+
+  it("accepts a manifest whose clips live at the configured mirror", () => {
+    expect(clipManifestVerdict({ manifestText: clipManifest(ROOT_VALUE), root: ROOT_VALUE }).ok).toBe(true);
+  });
+
+  it("does not care about the path under the root, only the origin", () => {
+    const moved = JSON.stringify({ clips: [{ url: `${ROOT_VALUE}/audio/2026/chicago-house.mp3` }] });
+    expect(clipManifestVerdict({ manifestText: moved, root: ROOT_VALUE }).ok).toBe(true);
+  });
+
+  it("refuses a manifest it cannot read, and one with no clips", () => {
+    expect(clipManifestVerdict({ manifestText: "{ not json", root: ROOT_VALUE }).ok).toBe(false);
+    expect(clipManifestVerdict({ manifestText: JSON.stringify({ clips: [] }), root: ROOT_VALUE }).ok).toBe(false);
+    expect(clipManifestVerdict({ manifestText: clipManifest(ROOT_VALUE), root: "" }).ok).toBe(false);
+  });
+
+  it("⭐ the manifest in this working tree really does point at the configured mirror", () => {
+    const root = configuredRoot();
+    const text = readFileSync(path.join(ROOT, "public", "genre-clips.json"), "utf8");
+    const hosts = [...new Set((JSON.parse(text).clips ?? []).map((clip: { url: string }) => new URL(clip.url).host))];
+    expect(hosts, "159 clips across more than one host is already a bug").toHaveLength(1);
+    if (root) {
+      expect(clipManifestVerdict({ manifestText: text, root }).ok, `the shipped clips must live at ${root}`).toBe(true);
+    }
+  });
+
+  it("is wired into the deploy path before wrangler runs", () => {
+    const deploy = readFileSync(path.join(ROOT, "scripts", "deploy.mjs"), "utf8");
+    const guard = deploy.indexOf("clipManifestVerdict(");
+    const spawn = deploy.indexOf('spawnSync("npx"');
+    expect(guard, "the guard is called").toBeGreaterThan(-1);
+    expect(guard, "and it runs before anything is uploaded").toBeLessThan(spawn);
   });
 });
