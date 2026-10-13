@@ -1,23 +1,23 @@
 {
-  "version": "2.39.2",
+  "version": "2.39.3",
   "releaseDate": "2026-10-13",
   "changelogCount": 10,
   "latest": {
-    "version": "2.39.2",
+    "version": "2.39.3",
     "date": "2026-10-13",
     "category": "fix",
     "title": {
-      "zh": "手机唱片：进度条走到底就不动了，切歌还会黑一下",
-      "en": "Phone record: the bar stopped at the end, and a track change flashed empty"
+      "zh": "手机片段：拒绝播放的原因被丢掉了，状态行说不清是哪一种",
+      "en": "Phone clips: the refusal reason was discarded, so the line could not say which failure it was"
     },
     "highlights": [
       {
-        "zh": "进度条读的是「从片段开始算了多少步」，却在第一步循环之后就被钳在 100%：chicago-house 16.6 秒、124 BPM，条在 1.94 秒就满了。现在按循环取余，它会一直转。",
-        "en": "The bar read the step count since the clip began, then clamped at 100 % after the first loop: chicago-house is 16.6 s at 124 BPM, and the bar filled at 1.94 s. It is reduced modulo the loop now, so it keeps cycling."
+        "zh": "播放器本来算出了原因（浏览器拒绝、还是这段片段取不到），外壳却把参数丢掉，所以只说「无法播放」。现在原因随状态行一起给出。",
+        "en": "The player already worked out the reason — the browser refused, or the clip would not load — and the shell dropped the argument, so the line could only say that it failed. The reason now travels with it."
       },
       {
-        "zh": "切歌时封面会先清空再加载，唱片中间的图因此空白一段时间，看起来就是黑一下。现在旧封面留到新封面解码完成；解码过的封面按 URL 缓存。",
-        "en": "Changing records cleared the cover before loading the next, so the artwork in the middle of the disc was blank for a moment — the flash. The previous cover now stays until the new one has decoded, and decoded covers are cached by URL."
+        "zh": "状态行的优先级抽成纯函数并加了判据：拒绝播放会让 isPlaying 变 false，写成 isPlaying ? 播放中 : 空闲 就会把「被拒」显示成「没点过」。",
+        "en": "The status precedence became a pure function with a criterion: a refusal makes isPlaying false, so a naive `isPlaying ? playing : idle` reports \"never started\" for exactly the case the user needs to know about."
       }
     ],
     "truncated": false
