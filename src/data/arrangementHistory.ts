@@ -52,6 +52,7 @@ import {
   setArrangementTempo,
   setCollapsed,
   setTrackFlag,
+  setTrackAutomation,
   setTrackGain,
   setTrackNoteLength,
   setTrackNoteVelocity,
@@ -61,6 +62,7 @@ import {
   toggleStep,
   setTrackInstrument,
 } from "./arrangementEdits";
+import type { AutomationLane } from "./automation";
 import type { PlannedTake } from "./takePlanning";
 
 /**
@@ -256,6 +258,26 @@ export function setCollapsedCommand(trackId: string, collapsed: boolean): Arrang
 
 export function setTrackGainCommand(trackId: string, before: number, after: number): ArrangementCommand {
   return setterCommand("gain", (arrangement, next: number) => setTrackGain(arrangement, trackId, next), before, after);
+}
+
+/**
+ * ⭐ **Drawing a fade is one action, so it is one undo step.**
+ *
+ * The whole lane is the value rather than a single point, for the reason `setTrackAutomation` gives: a curve is one
+ * decision, and a command per dragged point would make one gesture into a dozen entries in the history — the same
+ * mistake `arrangementHistory` already records for pointer moves.
+ */
+export function setTrackAutomationCommand(
+  trackId: string,
+  before: AutomationLane,
+  after: AutomationLane
+): ArrangementCommand {
+  return setterCommand(
+    "automation",
+    (arrangement, next: AutomationLane) => setTrackAutomation(arrangement, trackId, next),
+    before,
+    after
+  );
 }
 
 export function setTrackPanCommand(trackId: string, before: number, after: number): ArrangementCommand {

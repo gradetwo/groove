@@ -1,7 +1,9 @@
 import { DEFAULT_SAMPLER_ASSET } from "../data/defaultContent";
 import type { ArrangementV2 } from "../types/arrangementV2";
 import { beforeEach, describe, expect, it } from "vitest";
-import { addTake, addTrack, addTrackNote, addTrackNotes, changeTrackKind, createArrangement, moveTrackNote, removeTrack, removeTrackNote, resetTrackIdsForTests, setArrangementTempoMap, setTrackFlag, setTrackGain, setTrackNoteLength, setTrackPan, setTrackParent, setTrackSample, setTrackSteps, toggleStep } from "../data/arrangementEdits";
+import { addTake, addTrack, addTrackNote, addTrackNotes, changeTrackKind, createArrangement, moveTrackNote, removeTrack, removeTrackNote, resetTrackIdsForTests, setArrangementTempoMap, setTrackAutomation, setTrackFlag, setTrackGain, setTrackNoteLength, setTrackPan, setTrackParent, setTrackSample, setTrackSteps, toggleStep } from "../data/arrangementEdits";
+import { setTrackAutomationCommand } from "../data/arrangementHistory";
+import type { AutomationLane } from "../data/automation";
 
 /**
  * The edits an interface is built from, and the two ways they go quietly wrong.
@@ -633,5 +635,66 @@ describe("writing the tempo map", () => {
     const cleared = setArrangementTempoMap(withMap, []);
     expect(cleared).not.toHaveProperty("tempoTrack");
     expect("tempoTrack" in cleared).toBe(false);
+  });
+});
+
+/**
+ * ⭐ **A fade is one curve, so storing it is one edit and one undo step.**
+ *
+ * `docs/DAW_GAP_ARRANGEMENT.md` §8 ranks automation fourth because without it "渐强只能靠分段或不做". The edit is the
+ * half a view talks to, and the two ways it goes wrong are the ones this project keeps meeting: a stored lane that is
+ * not well formed (unsorted, non-finite, or past what the mixer can honour), and a curve that takes more than one undo
+ * to remove.
+ */
+describe("a track's automation", () => {
+  const withAutomationTrack = () => {
+    const arrangement = addTrack(emptyArrangement(), "synth", "Keys");
+    return { arrangement, id: arrangement.tracks[0]!.id };
+  };
+
+  it("⭐ stores the curve sorted and clamped, so readers never have to ask whether it is well formed", () => {
+    const { arrangement, id } = withAutomationTrack();
+    const stored = setTrackAutomation(arrangement, id, {
+      parameter: "gainDb",
+      points: [
+        { atBeats: 8, value: -12 },
+        { atBeats: 0, value: 0 },
+        { atBeats: 4, value: 99 },
+        { atBeats: 2, value: Number.NaN },
+        { atBeats: -5, value: -99 },
+      ],
+    });
+
+    const lane = stored.tracks[0]!.automation![0]!;
+    expect(lane.parameter).toBe("gainDb");
+    // A negative position is clamped to 0, which is what makes it collide with the point already there: the later
+    // one wins, so the lane keeps one point per beat — a curve cannot turn twice at one position.
+    expect(lane.points.map((point) => point.atBeats), "sorted, and a negative position cannot exist").toEqual([0, 4, 8]);
+    expect(lane.points.map((point) => point.value), "clamped to the range the mixer honours").toEqual([-60, 6, -12]);
+  });
+
+  it("⭐ is a single undo step: one command restores the whole lane, and one redo puts it back", () => {
+    const { arrangement, id } = withAutomationTrack();
+    const before: AutomationLane = { parameter: "gainDb", points: [] };
+    const after: AutomationLane = {
+      parameter: "gainDb",
+      points: [
+        { atBeats: 0, value: 0 },
+        { atBeats: 8, value: -12 },
+      ],
+    };
+    const command = setTrackAutomationCommand(id, before, after);
+    expect(command.action, "the history names the action").toBe("automation");
+
+    const applied = command.redo(arrangement);
+    expect(applied.tracks[0]!.automation![0]!.points).toHaveLength(2);
+    const undone = command.undo(applied);
+    expect(undone.tracks[0]!.automation![0]!.points, "one undo clears the fade, not one point of it").toEqual([]);
+    expect(command.redo(undone).tracks[0]!.automation![0]!.points).toHaveLength(2);
+  });
+
+  it("leaves a track with no automation without the field at all", () => {
+    const { arrangement } = withAutomationTrack();
+    expect(arrangement.tracks[0]!.automation, "absent means nothing is automated").toBeUndefined();
   });
 });

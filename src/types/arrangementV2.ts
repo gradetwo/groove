@@ -10,6 +10,7 @@
  * carries — name, kind, colour, mute, solo, gain, pan, grouping — and the notes remain where every existing consumer already reads them.
  */
 import type { NoteConvention } from "../data/pitchTruth";
+import type { AutomationLane } from "../data/automation";
 import type { SequencerTrack } from "./genre";
 
 /**
@@ -50,6 +51,14 @@ export interface TrackV2 {
    */
   armed?: boolean;
   gainDb?: number;
+  /**
+   * ⭐ **This track's automated parameters.** One lane per parameter, and the only lane today is `gainDb` — a fade drawn
+   * over the arrangement instead of a single number for it.
+   *
+   * Stored on the track rather than in the notes because automating a part is a decision about the part, exactly as
+   * `pan` is. Absent means nothing is automated, which is what every project written before this field existed says.
+   */
+  automation?: AutomationLane[];
   pan?: number;
   /** A `folder` this track belongs to, for a Track Stack. */
   parentId?: string;

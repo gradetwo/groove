@@ -7,6 +7,7 @@
  * Every function returns a **new arrangement**, because a track list is state that an interface re-renders from; mutating in place is how a UI ends up showing something the model does not say.
  */
 import type { ArrangementV2, NoteEvent, TakeRegion, TrackKindV2, TrackV2, TrackRegion } from "../types/arrangementV2";
+import { clampGainDb, type AutomationLane } from "./automation";
 import { normaliseTrackRegion, regionBars, sameTrackRegion } from "./arrangementLanes";
 import { stepCountFor, stepsPerBarFor } from "./noteEvents";
 import type { PlannedTake } from "./takePlanning";
@@ -417,6 +418,46 @@ export function setTrackGain(arrangement: ArrangementV2, trackId: string, gainDb
   return {
     ...arrangement,
     tracks: arrangement.tracks.map((track) => (track.id === trackId ? { ...track, gainDb: clamped } : track)),
+  };
+}
+
+/**
+ * ⭐ **A track's automation, replaced whole, with the same clamping the static fader gets.**
+ *
+ * Replaced rather than patched point-by-point because a curve is one decision: "this fade goes from here to there".
+ * A per-point API would put the ordering and the clamping in the view, and the two would disagree with
+ * `valueAt`'s reading the first time a point was dragged past its neighbour.
+ *
+ * `arrangement.ts`'s `valueAt` holds the line between points and outside them; this only stores the points. Points
+ * are normalised here (sorted, non-finite dropped, values clamped to the range the mixer honours) so a stored lane is
+ * already something both a view and a renderer can read without asking whether it is well formed.
+ */
+export function setTrackAutomation(
+  arrangement: ArrangementV2,
+  trackId: string,
+  lane: AutomationLane
+): ArrangementV2 {
+  const ordered = lane.points
+    .filter((point) => Number.isFinite(point.atBeats) && Number.isFinite(point.value))
+    .map((point) => ({ atBeats: Math.max(0, point.atBeats), value: clampGainDb(point.value) }))
+    .sort((a, b) => a.atBeats - b.atBeats);
+  /**
+   * Two points at one beat are folded, later winning, because a curve cannot turn twice at one position: clamping a
+   * negative position to 0 is what makes two points collide, and keeping both would leave a lane whose rendering and
+   * whose reading have to agree about which one counts.
+   */
+  const points: { atBeats: number; value: number }[] = [];
+  for (const point of ordered) {
+    if (points[points.length - 1]?.atBeats === point.atBeats) points[points.length - 1] = point;
+    else points.push(point);
+  }
+  return {
+    ...arrangement,
+    tracks: arrangement.tracks.map((track) =>
+      track.id === trackId
+        ? { ...track, automation: [{ parameter: lane.parameter, points }] }
+        : track
+    ),
   };
 }
 
