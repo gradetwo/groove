@@ -39,6 +39,7 @@ import type { Genre } from "../../types/genre";
 import { CATEGORY_SWATCH } from "../genreArt";
 import { MobileGenrePicker } from "../MobileGenrePicker";
 import { VinylCanvas, type VinylClock } from "../vinyl/VinylCanvas";
+import { recordStatusKey } from "../vinyl/recordStatus";
 import { applyStoredLightPlayer } from "../../hooks/useLightPlayer";
 import { useLabelArt } from "../../hooks/useLabelArt";
 import { PLAY_MODE_LABEL_KEYS, type PlayMode } from "../vinyl/vinylMath";
@@ -59,6 +60,11 @@ export interface MobilePlayerScreenProps {
   isPlaying: boolean;
   /** The browser refused the clip's `play()` (or it would not load), so the status line says why instead of "idle". */
   playFailed?: boolean;
+  /**
+   * The refusal's own words, kept as a diagnostic. The visible line stays the translated, actionable sentence; this is
+   * for the reader who asks "refused *why*" — a debugging tooltip rather than a second untranslated sentence in the UI.
+   */
+  playFailure?: string | null;
   playMode: PlayMode;
   readClock: () => VinylClock | null;
   /** Play/pause a genre *by id*: the shell resolves the record (the phone browses by index). */
@@ -138,6 +144,7 @@ function PlayerForGenre({
   onScrubSoundEnd,
   isPlaying,
   playFailed = false,
+  playFailure = null,
   playMode,
   readClock,
   onTogglePlay,
@@ -239,13 +246,7 @@ function PlayerForGenre({
    * `clipGenreId` on the refusal, so `isPlaying` is false and the bare idle wording would hide the failure entirely —
    * which is the "no error anywhere" half of the 2026-10-13 report. The failure wins over the transport state.
    */
-  const status = playFailed
-    ? t("mobile_player_status_failed")
-    : isPlaying
-      ? dropping
-        ? t("mobile_player_status_dropping")
-        : t("mobile_player_status_playing")
-      : t("mobile_player_status_idle");
+  const status = t(recordStatusKey({ playFailed, isPlaying, dropping }));
   const mmss = `${String(Math.floor(elapsed / 60)).padStart(2, "0")}:${String(Math.floor(elapsed % 60)).padStart(2, "0")}`;
 
   return (
@@ -273,7 +274,9 @@ function PlayerForGenre({
         </div>
         <div className="m-status">
           <span className="m-dot" aria-hidden="true" />
-          <span data-testid="mobile-player-status">{status}</span>
+          <span data-testid="mobile-player-status" title={playFailed && playFailure ? playFailure : undefined}>
+            {status}
+          </span>
         </div>
       </header>
 

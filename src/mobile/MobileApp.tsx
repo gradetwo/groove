@@ -218,6 +218,8 @@ export function MobileApp({
   const [clipGenreId, setClipGenreId] = useState<string | null>(null);
   /** A clip whose `play()` the browser refused, so the player can say so instead of only going quiet. */
   const [clipFailed, setClipFailed] = useState(false);
+  /** The refusal's own words, shown as a diagnostic on the status line rather than thrown away at this boundary. */
+  const [clipFailure, setClipFailure] = useState<string | null>(null);
   const clipAudioRef = useRef<HTMLAudioElement | null>(null);
 
   const stopClipAudio = useCallback(() => {
@@ -242,14 +244,17 @@ export function MobileApp({
    * leave the record, the bar and the timer reporting playback over silence (owner, 2026-10-13). Cleared, the transport
    * reads "idle" and the next press is a fresh attempt.
    */
-  const onClipPlayFailed = useCallback(() => {
+  const onClipPlayFailed = useCallback((reason: string) => {
     setClipGenreId(null);
     setClipFailed(true);
+    setClipFailure(reason);
   }, []);
 
   // A new attempt supersedes the last failure, so the notice cannot outlive the press that retries it.
   useEffect(() => {
-    if (clipGenreId) setClipFailed(false);
+    if (!clipGenreId) return;
+    setClipFailed(false);
+    setClipFailure(null);
   }, [clipGenreId]);
 
   useEffect(() => () => { stopAudition(); stopClipAudio(); }, [stopAudition, stopClipAudio]);
@@ -478,6 +483,7 @@ export function MobileApp({
                */
               isPlaying={clipMode ? clipGenreId === genreId : playingGenreId === genreId}
               playFailed={clipMode && clipFailed}
+              playFailure={clipFailure}
               playMode={playMode}
               readClock={currentReadClock}
               onTogglePlay={(id: string) => handleToggleAudition(id)}
