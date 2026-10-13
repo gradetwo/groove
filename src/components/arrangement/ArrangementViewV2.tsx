@@ -34,6 +34,7 @@
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Redo2, Undo2 } from "lucide-react";
+import type { AutomationLane } from "../../data/automation";
 import type { ArrangementV2, TrackKindV2, TrackRegion } from "../../types/arrangementV2";
 import { createArrangementFromTemplate, quantizeArrangementNoteLengths, rampArrangementNoteVelocity, legatoNotesInRect, arpeggiateNotesInRect, stampChordInRect } from "../../data/arrangementEdits";
 import { setterCommand } from "../../data/arrangementHistory";
@@ -60,6 +61,7 @@ import {
   setArrangementTempoCommand,
   setCollapsedCommand,
   setTrackFlagCommand,
+  setTrackAutomationCommand,
   setTrackGainCommand,
   setTrackNoteLengthCommand,
   setTrackNoteVelocityCommand,
@@ -80,6 +82,7 @@ import { PianoRollV2 } from "./PianoRollV2";
 import { ScoreV2 } from "./ScoreV2";
 import { ArrangementRulerV2 } from "./ArrangementRulerV2";
 import { ArrangementLaneV2 } from "./ArrangementLaneV2";
+import { AutomationLaneV2, AUTOMATION_LANE_HEIGHT } from "./AutomationLaneV2";
 import { TrackHeaderV2 } from "./TrackHeaderV2";
 import { LoopBraceV2 } from "./LoopBraceV2";
 import { loopRangeAt, type LoopRange } from "../../data/arrangementLoop";
@@ -354,6 +357,11 @@ export function ArrangementViewV2({ currentSong, songId, capture, bar = 0, playe
    */
   const { commit, undo: undoEdit, redo: redoEdit, canUndo, canRedo, undoAction, redoAction } = useArrangementHistory(arrangement, setArrangement);
   const [selectedTrackId, setSelectedTrackId] = useState<string | undefined>(undefined);
+  /**
+   * Which tracks show their level curve. Per track and local to this surface, because "I am looking at this curve" is a
+   * fact about the session on screen rather than about the song — the same reason the selection above is not in the model.
+   */
+  const [openAutomationFor, setOpenAutomationFor] = useState<string[]>([]);
   /** ⭐ **What the roll has marked.** The roll owns the mark; the toolbar acts on it, so the view keeps a copy. */
   const [rollSelection, setRollSelection] = useState<readonly { pitch: number; startBeats: number }[]>([]);
   /** ⭐ The interval the transpose buttons move a marked span by. */
@@ -2026,6 +2034,12 @@ export function ArrangementViewV2({ currentSong, songId, capture, bar = 0, playe
                       if (previous !== undefined) commit(changeTrackKindCommand(previous, kind));
                     }}
                     onToggleCollapse={(trackId, collapsed) => commit(setCollapsedCommand(trackId, collapsed))}
+                    automationOpen={openAutomationFor.includes(track.id)}
+                    onToggleAutomation={(trackId, open) =>
+                      setOpenAutomationFor((current) =>
+                        open ? [...current, trackId] : current.filter((id) => id !== trackId)
+                      )
+                    }
                     onRemoveTrack={(trackId) => {
                       commit(removeTrackCommand(arrangement, trackId));
                       // A removed track must not stay selected: the take selector would then describe something that is gone.
@@ -2033,6 +2047,19 @@ export function ArrangementViewV2({ currentSong, songId, capture, bar = 0, playe
                     }}
                   />
                 </div>
+              ))}
+              {/**
+                * ⭐ **A spacer per open curve, so the two columns keep one baseline.**
+                *
+                * The header column and the lane column are siblings in one flex row, and a curve row exists only in the
+                * lane column — so without this the lane column grows taller than the header column and every region
+                * below drifts out of step with the track it belongs to. That drift is the defect this grid already
+                * records once (the add-track row used to sit inside the header column and push every header 101 px
+                * down), and a spacer of the curve's own height is the same remedy in the other direction: the curve is
+                * a row *below* the regions, so the header column reserves its height at the bottom.
+                */}
+              {openAutomationFor.map((trackId) => (
+                <div key={`automation-spacer-${trackId}`} aria-hidden="true" style={{ height: AUTOMATION_LANE_HEIGHT }} />
               ))}
             </div>
             {/* The lane column. Its width is bars × pixels-per-bar — the ruler's own number.
@@ -2061,6 +2088,33 @@ export function ArrangementViewV2({ currentSong, songId, capture, bar = 0, playe
                 {...(snapOn ? { snapBars: SNAP_BARS[snap] } : {})}
                 onRegionChange={onRegionChange}
               />
+              {/**
+                  * The curve rows, one per track that has its lane open, **in the same column as the regions** so the two
+                  * share one time axis: the points are laid out with the lane's own `pixelsPerBar`, which is what stops a
+                  * point sitting at one beat in the curve and a different one under the ruler.
+                  *
+                  * One edit per gesture: `onChange` carries the whole curve, and the command stores it whole, so a drag is
+                  * a single press of undo — the rule `setTrackAutomationCommand` was written for.
+                  */}
+                {arrangement.tracks.map((track) =>
+                  openAutomationFor.includes(track.id) ? (
+                    <AutomationLaneV2
+                      key={`automation-${track.id}`}
+                      trackName={track.name}
+                      points={track.automation?.find((entry) => entry.parameter === "gainDb")?.points ?? []}
+                      pixelsPerBar={pixelsPerBar}
+                      width={laneWidth}
+                      onChange={(points) => {
+                        const before: AutomationLane = {
+                          parameter: "gainDb",
+                          points: track.automation?.find((entry) => entry.parameter === "gainDb")?.points ?? [],
+                        };
+                        commit(setTrackAutomationCommand(track.id, before, { parameter: "gainDb", points }));
+                      }}
+                      testId={`automation-lane-${track.id}`}
+                    />
+                  ) : null
+                )}
               {/**
                * The playhead: the second of the two indicators. A line over the lanes, positioned in bar space.
                *

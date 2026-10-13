@@ -38,6 +38,9 @@ export interface TrackHeaderV2Props {
   onChangeKind?: (trackId: string, kind: TrackKindV2) => void;
   onRemoveTrack?: (trackId: string) => void;
   onToggleCollapse?: (trackId: string, collapsed: boolean) => void;
+  /** Whether this track's level curve is shown. Absent means the header offers no such control. */
+  automationOpen?: boolean;
+  onToggleAutomation?: (trackId: string, open: boolean) => void;
 }
 
 /**
@@ -77,6 +80,8 @@ export function TrackHeaderV2({
   onChangeKind,
   onRemoveTrack,
   onToggleCollapse,
+  automationOpen = false,
+  onToggleAutomation,
 }: TrackHeaderV2Props) {
   const { t } = useLanguage();
   const gain = track.gainDb ?? 0;
@@ -158,6 +163,19 @@ export function TrackHeaderV2({
             className="h-7 w-6 shrink-0 rounded text-xs text-text opacity-80"
           >
             {track.collapsed ? "▸" : "▾"}
+          </button>
+        )}
+        {onToggleAutomation && (
+          <button
+            type="button"
+            aria-label={`${track.name} ${t("arrangement_automation_show")}`}
+            aria-expanded={automationOpen}
+            data-testid={`track-automation-${track.id}-header`}
+            onClick={() => onToggleAutomation(track.id, !automationOpen)}
+            className="h-7 w-6 shrink-0 rounded text-xs text-text opacity-80"
+          >
+            {/* A curve, not a letter: the control is "show the envelope" in every DAW that has one. */}
+            <span aria-hidden="true">∿</span>
           </button>
         )}
         <span data-testid={`track-name-${track.id}-header`} className="min-w-[2.5rem] truncate text-xs text-text" style={{ flex: "1 1 2rem" }} title={track.name}>

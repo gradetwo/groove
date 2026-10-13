@@ -86,6 +86,8 @@ export const commonMessages = {
   arrangement_pause: { en: "Pause", zh: "暂停" },
   arrangement_stop: { en: "Stop", zh: "停止" },
   arrangement_record: { en: "Record", zh: "录音" },
+  arrangement_automation_lane: { en: "Level automation", zh: "音量自动化" },
+  arrangement_automation_show: { en: "Show the level curve", zh: "显示音量包络" },
   arrangement_recording: { en: "Recording…", zh: "录音中…" },
   arrangement_position: { en: "Position", zh: "位置" },
   arrangement_position_value: { en: "Bar {bar}.{beat}", zh: "第 {bar} 小节第 {beat} 拍" },
