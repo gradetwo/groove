@@ -85,6 +85,73 @@ describe("surface capabilities", () => {
     }
   });
 
+  it("imports every module it names, so the map cannot quietly go stale", () => {
+    /**
+     * The check above only proves the path *exists*, which a module that nothing renders still does. That is how
+     * this map went stale: `piano-roll` named `src/components/sequencer/PianoRollLane` long after the studio
+     * stopped rendering it (`ArrangementViewV2` renders `PianoRollV2`; `PianoRollLane` has no importer outside
+     * its own test). Existence passed, the truth did not.
+     *
+     * So this walks the real import graph and asks the only question that distinguishes the two: does any
+     * **production** file import the module this capability claims implements it? Test files are excluded, so
+     * "a test imports it" cannot stand in for "the app uses it".
+     *
+     * Resolution is exact rather than a substring search, because an import specifier is written relative to the
+     * file that writes it (`../components/…`), never as the repo-relative `src/…` path this map stores — matching
+     * on the stored string would call every module dead.
+     */
+    const EXTENSIONS = [".ts", ".tsx"];
+
+    const walk = (dir: string): string[] =>
+      fs.readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
+        const full = path.join(dir, entry.name);
+        if (entry.isDirectory()) return walk(full);
+        return /\.tsx?$/.test(entry.name) ? [full] : [];
+      });
+
+    const productionFiles = walk(path.join(ROOT, "src"))
+      .map((file) => path.relative(ROOT, file))
+      .filter((file) => !file.startsWith("src/test/") && !/\.test\.tsx?$/.test(file));
+
+    /** Resolve a specifier to a repo-relative module path; a package import resolves to null. */
+    const resolve = (fromFile: string, specifier: string): string | null => {
+      if (!specifier.startsWith(".")) return null;
+      const base = path.resolve(path.dirname(path.join(ROOT, fromFile)), specifier);
+      for (const candidate of [base, ...EXTENSIONS.map((extension) => base + extension)]) {
+        if (fs.existsSync(candidate) && fs.statSync(candidate).isFile()) return path.relative(ROOT, candidate);
+      }
+      for (const extension of EXTENSIONS) {
+        if (fs.existsSync(path.join(base, `index${extension}`))) return `${path.relative(ROOT, base)}/`;
+      }
+      return null;
+    };
+
+    const importerOf = new Map<string, string[]>();
+    for (const file of productionFiles) {
+      const source = fs.readFileSync(path.join(ROOT, file), "utf8");
+      for (const match of source.matchAll(/from\s+["']([^"']+)["']/g)) {
+        const resolved = resolve(file, match[1]);
+        if (!resolved) continue;
+        importerOf.set(resolved, [...(importerOf.get(resolved) ?? []), file]);
+      }
+    }
+
+    for (const [id, modules] of Object.entries(CAPABILITY_MODULES)) {
+      for (const modulePath of modules ?? []) {
+        // A directory counts as implemented when any module inside it is imported.
+        const candidates = [modulePath, ...EXTENSIONS.map((extension) => modulePath + extension)];
+        const importers = [
+          ...candidates.flatMap((candidate) => importerOf.get(candidate) ?? []),
+          ...[...importerOf].filter(([resolved]) => resolved.startsWith(`${modulePath}/`)).flatMap(([, from]) => from),
+        ];
+        expect(
+          importers,
+          `${id} names ${modulePath}, which no production file imports — the map has gone stale`
+        ).not.toHaveLength(0);
+      }
+    }
+  });
+
   it("keeps the shared model free of a surface", () => {
     // The song model is shared data, not a surface feature.
     for (const file of ["src/types/song.ts", "src/platform/surfaceCapabilities.ts"]) {

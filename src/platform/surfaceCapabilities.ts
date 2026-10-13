@@ -146,7 +146,19 @@ export const CAPABILITY_MODULES: Partial<Record<CapabilityId, readonly string[]>
   // ⭐ The capability's implementation moved with the owner's switch of 2026-10-06: the studio tab renders the
   // arrangement editor now, and this map is the only link between a capability and the code that implements it.
   arrangement: ["src/components/arrangement/ArrangementViewV2"],
-  "piano-roll": ["src/components/sequencer/PianoRollLane"],
+  // ⭐ Corrected 2026-10-13, the same correction `arrangement` above already records, one owner later. This named
+  // `src/components/sequencer/PianoRollLane`, which nothing had rendered since the editor moved into
+  // `ArrangementViewV2` — the studio renders `PianoRollV2` (`ArrangementViewV2.tsx` imports it at :79 and renders
+  // it at :2119), and `PianoRollLane` has no importer outside its own test. The old path existed, so the
+  // existence check passed while the declaration was false; `surfaceCapabilities.test.ts` now resolves the real
+  // import graph and fails on exactly this, which is why the correction is no longer optional.
+  "piano-roll": ["src/components/arrangement/PianoRollV2"],
   "hardware-console": ["src/components/console"],
-  "project-hub-multitrack": ["src/components/sequencer/ProjectHubModal"],
+  // ⭐ Repointed 2026-10-13, the same correction as the two entries above, found by the same criterion. This
+  // named `src/components/sequencer/ProjectHubModal`, which no production file has imported since the editor was
+  // rebuilt: the arrangement-project flow it owned is now `NewProjectPanelV2`, which `ArrangementViewV2` imports
+  // and renders. Measured before the change: `ProjectHubModal` had zero production importers. Note the
+  // consequence, decided rather than papered over: this entry and `arrangement` now name the same module, because
+  // the project flow lives inside the arrangement editor and no longer has a surface of its own.
+  "project-hub-multitrack": ["src/components/arrangement/NewProjectPanelV2"],
 };
