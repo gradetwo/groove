@@ -163,6 +163,16 @@ export interface MobileClipPlayerProps {
   onAudioRef?: (audio: HTMLAudioElement | null) => void;
   /** Callback when playback reaches the end of the clip. */
   onEnded?: () => void;
+  /**
+   * ⭐ **The element could not produce sound, so the host must stop saying it does.**
+   *
+   * `autoPlay`'s comment above assumes the `play()` is inside the gesture that asked for it. It is not: the call happens
+   * in an effect, after the clip manifest resolves, so iOS can refuse it with `NotAllowedError`, and a clip whose URL
+   * 404s fails the same way. Until this callback existed the only reaction was this component's own `playing` state —
+   * which nothing outside it reads — so the shell's `clipGenreId` stayed set and the record, the bottom bar and the timer
+   * all reported a playback that was not happening (owner, 2026-10-13). The host clears its playing state on this.
+   */
+  onPlayFailed?: (reason: string) => void;
 }
 
 export function MobileClipPlayer({
@@ -171,9 +181,15 @@ export function MobileClipPlayer({
   autoPlay = false,
   onAudioRef,
   onEnded,
+  onPlayFailed,
 }: MobileClipPlayerProps): React.ReactElement {
   const { t } = useLanguage();
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  /**
+   * The clip URL whose refusal has already been reported to the host, so the two attempt paths (the autoplay effect and
+   * `toggle`) cannot report the same clip twice.
+   */
+  const refusedPlayFor = useRef<string | null>(null);
   const [clips, setClips] = useState<GenreClip[] | null>(null);
   const [unavailable, setUnavailable] = useState<string | null>(null);
   const [playing, setPlaying] = useState(false);
@@ -320,6 +336,28 @@ export function MobileClipPlayer({
     (audio as HTMLAudioElement & { webkitPreservesPitch?: boolean }).webkitPreservesPitch = false;
   }, [rate, clip]);
 
+  /**
+   * ⭐ **A `play()` the browser refused is reported to the host, once per clip.**
+   *
+   * The element is asked to play from an effect (above) and from `toggle` — both outside the gesture that asked for the
+   * sound, which on iOS is a `NotAllowedError`; a clip URL that 404s fails the same way. This component's own `playing`
+   * state is private to it, so without this report the host's `clipGenreId` keeps the record, the bottom bar and the
+   * elapsed timer saying "playing" over silence, with nothing on screen to say otherwise (owner, 2026-10-13).
+   *
+   * Reported straight from the rejection rather than from a `paused` watcher: a ref is not a render, so an effect keyed
+   * on one would never run, and `paused` is also true in the moment before a legitimate start.
+   */
+  const reportRefused = useCallback(
+    (audio: HTMLAudioElement) => {
+      setPlaying(false);
+      const url = clip?.url ?? "";
+      if (refusedPlayFor.current === url) return;
+      refusedPlayFor.current = url;
+      onPlayFailed?.(audio.error ? `the clip could not be loaded (code ${audio.error.code})` : "the browser refused to start playback");
+    },
+    [clip, onPlayFailed]
+  );
+
   useEffect(() => {
     if (!autoPlay) return;
     const audio = audioRef.current;
@@ -328,18 +366,19 @@ export function MobileClipPlayer({
     audio.currentTime = 0;
     // Starting from the top is itself a position: show it now, without waiting for the element to report one.
     setPosition({ url: clip?.url ?? "", current: 0, duration: audio.duration });
-    void audio.play().then(() => setPlaying(true)).catch(() => setPlaying(false));
-  }, [autoPlay, clip]);
+    void audio.play().then(() => setPlaying(true)).catch(() => reportRefused(audio));
+  }, [autoPlay, clip, reportRefused]);
 
   const toggle = useCallback(() => {
     const audio = audioRef.current;
     if (!audio) return;
-    if (audio.paused) void audio.play().then(() => setPlaying(true)).catch(() => setPlaying(false));
-    else {
+    if (audio.paused) {
+      void audio.play().then(() => setPlaying(true)).catch(() => reportRefused(audio));
+    } else {
       audio.pause();
       setPlaying(false);
     }
-  }, []);
+  }, [reportRefused]);
 
   if (unavailable && !clips) {
     return (

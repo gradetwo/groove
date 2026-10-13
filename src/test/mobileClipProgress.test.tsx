@@ -200,3 +200,39 @@ describe("the phone clip player's position rail", () => {
     expect(rail.getAttribute("aria-valuenow"), "autoplay restarts the clip from zero").toBe("0");
   });
 });
+
+/**
+ * ⭐ **A refused `play()` has to reach the host, because the host is the only thing that draws "playing".**
+ *
+ * Every clip surface in the shell reads its transport from `clipGenreId` (the record, the bottom bar, the elapsed
+ * timer) and `clipGenreId` is set by the press, before the element has done anything. The `play()` itself happens in
+ * an effect — after the manifest resolves, outside the gesture — so iOS can refuse it and a clip URL that 404s fails
+ * the same way. Until `onPlayFailed` existed, the only reaction was this component's private `playing` state, so the
+ * shell reported playback that was not happening, forever, with nothing on screen to say so (owner, 2026-10-13).
+ *
+ * The refusal is what is asserted, not the message: the host clears its own state on it.
+ */
+describe("a play() the browser refuses", () => {
+  it("⭐ tells the host, so it can stop claiming the clip is playing", async () => {
+    playMock.mockRejectedValueOnce(new DOMException("no gesture", "NotAllowedError"));
+    const onPlayFailed = vi.fn();
+    render(
+      <LanguageProvider>
+        <MobileClipPlayer genreId="chicago-house" autoPlay onPlayFailed={onPlayFailed} />
+      </LanguageProvider>
+    );
+    await waitFor(() => expect(onPlayFailed).toHaveBeenCalledTimes(1), { timeout: 6000 });
+    expect(String(onPlayFailed.mock.calls[0]?.[0]), "the reason is carried, so a surface can say why").toContain("refused");
+  });
+
+  it("⭐ stays quiet when the clip does play, so the callback is not just a second 'loading' signal", async () => {
+    const onPlayFailed = vi.fn();
+    render(
+      <LanguageProvider>
+        <MobileClipPlayer genreId="chicago-house" autoPlay onPlayFailed={onPlayFailed} />
+      </LanguageProvider>
+    );
+    await waitFor(() => expect(playMock).toHaveBeenCalled(), { timeout: 6000 });
+    expect(onPlayFailed, "a clip that started is not a failure").not.toHaveBeenCalled();
+  });
+});

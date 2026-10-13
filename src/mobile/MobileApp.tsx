@@ -215,6 +215,8 @@ export function MobileApp({
   /** ⭐ Modules but jam and explore play the rendered clip (owner, 2026-10-11). */
   const clipMode = usesClipPlayback(module);
   const [clipGenreId, setClipGenreId] = useState<string | null>(null);
+  /** Why the last clip attempt produced no sound, kept so a surface can say it; cleared by the next attempt. */
+  const [clipFailure, setClipFailure] = useState<string | null>(null);
   const clipAudioRef = useRef<HTMLAudioElement | null>(null);
 
   const stopClipAudio = useCallback(() => {
@@ -232,6 +234,28 @@ export function MobileApp({
       stopAudition();
     }
   }, [clipMode, clipGenreId, playingGenreId, stopAudition, stopClipAudio]);
+
+  /**
+   * ⭐ **The element could not start, so the shell stops claiming it did.**
+   *
+   * Every clip surface here reads its "playing" from `clipGenreId` — the record, the bottom bar, the elapsed timer — and
+   * nothing else: `MobileClipPlayer`'s own `playing` state is private to it. `clipGenreId` is set by the press, before
+   * the element has done anything, so a `play()` the browser refuses (iOS, outside the gesture) or a clip whose URL 404s
+   * used to leave all of them reporting playback forever, with no error anywhere (owner, 2026-10-13). The player now
+   * reports the refusal, and this clears the state that was standing in for the sound.
+   *
+   * It clears rather than shows an error: with `clipGenreId` null the transport reads "idle", which is true, and the next
+   * press is a fresh attempt. The reason is kept for the surfaces that want to say why.
+   */
+  const onClipPlayFailed = useCallback((reason: string) => {
+    setClipFailure(reason);
+    setClipGenreId(null);
+  }, []);
+
+  /** A new attempt supersedes the last failure, so the reason cannot outlive the press that retries it. */
+  useEffect(() => {
+    if (clipGenreId) setClipFailure(null);
+  }, [clipGenreId]);
 
   useEffect(() => () => { stopAudition(); stopClipAudio(); }, [stopAudition, stopClipAudio]);
 
@@ -365,8 +389,15 @@ export function MobileApp({
     const currentGenre = GENRE_INDEX.find((g) => g.id === clipGenreId);
     const bpm = currentGenre?.default_bpm ?? 120;
     const stepDuration = 15 / bpm;
-    const rate = audio.playbackRate || 1;
-    const totalStepsElapsed = (audio.currentTime * rate) / stepDuration;
+    /**
+     * ⭐ **`currentTime` is already content time and must not be scaled by `playbackRate` again.**
+     *
+     * `HTMLMediaElement.currentTime` advances at the element's playback rate, so at 2× it reads two seconds after one
+     * second of wall clock — which is exactly the position within the record the needle has to point at. Multiplying by
+     * `rate` on top of that made the drawn position double the true one at any speed but 1.0 (owner, 2026-10-13). The
+     * rate is the element's job; this only maps its position onto the step grid.
+     */
+    const totalStepsElapsed = audio.currentTime / stepDuration;
     const step = Math.floor(totalStepsElapsed);
     const fraction = Math.min(1, Math.max(0, totalStepsElapsed - step));
     return { step, fraction };
@@ -524,6 +555,7 @@ export function MobileApp({
           <MobileClipPlayer
             genreId={clipGenreId}
             autoPlay
+            onPlayFailed={onClipPlayFailed}
             onAudioRef={(el) => {
               clipAudioRef.current = el;
             }}

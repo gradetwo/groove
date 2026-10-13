@@ -204,14 +204,21 @@ function PlayerForGenre({
     return () => window.clearTimeout(id);
   }, [isPlaying]);
 
-  /** The reference counts the elapsed time on its own 400 ms timer, not on the audio clock. */
+  /**
+   * The reference counts the elapsed time on its own 400 ms timer, not on the audio clock.
+   *
+   * ⭐ **The genre is a dependency, not just `isPlaying`.** Switching records in the player keeps `isPlaying` true — the
+   * shell moves `clipGenreId` to the new id, it does not pass through null — so keyed on `isPlaying` alone this effect
+   * did not re-run and the timer kept counting from the *previous* track's start, reporting the wrong elapsed time for as
+   * long as the new record played (owner, 2026-10-13).
+   */
   useEffect(() => {
     if (!isPlaying) return;
     const started = performance.now();
     setElapsed(0);
     const id = window.setInterval(() => setElapsed((performance.now() - started) / 1000), 400);
     return () => window.clearInterval(id);
-  }, [isPlaying]);
+  }, [isPlaying, genre.id]);
 
   /** The lane dots the record shows: the genre's real step pattern, four lanes, outer ring first. */
   const lanes = useMemo(() => {
