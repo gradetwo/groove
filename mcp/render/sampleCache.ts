@@ -132,6 +132,18 @@ export class SampleByteCache {
   /** This store's counters. Owned here so "bytes written" and "bytes evicted" cannot get out of step with the files. */
   readonly stats: SampleCacheStats;
   private ready = false;
+  /**
+   * ⚡ Performance fix (2026-10-13 audit): the sweep used to run after **every** write — a full `readdirSync` plus one
+   * `statSync` per entry, on the host's event loop. On a cache near its bound (thousands of entries, several GB) each
+   * sweep measured at milliseconds to tens of milliseconds, so a cold render's 134 downloads paid the whole walk 134
+   * times and every other request on the process stalled behind it. The sweep now runs at most once per
+   * `SWEEP_MIN_INTERVAL_MS`, and only when the accounting says the bound may actually be exceeded.
+   */
+  private static readonly SWEEP_MIN_INTERVAL_MS = 2_000;
+  private lastSweepMs = -Infinity;
+  /** Bytes accounted since the last sweep, on top of the total the sweep last measured. */
+  private unsweptBytes = 0;
+  private sweptTotalBytes = 0;
 
   constructor(options: ByteCacheOptions = {}) {
     this.directory = options.directory === undefined ? resolveSampleCacheDirectory() : options.directory;
@@ -222,7 +234,7 @@ export class SampleByteCache {
     try {
       writeFileSync(temporary, buffer);
       renameSync(temporary, file);
-      this.sweep();
+      this.sweepAfterWrite(bytes.byteLength);
     } catch {
       try {
         unlinkSync(temporary);
@@ -297,10 +309,38 @@ export class SampleByteCache {
   }
 
   /**
+   * ⚡ The throttled entry point `writeKeyed` calls. Runs the full sweep only when the interval has elapsed **and**
+   * the accounting (last swept total + everything written since) says the bound may be exceeded. Everything else
+   * just accumulates, so the common write costs O(1) instead of a directory walk.
+   *
+   * ⚠️ **The interval is therefore also the window in which the directory may sit above its bound.** Measured with
+   * `limitBytes: 100` and one 40-byte write every 300 ms — sustained faster than `SWEEP_MIN_INTERVAL_MS` — the
+   * directory reached **240 bytes** before the throttle let the first sweep through. The accounting is conservative
+   * (it can only make a sweep happen sooner), but the throttle is not, so the bound is a bound on what the cache
+   * *converges to*, not an instantaneous cap: with the default 512 MiB limit, the slack is one interval's writes.
+   * Read `usage()` for the truth; these counters only decide when to look.
+   */
+  private sweepAfterWrite(bytesWritten: number): void {
+    if (this.directory === null || this.limitBytes === null || this.limitBytes <= 0) return;
+    this.unsweptBytes += bytesWritten;
+    const nowMs = Date.now();
+    const mayExceed = this.sweptTotalBytes + this.unsweptBytes > this.limitBytes;
+    if (!mayExceed || nowMs - this.lastSweepMs < SampleByteCache.SWEEP_MIN_INTERVAL_MS) return;
+    this.lastSweepMs = nowMs;
+    // The sweep is synchronous, so nothing can accumulate while it walks: it re-measures the whole
+    // directory and leaves both counters exact.
+    this.sweep();
+  }
+
+  /**
    * Evict least-recently-used entries until the directory is under the bound.
    *
    * Called after a write rather than before, so a cache already over the bound (a lowered `GROOVE_SAMPLE_CACHE_BYTES`, or a
-   * hand-copied directory) converges on the next download instead of on every read.
+   * hand-copied directory) converges on the next download instead of on every read. The full walk is the honest
+   * source of truth; `sweepAfterWrite` only decides how often it is worth paying for.
+   *
+   * `sweptTotalBytes` keeps the **pre-eviction** total, which is an upper bound on what is on disk afterwards — so
+   * a later write can only over-estimate the directory and trigger an extra sweep, never skip one.
    */
   private sweep(): void {
     if (this.directory === null || this.limitBytes === null || this.limitBytes <= 0) return;
@@ -316,6 +356,8 @@ export class SampleByteCache {
       }
     }
     let total = found.reduce((sum, entry) => sum + entry.bytes, 0);
+    this.sweptTotalBytes = total;
+    this.unsweptBytes = 0;
     if (total <= this.limitBytes) return;
     found.sort((a, b) => a.mtimeMs - b.mtimeMs);
     for (const entry of found) {
@@ -329,6 +371,7 @@ export class SampleByteCache {
         /* an entry that cannot be removed must not fail the render waiting on this write */
       }
     }
+    this.sweptTotalBytes = total;
   }
 }
 

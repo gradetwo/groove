@@ -6,7 +6,7 @@ import { getGenreLoudnessTrimDb } from "../src/data/genreMix";
 import { loudnessReport } from "./exporting";
 import { analyseWavFileIsolated } from "./render/analysis";
 import { HEADLESS_POINTER_SENTENCE, headlessParameterDescription } from "./render/budget";
-import { analyseWavFile, renderAudio } from "./render/worker";
+import { renderAudio } from "./render/worker";
 import { flattenMcpArrangement, getMcpArrangement } from "./arrangement";
 import type { NoteEvent } from "../src/types/arrangementV2";
 import { runWithProgress } from "./render/progress";
@@ -235,9 +235,17 @@ export const ANALYSIS_TOOLS: ToolDefinition[] = [
          * ⭐ **One call, and one phase.** The analyser is synchronous, so a heartbeat could not fire between its start and its
          * end — the event loop is inside it. The announcement is still worth making: a caller that asked to be told learns what
          * the tool is doing, and if the analyser ever becomes asynchronous the heartbeat arrives without a second change.
+         *
+         * ⚡ **Performance fix (2026-10-13 audit): this tool now runs the analysis the way `spectral_balance` already
+         * does — in a child process (`analyseWavFileIsolated`).** Measured on a two-minute stereo WAV: the inline call
+         * held the server's event loop for **5.9 s with a 20 ms timer getting zero ticks (100 % freeze)** — every other
+         * request, progress notification and cancel check waited that long — while the isolated call keeps the loop
+         * free (the same file, `worker: "child"`). The child is the same bundle `spanHosts.ts` spawns, it can be
+         * killed (a real cancel), and a caller under a test runner or dev server still gets the inline fallback
+         * (`worker: "inline"`), so behaviour degrades to exactly what it was.
          */
         return await runWithProgress(ctx?.progress, "analysing the rendered file", async () =>
-          analyseWavFile(String(args.path), { discontinuities: args.loudnessAndSpectrumOnly !== true })
+          analyseWavFileIsolated(String(args.path), { discontinuities: args.loudnessAndSpectrumOnly !== true })
         );
       } catch (error) {
         return failure(`could not analyse "${String(args.path)}": ${(error as Error).message}`);

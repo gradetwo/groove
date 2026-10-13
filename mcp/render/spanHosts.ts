@@ -167,8 +167,18 @@ export async function renderPatternInSpans(
     const started = Date.now();
     await new Promise<void>((resolve, reject) => {
       const child = spawn(process.execPath, [bundle], { env: { ...process.env, GROOVE_SPAN_JOB: jobPath }, stdio: ["ignore", "pipe", "pipe"] });
+      /**
+       * ⚡ Performance fix (2026-10-13 audit): the child's stdout was piped and never read. The child echoes one JSON
+       * line (the sidecar, tens of KB) before exiting; data past the pipe buffer used to depend on the runtime — on a
+       * synchronous-stdout runtime the child would block forever inside that write and `close` would never fire, and
+       * even where exit is forced the bytes were dropped silently. Draining costs nothing and removes both failure
+       * modes. stderr is drained too, but capped: an unbounded `stderr +=` on a chatty child was a slow memory leak.
+       */
+      child.stdout.resume();
       let stderr = "";
-      child.stderr.on("data", (chunk) => { stderr += chunk.toString(); });
+      child.stderr.on("data", (chunk) => {
+        if (stderr.length < 16_000) stderr += chunk.toString();
+      });
       child.on("error", reject);
       child.on("close", (code) => (code === 0 ? resolve() : reject(new Error(`span ${index} (bars ${span.fromBar}-${span.toBar}) exited ${code}: ${stderr.trim().slice(0, 400)}`))));
     });

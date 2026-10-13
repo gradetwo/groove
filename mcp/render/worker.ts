@@ -399,7 +399,22 @@ export function awaitRendererStart(child: ChildProcess, timeoutMs = 60_000): Pro
   });
 }
 
+let startingPage: Promise<import("playwright").Page> | null = null; // in-flight startup, shared
+
 async function ensurePage(): Promise<import("playwright").Page> {
+  if (startingPage) return startingPage;
+  startingPage = startRendererOnce().finally(() => { startingPage = null; });
+  return startingPage;
+}
+
+async function startRendererOnce(): Promise<import("playwright").Page> {
+  if (state.page) {
+    const alive = !state.page.isClosed() && (state.browser?.isConnected() ?? false);
+    if (alive) return state.page;
+    await resetRenderer();
+  } else if (state.browser && !state.browser.isConnected()) {
+    await resetRenderer();
+  }
   /**
    * ⭐ **A dead page is not a live one, and until this check existed the renderer could not tell.**
    *
@@ -413,15 +428,6 @@ async function ensurePage(): Promise<import("playwright").Page> {
    * was asking whether the page is still alive before handing it back. A closed page or a disconnected
    * browser now takes that path, and a healthy one costs a liveness query.
    */
-  if (state.page) {
-    const alive = !state.page.isClosed() && (state.browser?.isConnected() ?? false);
-    if (alive) return state.page;
-    await resetRenderer();
-  } else if (state.browser && !state.browser.isConnected()) {
-    // The page went with the browser; clear the remainder of the state before rebuilding.
-    await resetRenderer();
-  }
-
   const root = appRoot();
   const port = await aFreePort();
   const viteBin = path.join(root, "node_modules", "vite", "bin", "vite.js");
@@ -1353,7 +1359,9 @@ export async function renderStems(
       ? await withNodeHostBudget(
           renderPatternHeadless!(
             pattern,
-            { ...options, bars: options.bars ?? 1, stemTrackIdx: index, progress: stemProgress(index, framesRendered) },
+            // A stem is one track, so one pass is what it means: pin it rather than let the per-stem default
+            // re-decide a span count (that spawned K processes per stem on a many-core host).
+            { ...options, bars: options.bars ?? 1, stemTrackIdx: index, chunks: 1, progress: stemProgress(index, framesRendered) },
             catalogueRead,
             headlessContext
           ),
