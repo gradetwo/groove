@@ -1033,10 +1033,9 @@ export class AudioEngine {
       const strip = this.trackStrips[idx];
       if (!strip) return;
       const track = this.pattern?.tracks[idx];
-      // One audibility rule for the scheduler and the fader (see `isTrackAudible`): what a lane
-      // sounds and what its meter shows cannot disagree about whether it is silent.
+      // One rule for scheduler and fader (`isTrackAudible`); ceiling +6 dB, automated lanes ramp per step below.
       const isSilenced = !this.isTrackAudible(track, idx, anySolo);
-      const targetGain = isSilenced ? 0 : (state.volume !== undefined ? Math.max(0, Math.min(1.0, state.volume)) : 0.8);
+      const targetGain = isSilenced ? 0 : state.volume !== undefined ? Math.max(0, Math.min(2.0, state.volume)) : 0.8;
 
       try {
         if (typeof strip.gain.gain.cancelScheduledValues === "function") {
@@ -2291,6 +2290,16 @@ export class AudioEngine {
     const stepVal = track.steps ? track.steps[stepIdx] : 0;
     const isStepActive = stepVal > 0;
     if (!isStepActive) return false;
+
+    // ⭐ The compiled automation curve wins over the static fader for this step (see the compile's `volumeByStep`).
+    const automated = track.volumeByStep?.[stepIdx];
+    if (typeof automated === "number" && Number.isFinite(automated)) {
+      try {
+        this.trackStrips[trackIdx]?.gain.gain.setValueAtTime?.(Math.max(0, Math.min(2, automated)), time);
+      } catch {
+        /* a strip that cannot schedule must not fail the step */
+      }
+    }
 
     // Probability check (Chance: 0 - 100)
     // V-01 note: this is the one place where live playback is deliberately NOT

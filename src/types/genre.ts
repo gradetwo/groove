@@ -161,6 +161,9 @@ export interface SequencerTrack {
   mute?: boolean;
   solo?: boolean;
   volume?: number; // 0 - 1
+  /** ⭐ The lane's level per step when its arrangement track automates one — the curve expanded at compile time, on the
+   *  same linear-fader scale as `volume`. Absent means not automated. */
+  volumeByStep?: number[];
   pan?: number; // -1 to 1
   swing?: number; // per-track swing offset (-50 to 50)
   sendA?: number; // Reverb send level 0 - 1

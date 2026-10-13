@@ -8,6 +8,8 @@
  */
 import { describe, expect, it } from "vitest";
 import { compileArrangementToLanes } from "../data/arrangementCompile";
+import { valueAt } from "../data/automation";
+import { STEP_BEATS } from "../data/noteEvents";
 import { DEFAULT_TRACK_VOLUME, deriveTrackStates } from "../audio/trackStates";
 import type { ArrangementV2, TrackV2 } from "../types/arrangementV2";
 
@@ -48,5 +50,58 @@ describe("an arrangement track's level and position on its compiled lane", () =>
     expect(compileArrangementToLanes(arrangementWith({ pan: -1 }))[0]!.track.pan).toBe(-1);
     expect(compileArrangementToLanes(arrangementWith({ pan: 0.5 }))[0]!.track.pan).toBe(0.5);
     expect(compileArrangementToLanes(arrangementWith({ pan: 3 }))[0]!.track.pan).toBe(1);
+  });
+});
+
+/**
+ * ⭐ **An automated level is a curve, and the compile is where it becomes per-step values.**
+ *
+ * `docs/DAW_GAP_ARRANGEMENT.md` §8's fourth item: without it a fade is faked by splitting the part. Expanding the curve
+ * **here** is what keeps one implementation of "what is this gain at this step" instead of one in the live engine and
+ * another in the offline renderer — and a project with no automation has to compile to exactly the lane it always did,
+ * which is the first case below.
+ */
+describe("an automated level on its compiled lane", () => {
+  const fade = {
+    parameter: "gainDb" as const,
+    points: [
+      { atBeats: 0, value: 0 },
+      { atBeats: 4, value: -6.0206 },
+    ],
+  };
+
+  it("⭐ expands the curve to one linear fader per step, and the static level still describes the lane", () => {
+    const lane = compileArrangementToLanes(arrangementWith({ gainDb: 0, automation: [fade] }))[0]!.track;
+    const perStep = lane.volumeByStep;
+    expect(perStep, "an automated lane carries the curve").toBeDefined();
+    expect(perStep!.length, "one value per step of the compiled lane").toBe(lane.steps.length);
+    expect(perStep![0], "the curve starts at unity").toBeCloseTo(1, 6);
+    // Every step is the curve's own reading at that step's beat, converted once — the same source the compile used,
+    // so this pins the expansion without inventing a second opinion about the grid.
+    for (const step of [0, 4, 8, 15]) {
+      const beats = step * STEP_BEATS;
+      const expected = Math.min(2, Math.max(0, Math.pow(10, valueAt(fade.points, beats) / 20)));
+      expect(perStep![step], `step ${step} at beat ${beats}`).toBeCloseTo(expected, 6);
+    }
+    // And the fade really does descend: a curve that read flat would satisfy the loop above only by accident.
+    expect(perStep![4]).toBeLessThan(perStep![0]);
+    // The static field is still written: it is what a reader that knows nothing about automation uses.
+    expect(lane.volume, "the mixer's own fader still describes the lane").toBe(1);
+  });
+
+  it("⭐ writes no curve at all when the track is not automated, so old projects compile unchanged", () => {
+    const plain = compileArrangementToLanes(arrangementWith({ gainDb: -6 }))[0]!.track;
+    expect("volumeByStep" in plain).toBe(false);
+    // An empty lane is not automation either.
+    const empty = compileArrangementToLanes(arrangementWith({ automation: [{ parameter: "gainDb", points: [] }] }))[0]!.track;
+    expect("volumeByStep" in empty).toBe(false);
+  });
+
+  it("⭐ honours the mixer's ceiling rather than letting a curve exceed what it can play", () => {
+    const loud = compileArrangementToLanes(
+      arrangementWith({ automation: [{ parameter: "gainDb", points: [{ atBeats: 0, value: 99 }] }] })
+    )[0]!.track;
+    // `gainDbToLinear` clamps at +6 dB, so a stored curve cannot make a lane louder in the file than in the room.
+    expect(loud.volumeByStep![0]).toBeLessThanOrEqual(2);
   });
 });

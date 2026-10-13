@@ -17,6 +17,7 @@
  */
 import type { SequencerPattern, SequencerTrack } from "../types/genre";
 import type { ArrangementV2, NoteEvent, TrackV2 } from "../types/arrangementV2";
+import { samplePerStep } from "./automation";
 import { STEPS_PER_BAR, STEP_BEATS, stepsFromNotes, stackFromNotes, stepCountFor, stepsPerBarFor } from "./noteEvents";
 import { requireTrackKind } from "./arrangementEdits";
 import { sampledAssetForLane } from "./sampledInstruments";
@@ -218,6 +219,23 @@ export function compileArrangementToLanes(arrangement: ArrangementV2, notes: Not
          * a bug report.
          */
         ...(typeof track.gainDb === "number" && Number.isFinite(track.gainDb) ? { volume: gainDbToLinear(track.gainDb) } : {}),
+        /**
+         * ⭐ **An automated level is a curve, and the curve is expanded here rather than in each renderer.**
+         *
+         * `docs/DAW_GAP_ARRANGEMENT.md` §8's fourth item: without it a fade is faked by splitting the part. The lane
+         * carries `volumeByStep` so the live engine, the offline renderer and the stems all keep reading a per-step
+         * value — one expansion, three readers — instead of each learning to sample an envelope.
+         *
+         * The static `volume` above is still written: it is what a reader that knows nothing about automation uses, and
+         * what a mixer fader shows. Spread only when the lane actually automates, so a project with no automation
+         * compiles to exactly the lane it always did.
+         */
+        ...(() => {
+          const points = track.automation?.find((lane) => lane.parameter === "gainDb")?.points;
+          if (!points || points.length === 0) return {};
+          const perStep = samplePerStep(points, stepCount, STEP_BEATS).map(gainDbToLinear);
+          return { volumeByStep: perStep };
+        })(),
         ...(typeof track.pan === "number" && Number.isFinite(track.pan) ? { pan: Math.max(-1, Math.min(1, track.pan)) } : {}),
         /**
          * ⭐ **Mute and solo travel too, for the same reason as the level above.** They were dropped by the same omission, so a muted arrangement track was

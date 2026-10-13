@@ -85,7 +85,16 @@ const CAPS: Record<string, number> = {
 
 // The twelve largest files, pinned at their measured length.
 const FILE_CAPS: Record<string, number> = {
-  "src/audio/AudioEngine.ts": 3259,
+  /**
+   * ⭐ **Raised 3259 → 3268 on 2026-10-14, by the owner's decision, for automation.** A fade needs a per-step gain, so
+   * the engine gained one block in `scheduleTrackStep` that applies the compiled `volumeByStep` at that step's time.
+   * The shape of that block was already at its shortest honest form first: its own note is one line, and two older
+   * volume notes above `syncTrackGains` were merged into the line they describe to make room. The owner chose the raise
+   * over editing other authors' measured notes in this file — 「抬高 AudioEngine 上限到 3268」.
+   *
+   * **This number may only go down from here.**
+   */
+  "src/audio/AudioEngine.ts": 3268,
   /**
    * ⭐ **Re-measured on 2026-10-12, when the per-render O(n²) note lookups became a Map index** (perf audit ROI #2).
    * The file grew 3241 → 3264 lines with `noteIndex` — one `useMemo` building `byCell`/`byStep`, its comment, and the
