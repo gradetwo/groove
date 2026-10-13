@@ -1195,7 +1195,7 @@ async function renderPatternOfflineOnce(
     pan: StereoPannerNode;
     /** E-10: the same pre-fader insert chain the live engine builds. */
     insert: ChannelStrip;
-  }> = [];
+  } | null> = [];
   const numTracks = pattern.tracks.length;
   // Hoisted above the strip loop because the send taps below need to know whether the
   // track is silenced — the live engine zeroes a muted/soloed-out track's sends too.
@@ -1216,10 +1216,43 @@ async function renderPatternOfflineOnce(
   const offlineCatalogue: readonly SampleAsset[] = options.audioLaneCatalogue ?? SAMPLE_CATALOGUE;
   const sampledLaneIndexes = sampledStandDownIndexes(pattern, offlineCatalogue);
 
+  /**
+   * ⭐ **A track the render can never dispatch a voice for gets no channel strip.**
+   *
+   * Measured on a ten-track sampled arrangement seeded by an eight-track genre (the shape every
+   * `create_arrangement` build takes): a silent graph of eighteen strips rendered two bars of
+   * nothing in **33.9 s**, while the same render with the empty tracks dropped took **7.8 s** —
+   * the strips, not the voices, are the render's floor. Every strip is high-pass, EQ, compressor
+   * and drive (`ChannelStrip`) plus duck/detector/fader/polarity/pan and two send taps, and an
+   * `OfflineAudioContext` processes all of them for every quantum whether or not anything is
+   * connected upstream. A track the scheduling loop below would skip anyway (`activeTracks`
+   * already filters steps that are all zero, muted, sampled and audio-lane tracks) therefore paid
+   * full DSP rent for zero audible contribution.
+   *
+   * The rule is deliberately the *same* predicate the scheduler uses, narrowed to the tracks that
+   * reach a strip: an audio lane or a sampled lane mixes through its own sink into
+   * `graph.musicBusInput` and never through its strip, so its strip is empty too and is skipped.
+   * A track with any step above zero keeps its strip, so no audible path changes; a muted or
+   * soloed-out track also keeps its strip, so mixer-state parity with the live engine is untouched.
+   * The type carries `null` for a skipped track and every read site already guards (`trackStrips[t]`
+   * is only reached for a track that dispatched a voice, and the bass-duck scan uses `?.`).
+   */
+  const stripNeeded: boolean[] = pattern.tracks.map((track: Track, idx: number) => {
+    if (isAudioLane(track) || sampledLaneIndexes.has(idx)) return false;
+    if (options.stemTrackIdx !== undefined && options.stemTrackIdx !== idx) return false;
+    return Boolean(track.steps && track.steps.some((v) => (v || 0) > 0));
+  });
+
   const clamp01 = (value: unknown): number =>
     Number.isFinite(value) ? Math.max(0, Math.min(1, value as number)) : 0;
 
   for (let t = 0; t < numTracks; t++) {
+    // The empty-track bypass: a track with nothing that can reach its strip gets null and costs
+    // nothing — see `stripNeeded` above for the measurement behind it.
+    if (!stripNeeded[t]) {
+      trackStrips.push(null);
+      continue;
+    }
     const tState = mixerStates[t] || { mute: false, solo: false, volume: 0.8, pan: 0, sendA: 0, sendB: 0 };
     // E-10: the bounce gets the same channel strip as playback — high-pass, EQ,
     // compressor and drive — or the export would be missing the very thing that makes a
@@ -1338,6 +1371,9 @@ async function renderPatternOfflineOnce(
        * Skipping them is free and takes the budget from ~7 exports per page to ~31.
        */
       if (options.stemTrackIdx !== undefined && options.stemTrackIdx !== t) continue;
+      // A track with no strip can never be dispatched (the scheduler skips it), so a GS-1 host
+      // — a WASM instance against the page's finite, unreclaimable budget — is not built for it.
+      if (!stripNeeded[t]) continue;
       const track = pattern.tracks[t];
       /**
        * The genre decides how a lane is voiced here too, from the pattern's own `genre_id` — the same
@@ -1438,7 +1474,9 @@ async function renderPatternOfflineOnce(
        * static nodes that a static node cannot plausibly produce.
        */
       if (directOut) host.output.connect(ctx.destination);
-      else host.output.connect(trackStrips[t].insert.input);
+      // Safe: the host is only built for a track `stripNeeded` keeps (the loop above skips the rest),
+      // so a null strip cannot reach this line.
+      else host.output.connect(trackStrips[t]!.insert.input);
       gs1Hosts.set(t, host);
     }
   }
@@ -1532,10 +1570,13 @@ async function renderPatternOfflineOnce(
        * channel the lane is panned towards. A compressor's gain moving as a note's release drops the level is the shape of
        * that, and this switch removes the strip to see it.
        */
+      // A dispatched track always has a strip: `activeTracks` only keeps steps-above-zero
+      // non-sampled non-audio-lane tracks, exactly the set `stripNeeded` builds strips for.
+      const strip = trackStrips[trackIdx]!;
       const trackDest =
         (globalThis as unknown as { __noStrip?: boolean }).__noStrip === true
-          ? trackStrips[trackIdx].gain
-          : trackStrips[trackIdx].insert.input;
+          ? strip.gain
+          : strip.insert.input;
       const trackId = (track.track_id || "").toLowerCase();
       const lowerName = track.name.toLowerCase();
       // Exporter parity: resolve the same per-track instrument the live engine does, so a

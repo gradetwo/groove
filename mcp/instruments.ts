@@ -24,8 +24,22 @@ import {
 import { ALL_SAMPLED_INSTRUMENTS } from "../src/data/sampledInstruments";
 
 function resolveManifestPath(): string {
+  /**
+   * ⭐ **The bundle's own repository is a candidate too, not only the caller's cwd.**
+   *
+   * The candidates below all resolve against `process.cwd()` — which is whatever directory the *client* was
+   * started from, because an MCP server is launched as a child process. Measured: starting the server from any
+   * directory other than the repository root made every candidate miss, the function fell back to the bare
+   * relative path, and `list_arrangement_instruments` answered `ENOENT: no such file or directory, open
+   * 'public/samples/manifest.json'` — the discovering half of the sampler feature was gone, and with it every
+   * `assetId` a caller could name. The bundle lives at `<repo>/dist-mcp/groove-mcp.mjs`, so the directory two
+   * levels up from this module is the repository the server was built from, and that candidate answers the
+   * same offline as online regardless of where the client's cwd happens to be.
+   */
+  const bundleRoot = path.resolve(import.meta.url.replace(/^file:\/\//, ""), "..", "..");
   const candidates = [
     process.env.GROOVE_MCP_ROOT ? path.resolve(process.env.GROOVE_MCP_ROOT, "public/samples/manifest.json") : "",
+    path.resolve(bundleRoot, "public/samples/manifest.json"),
     path.resolve(process.cwd(), "public/samples/manifest.json"),
     path.resolve(process.cwd(), "groove/public/samples/manifest.json"),
     path.resolve("public/samples/manifest.json"),
