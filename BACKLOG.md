@@ -443,7 +443,7 @@
 | 任务 ID | 任务名称 | 状态 | 验证命令 |
 |---|---|---|---|
 | **S-01** | 能力表两处"名字骗人"已修 + 判据补上（`CAPABILITY_MODULES` 的 `piano-roll`、`project-hub-multitrack`） | 已完成（`23fef4c`，`dev` **未推送**） | `npx vitest run src/test/surfaceCapabilities.test.ts` |
-| **S-02** | 删除 `src/components/sequencer/PianoRollLane.tsx`：**3,263 行**、生产代码**零 importer** ⇒ 产品侧是死代码，**但它不是"删一个文件"** —— 三个门禁把它钉在案上，见下方说明 | **未做 · 比原判复杂** | `grep -rn "PianoRollLane" src --include=*.ts --include=*.tsx \| grep -v '^src/test/' \| grep -v 'PianoRollLane.tsx:'` ⇒ 只剩 `surfaceCapabilities.ts` 里我写的注释文字 |
+| **S-02** | 删除 `src/components/sequencer/PianoRollLane.tsx`：**3,263 行**、生产代码**零 importer** ⇒ 产品侧是死代码，**但它不是"删一个文件"** —— 三个门禁把它钉在案上，见下方说明 | **未做 · 比原判复杂** | `grep -rn PianoRollLane src --include=*.ts --include=*.tsx` 去掉 `src/test/` 与文件自身后 ⇒ 只剩注释文字 |
 | **S-03** | `project-hub-multitrack` 与 `arrangement` 现在指向同一模块 ⇒ 决定该能力**保留合并还是删条** | **未做**（产品判断） | `npx vitest run src/test/surfaceCapabilities.test.ts` |
 | **S-04** | `pianoRollDomBudget.test.tsx` 的 `≤3,000` 走 jsdom 默认窗口路径，与真实浏览器 `ceil(clientWidth/12)+8` **口径不同**，需在文件里写清 | **未做**（本会话没改那条既有阈值） | `npx vitest run src/test/pianoRollDomBudget.test.tsx` |
 | **S-05** | **全选 / marquee** 编辑路径的重建量（写入 / 拖动 / 缩放三条已覆盖） | **未做 · 未测** | 需真实浏览器探针（`scratch/dom-probe.mjs`，见 §四百零一.6） |
