@@ -1,0 +1,181 @@
+/**
+ * **Mastering settings: the values a person sets on the whole mix, as one validated block.**
+ *
+ * The master chain has had all of this since it was built — a glue compressor on each bus, a true-peak limiter, a
+ * loudness trim, a stereo widener — but every one of those values was a **constant read once at build time**
+ * (`masterGraph.ts`'s `MASTER_BUS_COMP_*` and `MASTER_MAKEUP_DB`), or an option only `AudioEngine.initAudioContext`
+ * passed. Nothing could change them, so nothing exposed them: the settings panel's limiter controls were component
+ * state that never reached the engine, and no MCP tool mentioned a limiter at all.
+ *
+ * This module is the missing half that everything else can agree on: one block of values with their defaults and their
+ * bounds, so a settings panel, a project file, an MCP tool and the graph builder all read and write the same fields
+ * rather than each inventing a range. It holds no audio node and no React, so it can be tested on its own.
+ *
+ * ## Why the bounds live here rather than only in `masterGraph`
+ *
+ * `masterGraph` owns the constants that describe what the DSP *does* (a knee of 8 dB, an attack of 30 ms are shapes,
+ * not limits). What is added here is the range a **person** may set: a threshold the compressor can act on, a ratio
+ * that is still a compressor. The two are different questions, and a panel that clamped to one while the builder read
+ * the other is exactly how a slider and its audio disagree.
+ */
+
+/** Compression on the two glue buses (drums and music), which is the "master bus compressor" of a mastering chain. */
+export interface MasterBusCompSettings {
+  enabled: boolean;
+  /** dB; a higher threshold compresses less. */
+  thresholdDb: number;
+  /** dB of soft knee either side of the threshold. */
+  kneeDb: number;
+  /** 1 is no compression. */
+  ratio: number;
+  /** Seconds. */
+  attackSec: number;
+  /** Seconds. */
+  releaseSec: number;
+  /** dB applied after compression, to put back what the reduction took. */
+  makeupDb: number;
+}
+
+/** The output ceiling. */
+export interface MasterLimiterSettings {
+  /** dBTP; the absolute ceiling every render and every playback passes through. */
+  ceilingDb: number;
+  /** Milliseconds of lookahead the true-peak limiter uses. */
+  lookaheadMs: number;
+  /** Milliseconds; the two-stage release's fast half. */
+  releaseFastMs: number;
+  /** Milliseconds; the two-stage release's slow half. */
+  releaseSlowMs: number;
+}
+
+/** The stereo widener that sits on the master bus. */
+export interface MasterWidthSettings {
+  /** 0 is mono, 1 is unchanged, above 1 widens. */
+  amount: number;
+}
+
+/**
+ * Everything a person may set on the whole mix.
+ *
+ * Deliberately **not** here: the per-genre loudness trim. That number is fitted across all 159 genres so they match
+ * each other (see `masterGraph.ts`'s note on why the trim sits after the FX rack), so a person editing it would break
+ * the one property it exists to provide. It stays what it was: a measurement the app applies.
+ */
+export interface MasterSettings {
+  busComp: MasterBusCompSettings;
+  limiter: MasterLimiterSettings;
+  width: MasterWidthSettings;
+}
+
+/** The bounds a person may set, each a range the DSP can actually honour. */
+export const MASTER_LIMITS = {
+  /** Below this nothing reaches the threshold on real material; above it the compressor is effectively off. */
+  busCompThresholdDb: { min: -60, max: 0 },
+  busCompKneeDb: { min: 0, max: 40 },
+  busCompRatio: { min: 1, max: 20 },
+  busCompAttackSec: { min: 0, max: 1 },
+  busCompReleaseSec: { min: 0.01, max: 2 },
+  busCompMakeupDb: { min: -12, max: 12 },
+  /** The limiter's ceiling is always at or below 0 dBTP: a ceiling above it would clip. */
+  limiterCeilingDb: { min: -12, max: 0 },
+  limiterLookaheadMs: { min: 0, max: 20 },
+  limiterReleaseFastMs: { min: 0, max: 500 },
+  limiterReleaseSlowMs: { min: 0, max: 2000 },
+  widthAmount: { min: 0, max: 2 },
+} as const;
+
+/**
+ * What a project that states nothing hears.
+ *
+ * These are `masterGraph`'s own defaults, restated here as **data** so a project file, a panel and a tool can read the
+ * same numbers without loading the audio layer. `masterSettings.test.ts` pins them against the graph's constants, so
+ * the two cannot drift apart quietly.
+ */
+export const MASTER_DEFAULTS: MasterSettings = {
+  busComp: {
+    enabled: true,
+    thresholdDb: -16,
+    kneeDb: 8,
+    ratio: 2,
+    attackSec: 0.03,
+    releaseSec: 0.22,
+    makeupDb: 5,
+  },
+  limiter: { ceilingDb: -1, lookaheadMs: 5, releaseFastMs: 60, releaseSlowMs: 400 },
+  width: { amount: 1 },
+};
+
+const clamp = (value: number, min: number, max: number): number =>
+  !Number.isFinite(value) ? min : Math.min(max, Math.max(min, value));
+
+/**
+ * A stored block made safe: every field clamped to the range the DSP honours, and every missing field defaulted.
+ *
+ * Takes `unknown` on purpose, because its commonest caller is a **file**: a project written by an older build, or
+ * edited by hand, must load as something playable rather than throw or carry a NaN into a `AudioParam`.
+ */
+export function normaliseMasterSettings(input: unknown): MasterSettings {
+  const raw = (input ?? {}) as Partial<Record<keyof MasterSettings, unknown>>;
+  const busComp = (raw.busComp ?? {}) as Partial<MasterBusCompSettings>;
+  const limiter = (raw.limiter ?? {}) as Partial<MasterLimiterSettings>;
+  const width = (raw.width ?? {}) as Partial<MasterWidthSettings>;
+
+  return {
+    busComp: {
+      enabled: busComp.enabled ?? MASTER_DEFAULTS.busComp.enabled,
+      thresholdDb: clamp(
+        busComp.thresholdDb ?? MASTER_DEFAULTS.busComp.thresholdDb,
+        MASTER_LIMITS.busCompThresholdDb.min,
+        MASTER_LIMITS.busCompThresholdDb.max
+      ),
+      kneeDb: clamp(busComp.kneeDb ?? MASTER_DEFAULTS.busComp.kneeDb, MASTER_LIMITS.busCompKneeDb.min, MASTER_LIMITS.busCompKneeDb.max),
+      ratio: clamp(busComp.ratio ?? MASTER_DEFAULTS.busComp.ratio, MASTER_LIMITS.busCompRatio.min, MASTER_LIMITS.busCompRatio.max),
+      attackSec: clamp(
+        busComp.attackSec ?? MASTER_DEFAULTS.busComp.attackSec,
+        MASTER_LIMITS.busCompAttackSec.min,
+        MASTER_LIMITS.busCompAttackSec.max
+      ),
+      releaseSec: clamp(
+        busComp.releaseSec ?? MASTER_DEFAULTS.busComp.releaseSec,
+        MASTER_LIMITS.busCompReleaseSec.min,
+        MASTER_LIMITS.busCompReleaseSec.max
+      ),
+      makeupDb: clamp(
+        busComp.makeupDb ?? MASTER_DEFAULTS.busComp.makeupDb,
+        MASTER_LIMITS.busCompMakeupDb.min,
+        MASTER_LIMITS.busCompMakeupDb.max
+      ),
+    },
+    limiter: {
+      ceilingDb: clamp(
+        limiter.ceilingDb ?? MASTER_DEFAULTS.limiter.ceilingDb,
+        MASTER_LIMITS.limiterCeilingDb.min,
+        MASTER_LIMITS.limiterCeilingDb.max
+      ),
+      lookaheadMs: clamp(
+        limiter.lookaheadMs ?? MASTER_DEFAULTS.limiter.lookaheadMs,
+        MASTER_LIMITS.limiterLookaheadMs.min,
+        MASTER_LIMITS.limiterLookaheadMs.max
+      ),
+      releaseFastMs: clamp(
+        limiter.releaseFastMs ?? MASTER_DEFAULTS.limiter.releaseFastMs,
+        MASTER_LIMITS.limiterReleaseFastMs.min,
+        MASTER_LIMITS.limiterReleaseFastMs.max
+      ),
+      releaseSlowMs: clamp(
+        limiter.releaseSlowMs ?? MASTER_DEFAULTS.limiter.releaseSlowMs,
+        MASTER_LIMITS.limiterReleaseSlowMs.min,
+        MASTER_LIMITS.limiterReleaseSlowMs.max
+      ),
+    },
+    // 1 is "unchanged", so a project that states nothing is not widened by accident.
+    width: {
+      amount: clamp(width.amount ?? MASTER_DEFAULTS.width.amount, MASTER_LIMITS.widthAmount.min, MASTER_LIMITS.widthAmount.max),
+    },
+  };
+}
+
+/** Whether a block is exactly the defaults, so a writer can drop it from a file rather than storing noise. */
+export function isDefaultMasterSettings(settings: MasterSettings): boolean {
+  return JSON.stringify(normaliseMasterSettings(settings)) === JSON.stringify(MASTER_DEFAULTS);
+}
