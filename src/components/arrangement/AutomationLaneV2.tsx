@@ -25,7 +25,7 @@
  */
 import { useRef, useState } from "react";
 import { useLanguage } from "../../i18n/LanguageContext";
-import { AUTOMATION_MAX_DB, AUTOMATION_MIN_DB, type AutomationPoint } from "../../data/automation";
+import { AUTOMATION_RANGES, type AutomationParameter, type AutomationPoint } from "../../data/automation";
 
 /** Beats to the bar, as the lane's own constant — see the file note about metre. */
 const BEATS_PER_BAR = 4;
@@ -36,12 +36,16 @@ const GRAB_RADIUS_PX = 14;
 /** The lane's height, shared with the view: the header column reserves exactly this so the two stay in step. */
 export const AUTOMATION_LANE_HEIGHT = 72;
 
-/** The smallest step a keyboard nudge makes, in dB. */
-const KEYBOARD_STEP_DB = 1;
+/** The keyboard nudge is the parameter's own step (`AUTOMATION_RANGES`), so one press is a round number in its terms. */
 
 export interface AutomationLaneV2Props {
   trackName: string;
-  /** The curve as stored, in beats and dB. */
+  /**
+   * ⭐ **Which field this lane automates**, because the vertical axis is the parameter's own range: a pan travels −1…1
+   * and a send 0…1, and drawing either on the level's −60…+6 dB axis would put every point at one end.
+   */
+  parameter: AutomationParameter;
+  /** The curve as stored, in beats and in the parameter's own unit. */
   points: readonly AutomationPoint[];
   /** The zoom, in pixels per bar — the ruler's own number. */
   pixelsPerBar: number;
@@ -56,6 +60,7 @@ export interface AutomationLaneV2Props {
 
 export function AutomationLaneV2({
   trackName,
+  parameter,
   points,
   pixelsPerBar,
   width,
@@ -69,14 +74,16 @@ export function AutomationLaneV2({
   const laneRef = useRef<HTMLDivElement | null>(null);
 
   const shown = dragging ?? [...points];
+  /** The range this lane's own parameter honours (see `AUTOMATION_RANGES`). */
+  const { min: valueMin, max: valueMax, step: valueStep } = AUTOMATION_RANGES[parameter];
 
   const xOf = (atBeats: number): number => (atBeats / BEATS_PER_BAR) * pixelsPerBar;
   const valueOf = (y: number): number => {
     const ratio = 1 - Math.min(1, Math.max(0, y / height));
-    return AUTOMATION_MIN_DB + ratio * (AUTOMATION_MAX_DB - AUTOMATION_MIN_DB);
+    return valueMin + ratio * (valueMax - valueMin);
   };
   const yOf = (value: number): number => {
-    const ratio = (value - AUTOMATION_MIN_DB) / (AUTOMATION_MAX_DB - AUTOMATION_MIN_DB);
+    const ratio = (value - valueMin) / (valueMax - valueMin);
     return (1 - Math.min(1, Math.max(0, ratio))) * height;
   };
 
@@ -121,7 +128,7 @@ export function AutomationLaneV2({
   };
 
   const nudge = (index: number) => (event: React.KeyboardEvent<HTMLButtonElement>) => {
-    const step = event.shiftKey ? KEYBOARD_STEP_DB * 5 : KEYBOARD_STEP_DB;
+    const step = valueStep * (event.shiftKey ? 5 : 1);
     const delta = event.key === "ArrowUp" ? step : event.key === "ArrowDown" ? -step : 0;
     if (delta === 0) return;
     event.preventDefault();
@@ -164,7 +171,7 @@ export function AutomationLaneV2({
           key={`${index}-${point.atBeats}`}
           type="button"
           data-testid={`${testId}-point-${index}`}
-          aria-label={`${trackName} ${point.value.toFixed(1)} dB`}
+          aria-label={`${trackName} ${point.value.toFixed(2)} ${parameter}`}
           className="absolute h-3 w-3 -translate-x-1/2 -translate-y-1/2 rounded-full border border-black/40 bg-[rgb(var(--d-accent,245_183_61))]"
           style={{ left: xOf(point.atBeats), top: yOf(point.value) }}
           onPointerDown={startDrag(index)}

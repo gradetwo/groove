@@ -124,11 +124,13 @@ export function clampGainDb(value: number): number {
  * strips use, and the two sends as 0…1 gains. Nothing here is invented — each pair is what the corresponding static
  * setter already clamps to, which is why a lane and a fader cannot disagree about a value.
  */
-export const AUTOMATION_RANGES: Record<AutomationParameter, { min: number; max: number }> = {
-  gainDb: { min: AUTOMATION_MIN_DB, max: AUTOMATION_MAX_DB },
-  pan: { min: -1, max: 1 },
-  sendA: { min: 0, max: 1 },
-  sendB: { min: 0, max: 1 },
+export const AUTOMATION_RANGES: Record<AutomationParameter, { min: number; max: number; step: number }> = {
+  // `step` is the keyboard nudge's own unit, so one press is a round number in the parameter's terms: a dB is a dB, and a
+  // pan that jumped by 0.1 would be a fifth of the travel in one press.
+  gainDb: { min: AUTOMATION_MIN_DB, max: AUTOMATION_MAX_DB, step: 1 },
+  pan: { min: -1, max: 1, step: 0.05 },
+  sendA: { min: 0, max: 1, step: 0.05 },
+  sendB: { min: 0, max: 1, step: 0.05 },
 };
 
 /** Clamp any lane's value to the range its own parameter honours. */

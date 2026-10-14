@@ -20,7 +20,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { cleanup, fireEvent, render } from "@testing-library/react";
 import { LanguageProvider } from "../i18n/LanguageContext";
 import { AutomationLaneV2 } from "../components/arrangement/AutomationLaneV2";
-import type { AutomationPoint } from "../data/automation";
+import type { AutomationParameter, AutomationPoint } from "../data/automation";
 
 const PIXELS_PER_BAR = 100;
 const WIDTH = 400;
@@ -35,11 +35,12 @@ function placeLane(container: HTMLElement, height: number): HTMLElement {
   return lane;
 }
 
-function mount(points: AutomationPoint[], onChange = vi.fn()) {
+function mount(points: AutomationPoint[], onChange = vi.fn(), parameter: AutomationParameter = "gainDb") {
   const view = render(
     <LanguageProvider>
       <AutomationLaneV2
         trackName="Keys"
+        parameter={parameter}
         points={points}
         pixelsPerBar={PIXELS_PER_BAR}
         width={WIDTH}
@@ -119,5 +120,43 @@ describe("the automation lane", () => {
     const written = onChange.mock.calls[0]![0] as AutomationPoint[];
     expect(written[0]!.value, "one dB up").toBeCloseTo(-5, 5);
     expect(written[0]!.atBeats, "and the position is untouched").toBe(0);
+  });
+});
+
+/**
+ * ⭐ **The axis belongs to the parameter, and getting that wrong is invisible rather than obvious.**
+ *
+ * A pan travels −1…1 and a send 0…1. Drawn on the level's −60…+6 dB axis, **every** pan value would sit at the very
+ * bottom of the lane (they are all far below −60 on that scale) and every drag would come back as a dB — a curve that
+ * looks plausible and is meaningless. So the vertical mapping is asserted per parameter, on the element's own geometry.
+ */
+describe("a lane for a parameter other than the level", () => {
+  it("⭐ maps a pan on the −1…1 scale, not on the level's dB scale", () => {
+    const { view } = mount([{ atBeats: 0, value: -1 }, { atBeats: 4, value: 1 }], vi.fn(), "pan");
+    const low = pointAt(view.container, 0)!;
+    const high = pointAt(view.container, 1)!;
+
+    // −1 is the bottom of the lane and +1 the top: on a dB axis both would be pinned to the bottom edge.
+    expect(parseFloat(low.style.top), "−1 sits at the bottom").toBeGreaterThan(60);
+    expect(parseFloat(high.style.top), "+1 sits at the top").toBeLessThan(12);
+  });
+
+  it("⭐ maps a send on the 0…1 scale, so a half-wet send is halfway up", () => {
+    const { view } = mount([{ atBeats: 0, value: 0 }, { atBeats: 4, value: 1 }], vi.fn(), "sendA");
+    const dry = parseFloat(pointAt(view.container, 0)!.style.top);
+    const wet = parseFloat(pointAt(view.container, 1)!.style.top);
+    expect(dry, "0 is the bottom").toBeGreaterThan(60);
+    expect(wet, "1 is the top").toBeLessThan(12);
+  });
+
+  it("⭐ writes the curve under the lane's own parameter, so a pan edit is stored as a pan", () => {
+    const { view, lane, onChange } = mount([{ atBeats: 0, value: 0 }], vi.fn(), "pan");
+    fireEvent.pointerDown(lane, { pointerId: 1, clientX: 0, clientY: 36 });
+    fireEvent.pointerUp(lane, { pointerId: 1, clientX: 0, clientY: 36 });
+    // The component reports points only; the parameter travels with the command the caller builds, which the view's own
+    // criterion pins. Here the point stays on the pan scale: halfway up the lane is 0, not −60.
+    expect(onChange).toHaveBeenCalledTimes(1);
+    const written = onChange.mock.calls[0]![0] as AutomationPoint[];
+    expect(Math.abs(written[0]!.value), "a pan value near centre").toBeLessThan(0.2);
   });
 });

@@ -41,6 +41,9 @@ export interface TrackHeaderV2Props {
   /** Whether this track's level curve is shown. Absent means the header offers no such control. */
   automationOpen?: boolean;
   onToggleAutomation?: (trackId: string, open: boolean) => void;
+  /** ⭐ Which field the open lane draws — the axis belongs to a parameter, so one is chosen at a time. */
+  automationParameter?: string;
+  onAutomationParameterChange?: (trackId: string, parameter: string) => void;
 }
 
 /**
@@ -82,6 +85,8 @@ export function TrackHeaderV2({
   onToggleCollapse,
   automationOpen = false,
   onToggleAutomation,
+  automationParameter = "gainDb",
+  onAutomationParameterChange,
 }: TrackHeaderV2Props) {
   const { t } = useLanguage();
   const gain = track.gainDb ?? 0;
@@ -177,6 +182,26 @@ export function TrackHeaderV2({
             {/* A curve, not a letter: the control is "show the envelope" in every DAW that has one. */}
             <span aria-hidden="true">∿</span>
           </button>
+        )}
+        {automationOpen && onAutomationParameterChange && (
+          /**
+           * ⭐ **Which field the curve is about.** Shown only while a lane is open, because it has no meaning otherwise —
+           * and it lists exactly the parameters the model can automate, so the control cannot offer a lane that does not
+           * exist.
+           */
+          <select
+            aria-label={`${track.name} ${t("arrangement_automation_parameter")}`}
+            data-testid={`track-automation-parameter-${track.id}-header`}
+            value={automationParameter}
+            onChange={(event) => onAutomationParameterChange(track.id, event.target.value)}
+            className="h-7 shrink-0 rounded border border-[rgb(var(--d-line))] bg-transparent text-[10px] text-text"
+          >
+            {(["gainDb", "pan", "sendA", "sendB"] as const).map((parameter) => (
+              <option key={parameter} value={parameter}>
+                {t(`arrangement_automation_${parameter}` as never)}
+              </option>
+            ))}
+          </select>
         )}
         <span data-testid={`track-name-${track.id}-header`} className="min-w-[2.5rem] truncate text-xs text-text" style={{ flex: "1 1 2rem" }} title={track.name}>
           {track.name}

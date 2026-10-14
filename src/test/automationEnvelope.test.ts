@@ -100,11 +100,12 @@ describe("an automation envelope", () => {
  */
 describe("the automatable fields", () => {
   it("⭐ carries a range per parameter, each the one its own static setter honours", () => {
-    expect(AUTOMATION_RANGES.gainDb).toEqual({ min: -60, max: 6 });
-    expect(AUTOMATION_RANGES.pan, "the scale the console's pan knob and the strips use").toEqual({ min: -1, max: 1 });
+    // `step` is asserted too: it is the keyboard nudge's unit, and a dB must still move by a dB.
+    expect(AUTOMATION_RANGES.gainDb).toEqual({ min: -60, max: 6, step: 1 });
+    expect(AUTOMATION_RANGES.pan, "the scale the console's pan knob and the strips use").toEqual({ min: -1, max: 1, step: 0.05 });
     // The sends are 0…1 gains: a negative send has no meaning, and above 1 would be more than full wet.
-    expect(AUTOMATION_RANGES.sendA).toEqual({ min: 0, max: 1 });
-    expect(AUTOMATION_RANGES.sendB).toEqual({ min: 0, max: 1 });
+    expect(AUTOMATION_RANGES.sendA).toEqual({ min: 0, max: 1, step: 0.05 });
+    expect(AUTOMATION_RANGES.sendB).toEqual({ min: 0, max: 1, step: 0.05 });
   });
 
   it("⭐ clamps each parameter by its own range, so a pan lane is not clamped like a level", () => {

@@ -83,6 +83,7 @@ import { ScoreV2 } from "./ScoreV2";
 import { ArrangementRulerV2 } from "./ArrangementRulerV2";
 import { ArrangementLaneV2 } from "./ArrangementLaneV2";
 import { AutomationLaneV2, AUTOMATION_LANE_HEIGHT } from "./AutomationLaneV2";
+import type { AutomationParameter } from "../../data/automation";
 import { TrackHeaderV2 } from "./TrackHeaderV2";
 import { LoopBraceV2 } from "./LoopBraceV2";
 import { loopRangeAt, type LoopRange } from "../../data/arrangementLoop";
@@ -363,6 +364,8 @@ export function ArrangementViewV2({ currentSong, songId, capture, bar = 0, playe
    * fact about the session on screen rather than about the song — the same reason the selection above is not in the model.
    */
   const [openAutomationFor, setOpenAutomationFor] = useState<string[]>([]);
+  /** ⭐ Which field each open lane draws. Local view state, like `openAutomationFor`: it is about the session on screen. */
+  const [automationParameterFor, setAutomationParameterFor] = useState<Record<string, string>>({});
   /** ⭐ **What the roll has marked.** The roll owns the mark; the toolbar acts on it, so the view keeps a copy. */
   const [rollSelection, setRollSelection] = useState<readonly { pitch: number; startBeats: number }[]>([]);
   /** ⭐ The interval the transpose buttons move a marked span by. */
@@ -2055,6 +2058,10 @@ export function ArrangementViewV2({ currentSong, songId, capture, bar = 0, playe
                         open ? [...current, trackId] : current.filter((id) => id !== trackId)
                       )
                     }
+                    automationParameter={automationParameterFor[track.id] ?? "gainDb"}
+                    onAutomationParameterChange={(trackId, parameter) =>
+                      setAutomationParameterFor((current) => ({ ...current, [trackId]: parameter }))
+                    }
                     onRemoveTrack={(trackId) => {
                       commit(removeTrackCommand(arrangement, trackId));
                       // A removed track must not stay selected: the take selector would then describe something that is gone.
@@ -2111,25 +2118,31 @@ export function ArrangementViewV2({ currentSong, songId, capture, bar = 0, playe
                   * One edit per gesture: `onChange` carries the whole curve, and the command stores it whole, so a drag is
                   * a single press of undo — the rule `setTrackAutomationCommand` was written for.
                   */}
-                {arrangement.tracks.map((track) =>
-                  openAutomationFor.includes(track.id) ? (
+                {arrangement.tracks.map((track) => {
+                  if (!openAutomationFor.includes(track.id)) return null;
+                  /**
+                   * ⭐ **One parameter at a time per track, chosen in the header's select.** A track can automate all
+                   * four fields, but the lane draws one curve — the axis belongs to a parameter, so two curves of
+                   * different units on one axis would be a picture nobody can read.
+                   */
+                  const parameter = (automationParameterFor[track.id] ?? "gainDb") as AutomationParameter;
+                  const lanePoints = track.automation?.find((entry) => entry.parameter === parameter)?.points ?? [];
+                  return (
                     <AutomationLaneV2
-                      key={`automation-${track.id}`}
+                      key={`automation-${track.id}-${parameter}`}
                       trackName={track.name}
-                      points={track.automation?.find((entry) => entry.parameter === "gainDb")?.points ?? []}
+                      parameter={parameter}
+                      points={lanePoints}
                       pixelsPerBar={pixelsPerBar}
                       width={laneWidth}
                       onChange={(points) => {
-                        const before: AutomationLane = {
-                          parameter: "gainDb",
-                          points: track.automation?.find((entry) => entry.parameter === "gainDb")?.points ?? [],
-                        };
-                        commit(setTrackAutomationCommand(track.id, before, { parameter: "gainDb", points }));
+                        const before: AutomationLane = { parameter, points: lanePoints };
+                        commit(setTrackAutomationCommand(track.id, before, { parameter, points }));
                       }}
                       testId={`automation-lane-${track.id}`}
                     />
-                  ) : null
-                )}
+                  );
+                })}
               {/**
                * The playhead: the second of the two indicators. A line over the lanes, positioned in bar space.
                *
