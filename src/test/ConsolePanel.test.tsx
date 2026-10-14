@@ -228,3 +228,67 @@ describe("ConsolePanel · B7 lives in the lifecycle hook, not here", () => {
     expect(engineMock.setPattern, "the console must not be a second writer of the transport").not.toHaveBeenCalled();
   });
 });
+
+/**
+ * ⭐ **The insert chain has to be reachable from the desk, or the DSP is a capability nothing can ask for.**
+ *
+ * `TrackInspector` — the signal-chain strip and the three curves computed from the live parameters — was built and
+ * tested and had **no production reference at all**: `grep -rn TrackInspector src/` found only its own file and
+ * `src/test/`. So every EQ band, the compressor and the drive were adjustable by nothing on the Web, however complete
+ * the audio path was. These cases are about the *mount*, not the panel: they assert the real component is rendered
+ * through the console's own button, and that a band drag reaches the store's existing action.
+ *
+ * Two failures worth catching: a desk with no opener at all (the state this fixes), and an opener that renders a copy
+ * of the panel that writes somewhere other than `SET_TRACK_INSERT` — which would look right and change no audio.
+ */
+describe("the console's insert chain", () => {
+  const openInspector = () => {
+    const utils = renderPanel({
+      engine: {
+        ...engineMock,
+        getTrackInsert: vi.fn(() => null),
+        getTrackCompressorReductionDb: vi.fn(() => 0),
+      } as never,
+    });
+    const opener = utils.container.querySelector<HTMLElement>("[data-testid='console-insert-0']");
+    expect(opener, "a channel offers its chain").not.toBeNull();
+    fireEvent.click(opener!);
+    return utils;
+  };
+
+  it("⭐ opens the real inspector from a channel's EQ button, with the chain the engine is running", () => {
+    const utils = openInspector();
+    expect(
+      utils.container.querySelector("[data-testid='insert-flow-strip']"),
+      "the real signal-chain strip is mounted, not a stand-in"
+    ).not.toBeNull();
+    // The curves are the inspector's own, and they are computed from the live parameters rather than drawn from a file.
+    // The chain strip shows one stage at a time without unmounting the others, so the compressor's and drive's curves
+    // are present but hidden until their stage is chosen — presence is what proves the panels are really mounted.
+    expect(utils.container.querySelector("[data-testid='insert-eq-curve-path']")).not.toBeNull();
+    expect(utils.container.querySelector("[data-testid='insert-comp-curve-path']")).not.toBeNull();
+    expect(utils.container.querySelector("[data-testid='insert-drive-curve-path']")).not.toBeNull();
+  });
+
+  it("⭐ a band drag changes the track's chain through the store's own action, so the audio follows", () => {
+    const utils = openInspector();
+    const before = utils.getStore().state.pattern.tracks[0]!.insert?.low.gainDb ?? null;
+
+    // The EQ stage is the initial selection, so its bands are the ones on screen.
+    const gain = utils.container.querySelector<HTMLInputElement>(
+      "[data-testid='insert-stage-panel-low'] [data-testid='track-inspector-low-gain']"
+    );
+    expect(gain, "the low band's gain is adjustable").not.toBeNull();
+    fireEvent.change(gain!, { target: { value: "6" } });
+
+    const after = utils.getStore().state.pattern.tracks[0]!.insert?.low.gainDb ?? null;
+    expect(after, "the store's chain changed, which is what the engine reads").toBe(6);
+    expect(after, "and not the value it already had").not.toBe(before);
+  });
+
+  it("closes again, so the desk is not permanently covered", () => {
+    const utils = openInspector();
+    fireEvent.click(utils.container.querySelector("[data-testid='track-inspector-close']")!);
+    expect(utils.container.querySelector("[data-testid='insert-flow-strip']")).toBeNull();
+  });
+});

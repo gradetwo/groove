@@ -5,6 +5,10 @@ import { useLanguage } from "../../i18n/LanguageContext";
 import { getDefaultDrumKitForGenre } from "../../utils/trackUtils";
 import { EmptyState } from "../../ui";
 import { BookOpen, Headphones, X } from "lucide-react";
+import { TrackInspector } from "./TrackInspector";
+import { resolveTrackInsertForGenre } from "../../data/genreInsert";
+import { bypassTrackInsert } from "../../data/trackInsert";
+import type { MixTrackId } from "../../data/genreMix";
 import { ChannelStrip } from "./ChannelStrip";
 import { MasterStrip } from "./MasterStrip";
 import { getTrackVisual } from "./trackVisuals";
@@ -96,6 +100,21 @@ export const ConsolePanel: React.FC<ConsolePanelProps> = ({
   // N-02: binaural (HRTF) monitoring toggle. Off by default; the engine rebuilds its
   // channel strips when this changes, so the unused panner model costs no CPU.
   const [spatialEnabled, setSpatialEnabled] = useState(false);
+  /**
+   * ⭐ **Which channel's chain is open below the desk.** View state, not model state: "I am looking at this track's
+   * EQ" is a fact about the session on screen, the same reason the arrangement's own selection is local. Absent means
+   * the inspector is closed, which is what the page does on first load — the desk is the page, the inspector is a
+   * drill-down.
+   */
+  const [inspectedIdx, setInspectedIdx] = useState<number | undefined>(undefined);
+  /** The pattern track being inspected, or undefined when the chain is closed or the index went stale. */
+  const inspected = inspectedIdx === undefined ? undefined : tracks[inspectedIdx];
+  /** What the engine is running for that track, falling back to the genre default before a strip exists. */
+  const insertForInspected =
+    inspected === undefined
+      ? undefined
+      : (engine.getTrackInsert(inspectedIdx!) ??
+        resolveTrackInsertForGenre(inspected.track_id, pattern.genre_id));
   const [localIsPlaying, setLocalIsPlaying] = useState(false);
   // Seeded from the engine's persisted level rather than a hard-coded default, so the
   // fader shows the real master level on mount (the engine keeps it in audio settings).
@@ -454,6 +473,7 @@ export const ConsolePanel: React.FC<ConsolePanelProps> = ({
                   onToggleSolo={handleToggleSolo}
                   isPhaseInverted={Boolean(track.phaseInvert)}
                   onTogglePhase={handleTogglePhase}
+                  onOpenInspector={setInspectedIdx}
                 />
               );
             })}
@@ -469,6 +489,58 @@ export const ConsolePanel: React.FC<ConsolePanelProps> = ({
             />
           </div>
         </div>
+      )}
+
+      {/**
+        * ⭐ **The insert chain, opened from a channel's own EQ button.**
+        *
+        * `TrackInspector` carries the signal-chain strip and the three curves that are computed from the live
+        * parameters (`insertCurveViews`), and it had **no production reference at all** until this line — the panel was
+        * built, tested and unreachable, which is why the Web could not change a track's EQ however complete the DSP
+        * was. The chain it shows is the one the engine is running (`engine.getTrackInsert`) and the one the store
+        * defaults to (`resolveTrackInsertForGenre`), which is the same resolver `SET_TRACK_INSERT` merges over — so
+        * the panel and the audio cannot describe different chains.
+        *
+        * `selectedInsertTrackId` is the role, which is what `resolveTrackInsertForGenre` keys on; the inspector's own
+        * `role` prop is typed to the mix roles, and a pattern track's `track_id` is exactly that union.
+        */}
+      {inspected !== undefined && (
+        <TrackInspector
+          role={inspected.track_id as MixTrackId}
+          trackName={inspected.name}
+          instrument={inspected.instrument}
+          instrumentOptions={[]}
+          insert={insertForInspected!}
+          onChangeInsert={(patch) =>
+            commit({ type: "SET_TRACK_INSERT", trackIdx: inspectedIdx!, patch })
+          }
+          onResetInsert={() =>
+            commit({
+              type: "REPLACE_TRACK_INSERT",
+              trackIdx: inspectedIdx!,
+              insert: resolveTrackInsertForGenre(inspected.track_id, pattern.genre_id),
+            })
+          }
+          onBypassInsert={() => commit({ type: "SET_TRACK_INSERT", trackIdx: inspectedIdx!, patch: bypassTrackInsert() })}
+          getGainReductionDb={() => engine.getTrackCompressorReductionDb(inspectedIdx!)}
+          isPlaying={isPlaying}
+          onInstrumentChange={() => {
+            /* The console's timbre picker lives on the strip; this panel is opened for the chain. */
+          }}
+          volume={inspected.volume ?? 0.8}
+          pan={inspected.pan ?? 0}
+          sendA={inspected.sendA ?? 0}
+          sendB={inspected.sendB ?? 0}
+          muted={inspected.mute === true}
+          soloed={inspected.solo === true}
+          onVolumeChange={(v) => handleVolumeChange(inspectedIdx!, v)}
+          onPanChange={(v) => handlePanChange(inspectedIdx!, v)}
+          onSendAChange={(v) => handleSendAChange(inspectedIdx!, v)}
+          onSendBChange={(v) => handleSendBChange(inspectedIdx!, v)}
+          onMuteToggle={() => handleToggleMute(inspectedIdx!)}
+          onSoloToggle={() => handleToggleSolo(inspectedIdx!)}
+          onClose={() => setInspectedIdx(undefined)}
+        />
       )}
 
       {tracks.length > 0 && (

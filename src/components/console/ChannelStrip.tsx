@@ -24,6 +24,12 @@ export interface ChannelStripProps {
   onToggleSolo: (trackIdx: number) => void;
   isPhaseInverted: boolean;
   onTogglePhase: (trackIdx: number) => void;
+  /**
+   * Opens this channel's insert chain below the desk. Optional, so a caller that only wants the fader row (and every
+   * existing criterion) is unchanged — and **present is what makes the EQ reachable**, which until now it was not:
+   * `TrackInspector` had no production reference at all.
+   */
+  onOpenInspector?: (trackIdx: number) => void;
 }
 
 const FADER_TICKS_DB = [0, -6, -12, -24, -48];
@@ -120,6 +126,7 @@ export const ChannelStrip: React.FC<ChannelStripProps> = ({
   onToggleSolo,
   isPhaseInverted,
   onTogglePhase,
+  onOpenInspector,
 }) => {
   const panInfo = panLabel(pan);
 
@@ -247,6 +254,18 @@ export const ChannelStrip: React.FC<ChannelStripProps> = ({
         >
           S
         </button>
+        {onOpenInspector && (
+          <button
+            type="button"
+            onClick={() => onOpenInspector(trackIdx)}
+            aria-label={`${name} ${t("console_insert_chain")}`}
+            title={t("console_insert_chain")}
+            data-testid={`console-insert-${trackIdx}`}
+            className="h-11 w-11 shrink-0 rounded-lg border border-line bg-[#15171d] text-[10px] font-bold text-text-sub transition-colors hover:text-text"
+          >
+            EQ
+          </button>
+        )}
         {/* Polarity inversion (Ø): flips the channel sign via a dedicated gain stage. */}
         <button
           type="button"

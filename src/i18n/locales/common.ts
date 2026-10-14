@@ -87,6 +87,7 @@ export const commonMessages = {
   arrangement_stop: { en: "Stop", zh: "停止" },
   arrangement_record: { en: "Record", zh: "录音" },
   arrangement_automation_lane: { en: "Level automation", zh: "音量自动化" },
+  console_insert_chain: { en: "Insert chain: EQ, compressor, drive", zh: "插入链：EQ、压缩、失真" },
   arrangement_automation_show: { en: "Show the level curve", zh: "显示音量包络" },
   arrangement_recording: { en: "Recording…", zh: "录音中…" },
   arrangement_position: { en: "Position", zh: "位置" },
