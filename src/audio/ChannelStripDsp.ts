@@ -85,6 +85,7 @@ import {
   type TrackInsertParams,
 } from "../data/trackInsert";
 import { makeSaturationCurve } from "./EffectsRack";
+import { StereoWidth } from "./StereoWidth";
 import {
   asInsertCompressorReduction,
   createInsertCompressorNode,
@@ -190,6 +191,15 @@ export class ChannelStrip {
    * its outgoing edges belong to the caller (the polarity/pan stage), so `rewire` must
    * never disconnect them.
    */
+  /**
+   * ⭐ **The stereo width stage, built only when a track actually asks for one.**
+   *
+   * `routingSignature` already watched `width > 0`, but the stage was never created, so a `width` set on a track was
+   * stored and heard as nothing. Built on demand rather than always: a wrap widens the mix and costs the per-note claim
+   * `docs/` records as a measured trade, so the default must stay a straight wire — which is also why nothing is
+   * constructed when `width` is 0.
+   */
+  private widthStage: StereoWidth | null = null;
   private readonly internalNodes: readonly AudioNode[];
 
   private params: TrackInsertParams;
@@ -344,6 +354,8 @@ export class ChannelStrip {
   dispose(): void {
     if (this.disposed) return;
     this.disposed = true;
+    // The width stage is not an `AudioNode` (its own input/output are), so it is disposed rather than disconnected.
+    this.widthStage?.dispose();
     for (const node of [this.input, ...this.internalNodes, this.output]) {
       try {
         node.disconnect();
@@ -464,6 +476,20 @@ export class ChannelStrip {
       // No drive: the previous stage (or `input` when everything is off) feeds the tail
       // directly. With every stage off — and no width — this is a straight wire.
       prev.connect(tail);
+    }
+
+    /**
+     * ⭐ **The width stage, last, and only when asked for.** `StereoWidth` is a Haas-style wrap: it delays one side and
+     * modulates it, which widens the image and gives up the per-note claim (the trade the stage's own note records).
+     * So it is built here rather than in the constructor, and `p.width === 0` leaves the straight wire above untouched.
+     */
+    if ((p.width ?? 0) > 0) {
+      const stage = (this.widthStage ??= new StereoWidth(this.ctx, p.width ?? 0));
+      stage.setAmount(p.width ?? 0);
+      // The stage sits between whatever fed the tail and the strip's real output.
+      tail.connect(stage.input);
+      stage.output.connect(this.output);
+      if (tail !== this.output) tail.disconnect(this.output);
     }
   }
 

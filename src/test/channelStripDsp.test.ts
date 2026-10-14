@@ -86,8 +86,15 @@ class RecNode {
   incoming: RecNode[] = [];
   outgoing: RecNode[] = [];
   connect(dest: RecNode): RecNode {
+    /**
+     * ⭐ **An `AudioParam` is a legal connection target**, and `StereoWidth` uses one (`depthLeft.connect(left.delayTime)`
+     * — its LFO modulates the delay). Such a target has no node bookkeeping, so the edge is recorded on this side only;
+     * a double that assumed every destination was a node threw on the width stage's own constructor.
+     */
     this.outgoing.push(dest);
-    dest.incoming.push(this);
+    if (Array.isArray((dest as unknown as { incoming?: unknown[] })?.incoming)) {
+      (dest as unknown as { incoming: RecNode[] }).incoming.push(this);
+    }
     return dest;
   }
   disconnect(): void {
@@ -121,6 +128,15 @@ class RecShaper extends RecNode {
   oversample: OverSampleType = "none";
 }
 
+class RecDelay extends RecNode {
+  delayTime = new RecParam(0.011);
+}
+class RecOscillator extends RecNode {
+  frequency = new RecParam(0.31);
+  start(): void {}
+  stop(): void {}
+}
+
 class RecordingContext {
   currentTime = 0;
   sampleRate = 44100;
@@ -151,6 +167,31 @@ class RecordingContext {
   createWaveShaper() {
     const node = new RecShaper();
     this.shapers.push(node);
+    this.nodes.push(node);
+    return node;
+  }
+  /**
+   * ⭐ The five nodes `StereoWidth` builds, so the strip's width stage can be constructed here at all. They are plain
+   * `RecNode`s because this double's subject is the **routing**, not the width maths — `stereoWidth.test.ts` owns the
+   * maths, and a second implementation of it here would be the drift this repository keeps removing.
+   */
+  createDelay() {
+    const node = new RecDelay();
+    this.nodes.push(node);
+    return node;
+  }
+  createOscillator() {
+    const node = new RecOscillator();
+    this.nodes.push(node);
+    return node;
+  }
+  createChannelSplitter() {
+    const node = new RecNode();
+    this.nodes.push(node);
+    return node;
+  }
+  createChannelMerger() {
+    const node = new RecNode();
     this.nodes.push(node);
     return node;
   }
@@ -992,5 +1033,39 @@ describe("ChannelStrip — contract, teardown and offline context", () => {
     expect(ctx.createdGains).toHaveLength(6);
     expect(strip.getGainReductionDb()).toBe(0);
     expect(() => strip.dispose()).not.toThrow();
+  });
+});
+
+/**
+ * ⭐ **A track's `width` has to move the signal, not just the routing signature.**
+ *
+ * `routingSignature` had watched `width > 0` since the stage was added, and the comment beside it said so in as many
+ * words — "`p.width` is deliberately **not** wired here yet" — while `StereoWidth.ts` sat there tested and unreachable.
+ * So a `width` set on a track changed the strip's idea of its own routing and nothing about the audio: the failure mode
+ * is silence-free and therefore invisible, which is why it needs a criterion rather than a comment.
+ *
+ * ⭐ What is asserted is the **edge**, not a sample: the stage is built only when asked for, and when it is built the
+ * strip's real output is fed by it. The audible effect is `StereoWidth`'s own subject and its tests' — a strip that
+ * wraps when told to is the whole of the wiring.
+ */
+describe("the stereo width stage", () => {
+  it("⭐ is built when a track asks for width, and takes over the strip's output", () => {
+    const { ctx, strip, output } = buildFrom({ ...allEnabled(), width: 0.8 });
+    const stage = (strip as unknown as { widthStage: { input: unknown; output: unknown } | null }).widthStage;
+    expect(stage, "the stage exists once a track asks for one").not.toBeNull();
+
+    // The stage's input is fed, and its output is what reaches the strip's real output.
+    const stageInput = stage!.input as unknown as RecNode;
+    const stageOutput = stage!.output as unknown as RecNode;
+    expect(ctx.nodes.some((node) => node.outgoing.includes(stageInput)), "something feeds the width stage").toBe(true);
+    expect(stageOutput.outgoing.includes(output as unknown as RecNode), "and the stage feeds the strip's output").toBe(true);
+  });
+
+  it("⭐ is not built at all when no width is asked for, so the default stays a straight wire", () => {
+    const { strip } = buildFrom(allEnabled());
+    expect((strip as unknown as { widthStage: unknown }).widthStage).toBeNull();
+    // And the same for an explicit zero, which is what an authored table that says nothing resolves to.
+    const zero = buildFrom({ ...allEnabled(), width: 0 });
+    expect((zero.strip as unknown as { widthStage: unknown }).widthStage).toBeNull();
   });
 });
