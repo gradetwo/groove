@@ -41,7 +41,7 @@ import { setMcpArrangementBars, setMcpArrangementTempoMap, setMcpTrackAutomation
 import { catalogueAssetById, listSampleLibraries, nearestCatalogueAssetIds } from "./instruments";
 import { inspectSfzAt } from "./sfzInspectRemote";
 
-import { addMcpTake, setMcpTrackAsset, setMcpTrackInstrument, setMcpTrackPan,
+import { addMcpTake, setMcpMasterSettings, setMcpTrackAsset, setMcpTrackInstrument, setMcpTrackPan,
   setMcpTrackSends,
   setMcpTrackInsert, setMcpTrackParent, setMcpTrackRegion, setMcpTrackSteps } from "./arrangement";
 
@@ -1021,6 +1021,46 @@ export const ARRANGEMENT_TOOLS: ToolDefinition[] = [
     handler: (args) => {
       try {
         return setMcpTrackPan(String(args.arrangementId), String(args.trackId), Number(args.pan));
+      } catch (error) {
+        return failure((error as Error).message);
+      }
+    },
+  },
+  {
+    name: "set_arrangement_master",
+    title: "Set an arrangement's mastering",
+    description:
+      "The mastering block a render of this arrangement uses: the glue bus compressor (threshold, knee, ratio, release, makeup), the limiter's ceiling and release times, and the stereo width. A partial patch — only the fields given change; everything else keeps its current value. Values are clamped to what the DSP honours, and the arrangement's summary reports the block in force, so a caller can read back what was accepted. Mastering is a decision about the whole mix, so it is one block rather than per-track settings.",
+    readOnly: false,
+    inputSchema: {
+      arrangementId: z.string(),
+      busComp: z
+        .object({
+          enabled: z.boolean().optional(),
+          thresholdDb: z.number().optional().describe("dB; higher compresses less"),
+          kneeDb: z.number().optional().describe("dB of soft knee"),
+          ratio: z.number().optional().describe("1 is no compression"),
+          releaseSec: z.number().optional(),
+          makeupDb: z.number().optional().describe("dB put back after compression"),
+        })
+        .optional(),
+      limiter: z
+        .object({
+          ceilingDb: z.number().optional().describe("dBTP ceiling; the graph clamps it to at most 0"),
+          lookaheadMs: z.number().optional(),
+          releaseFastMs: z.number().optional(),
+          releaseSlowMs: z.number().optional(),
+        })
+        .optional(),
+      width: z.object({ amount: z.number().optional().describe("0 mono, 1 unchanged, above 1 widens") }).optional(),
+    },
+    handler: (args) => {
+      try {
+        const patch: Record<string, unknown> = {};
+        if (args.busComp !== undefined) patch.busComp = args.busComp;
+        if (args.limiter !== undefined) patch.limiter = args.limiter;
+        if (args.width !== undefined) patch.width = args.width;
+        return setMcpMasterSettings(String(args.arrangementId), patch);
       } catch (error) {
         return failure((error as Error).message);
       }

@@ -62,6 +62,7 @@ import {
   setTrackInstrument,
 } from "../src/data/arrangementEdits";
 import type { TrackInsertPatch } from "../src/data/trackInsert";
+import { MASTER_DEFAULTS, normaliseMasterSettings, type MasterSettings } from "../src/data/masterSettings";
 import type { ArrangementV2, NoteEvent, TrackKindV2, TrackV2 } from "../src/types/arrangementV2";
 import type { PlannedTake } from "../src/data/takePlanning";
 import { flattenArrangementV2, laneInstrumentForTrack, laneRoleForTrack } from "../src/data/arrangementCompile";
@@ -76,6 +77,18 @@ import { beatsPerBar } from "../src/data/genreExpression";
 import type { FlattenedSong } from "../src/data/songFlatten";
 
 const arrangements = new Map<string, ArrangementV2>();
+
+/**
+ * ⭐ **The mastering block for each arrangement this session is editing.**
+ *
+ * It lives beside {@link arrangements} rather than inside `ArrangementV2` on purpose. The arrangement is a *musical*
+ * document — tracks, notes, regions, takes — and this repository keeps adding mix decisions to it (gain, pan, sends,
+ * insert). Mastering is a decision about the whole mix, which is what a project is for, and the browser stores it on
+ * `GrooveProject.masterSettings`. The protocol has no project object: an arrangement id is its unit of work. So the
+ * block is kept per arrangement id here, read through `masterSettingsFor` so a session that never set one gets the
+ * model's defaults, and it is reported in the summary rather than left invisible.
+ */
+const masterSettingsByArrangement = new Map<string, MasterSettings>();
 let idSequence = 0;
 
 export function clearMcpArrangements(): void {
@@ -299,6 +312,8 @@ export interface ArrangementSummary {
   tracks: ArrangementTrackSummary[];
   /** The templates a caller may name, so the list is discoverable rather than guessable. */
   templates: string[];
+  /** ⭐ The mastering block in force for this arrangement — what a render would use. */
+  master: MasterSettings;
   /** How long the arrangement is, in bars — absent for an older file, which means "as long as its content needs". */
   bars?: number;
   /** Beats per minute — absent for an older file, which plays at 120, the value the compile used to hardcode. */
@@ -357,6 +372,33 @@ function summariseTrack(track: TrackV2, arrangement: ArrangementV2): Arrangement
  * The id is passed in rather than read off the arrangement, because the model has no id field: an arrangement belongs to a `songId` and nothing more. Identity for the MCP surface is the key in this module's map, which is why it travels
  * alongside.
  */
+/**
+ * The mastering block for an arrangement, defaulted. Read through this rather than the map, so a caller never has to
+ * decide what an absent block means — the same reason `masterSettingsFromProject` exists on the browser side.
+ *
+ * Not exported: it is a reader, and this module's export surface is the operations a tool calls. The summary reports the
+ * block, which is how a caller reads it back.
+ */
+function masterSettingsFor(arrangementId: string): MasterSettings {
+  return masterSettingsByArrangement.get(arrangementId) ?? MASTER_DEFAULTS;
+}
+
+/**
+ * A partial mastering patch, clamped and stored for this arrangement. An arrangement that does not exist is refused:
+ * a settings write that silently created a document would make `getMcpArrangement` answer for something no caller
+ * built.
+ */
+export function setMcpMasterSettings(arrangementId: string, patch: unknown): ArrangementEditResult {
+  const current = getMcpArrangement(arrangementId);
+  if (!current) throw new Error(`no arrangement "${arrangementId}" — create one first`);
+  const merged = normaliseMasterSettings({
+    ...masterSettingsFor(arrangementId),
+    ...(patch as Partial<MasterSettings> | undefined),
+  });
+  masterSettingsByArrangement.set(arrangementId, merged);
+  return { summary: summariseArrangement(arrangementId, current), problems: [] };
+}
+
 export function summariseArrangement(arrangementId: string, arrangement: ArrangementV2): ArrangementSummary {
   const problems: string[] = [];
   if (arrangement.tracks.length === 0) problems.push("the arrangement has no tracks, so it would render nothing");
@@ -448,6 +490,9 @@ export function summariseArrangement(arrangementId: string, arrangement: Arrange
       ? { pitchNote: "This project states no note-name convention, so names read as C4, and no migration is needed." }
       : {}),
     steps: stepCountFor(allNotes, arrangement.bars),
+    // ⭐ Reported always, not only when it differs from the defaults: an agent that cannot see the current block
+    // cannot tell whether its own change took, and "absent" would be a second way to say "the defaults".
+    master: masterSettingsFor(arrangementId),
     trackCount: arrangement.tracks.length,
     tracks: arrangement.tracks.map((track) => summariseTrack(track, arrangement)),
     templates: TEMPLATES.map((template) => template.id),

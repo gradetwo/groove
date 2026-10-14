@@ -47,7 +47,7 @@ type Double = ReturnType<typeof engineDouble>;
 function mount(engine: Double) {
   return render(
     <LanguageProvider>
-      <AudioSettingsTab engine={engine as never} gs1RoutingEnabled={false} onGs1RoutingChange={() => {}} />
+      <AudioSettingsTab engine={engine as never} gs1Enabled={false} onToggleGs1={() => {}} />
     </LanguageProvider>
   );
 }
