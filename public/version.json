@@ -1,23 +1,23 @@
 {
-  "version": "2.42.0",
+  "version": "2.43.0",
   "releaseDate": "2026-10-14",
   "changelogCount": 10,
   "latest": {
-    "version": "2.42.0",
+    "version": "2.43.0",
     "date": "2026-10-14",
     "category": "feature",
     "title": {
-      "zh": "母带可调：压缩/限幅/宽度在 Web 与 MCP 都能改，且立刻生效",
-      "en": "Mastering is editable: compressor, limiter and width, on both Web and MCP, applied at once"
+      "zh": "混响/延迟可由协议调，声像与发送也能画包络",
+      "en": "Reverb and delay are settable over the protocol, and pan or send lanes can be drawn"
     },
     "highlights": [
       {
-        "zh": "新增母带设置块（母线压缩阈值/膝/比/释放/补偿、限幅器上限与释放、立体声宽度），存在工程里，Web 的音频设置面板可调，MCP 用 set_arrangement_master 读写；导出与渲染都按它母带。",
-        "en": "A mastering block (bus compressor threshold/knee/ratio/release/makeup, limiter ceiling and releases, stereo width) stored on the project, editable in the Web audio settings, readable and writable over MCP with set_arrangement_master, and used by both the export and a render."
+        "zh": "新增 set_arrangement_effects：按编排覆写混响 decay/damping/preDelay 与延迟 time/feedback/damp/pingPong，部分补丁、越界钳位。总线是实时参数，改动立即生效不切断音符。",
+        "en": "A new set_arrangement_effects overrides an arrangement's reverb (decay, damping, preDelay) and delay (time, feedback, damp, pingPong) — a partial patch, clamped. Both buses take live changes, so no note is cut."
       },
       {
-        "zh": "改动立刻生效：压缩器与限幅器本在建图时固定，所以面板改动会重建母带链并重接各轨（代价如实写明：正在发声的音符会被切断）。",
-        "en": "A change applies at once: the compressors and limiter are fixed when a chain is built, so the panel rebuilds the master chain and re-points the tracks — with the cost stated in the UI, that a note sounding at that instant is cut."
+        "zh": "自动化不再只支持音量：声像、混响/延迟发送都可画包络，各自按本参数的量程显示，轨道头可下拉切换。",
+        "en": "Automation is no longer level-only: pan and both sends can be drawn as envelopes, each on its own scale, with a field selector in the track header."
       }
     ],
     "truncated": false
