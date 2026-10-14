@@ -17,7 +17,7 @@
  */
 import type { SequencerPattern, SequencerTrack } from "../types/genre";
 import type { ArrangementV2, NoteEvent, TrackV2 } from "../types/arrangementV2";
-import { samplePerStep } from "./automation";
+import { samplePerStep, type AutomationParameter } from "./automation";
 import { STEPS_PER_BAR, STEP_BEATS, stepsFromNotes, stackFromNotes, stepCountFor, stepsPerBarFor } from "./noteEvents";
 import { requireTrackKind } from "./arrangementEdits";
 import { applyInsertPatch, resolveTrackInsertForGenre } from "./genreInsert";
@@ -82,6 +82,51 @@ export function laneInstrumentForTrack(track: TrackV2): string {
  * Clamped at the mixer's own +6 dB ceiling, the same bound the offline lane mixer and `AudioEngine` use, so a stored +12 dB cannot become a lane louder in the file
  * than it can be in the room.
  */
+/**
+ * ⭐ **One lane, expanded per step, whatever the lane is about.**
+ *
+ * The parameter is looked up rather than hard-coded, because automation stopped being only a level the moment the model
+ * had more than one automatable field: `AutomationLane.parameter` names the field, and a hard-coded `"gainDb"` here
+ * would silently ignore a pan lane — the exact defect this repository keeps removing ("two places, one thing").
+ *
+ * The conversion is the **same call the static field uses**, so a lane's first point and the mixer's own value for that
+ * field cannot disagree: dB for a level, the −1…1 scale for pan, 0…1 for the sends.
+ */
+function automatedValueSteps(track: TrackV2, parameter: AutomationParameter, stepCount: number): number[] | null {
+  const points = track.automation?.find((lane) => lane.parameter === parameter)?.points;
+  if (!points || points.length === 0) return null;
+  const raw = samplePerStep(points, stepCount, STEP_BEATS);
+  if (parameter === "gainDb") return raw.map(gainDbToLinear);
+  if (parameter === "pan") return raw.map((value) => Math.max(-1, Math.min(1, value)));
+  return raw.map((value) => Math.max(0, Math.min(1, value)));
+}
+
+/**
+ * ⭐ **Every automated field on one track, as the lane keys the readers already index.**
+ *
+ * One table rather than one helper per field: a second `if` per parameter is how a newly automatable field ends up wired
+ * into the compile and forgotten everywhere else. Adding a lane means adding a row.
+ */
+function automatedSteps(track: TrackV2, stepCount: number): {
+  volumeByStep?: number[];
+  panByStep?: number[];
+  sendAByStep?: number[];
+  sendBByStep?: number[];
+} {
+  const out: { volumeByStep?: number[]; panByStep?: number[]; sendAByStep?: number[]; sendBByStep?: number[] } = {};
+  const keys = {
+    gainDb: "volumeByStep",
+    pan: "panByStep",
+    sendA: "sendAByStep",
+    sendB: "sendBByStep",
+  } as const;
+  for (const parameter of Object.keys(keys) as AutomationParameter[]) {
+    const perStep = automatedValueSteps(track, parameter, stepCount);
+    if (perStep !== null) out[keys[parameter]] = perStep;
+  }
+  return out;
+}
+
 function gainDbToLinear(gainDb: number): number {
   return Math.min(2, Math.max(0, Math.pow(10, gainDb / 20)));
 }
@@ -231,12 +276,7 @@ export function compileArrangementToLanes(arrangement: ArrangementV2, notes: Not
          * what a mixer fader shows. Spread only when the lane actually automates, so a project with no automation
          * compiles to exactly the lane it always did.
          */
-        ...(() => {
-          const points = track.automation?.find((lane) => lane.parameter === "gainDb")?.points;
-          if (!points || points.length === 0) return {};
-          const perStep = samplePerStep(points, stepCount, STEP_BEATS).map(gainDbToLinear);
-          return { volumeByStep: perStep };
-        })(),
+        ...automatedSteps(track, stepCount),
         ...(typeof track.pan === "number" && Number.isFinite(track.pan) ? { pan: Math.max(-1, Math.min(1, track.pan)) } : {}),
         /**
          * ⭐ **The track's send levels travel with the lane, or the render cannot honour them.**

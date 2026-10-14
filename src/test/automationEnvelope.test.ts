@@ -17,6 +17,8 @@
 import { describe, it, expect } from "vitest";
 import {
   AUTOMATION_DEFAULT_VALUE,
+  AUTOMATION_RANGES,
+  clampForParameter,
   clampGainDb,
   isAutomated,
   samplePerStep,
@@ -86,5 +88,33 @@ describe("an automation envelope", () => {
     expect(clampGainDb(99)).toBe(6);
     expect(clampGainDb(-99)).toBe(-60);
     expect(clampGainDb(-6)).toBe(-6);
+  });
+});
+
+/**
+ * ⭐ **Automation is no longer only a level, and the range has to follow the parameter.**
+ *
+ * The union said `"gainDb"` alone, so a pan or send lane could not exist — and the compile **hard-coded** that name, which
+ * meant a lane of any other kind would have been stored, drawn, and silently ignored. These cases pin the two halves of
+ * the fix: a lane may name a field the model already carries, and each field's clamp is its own, not the level's.
+ */
+describe("the automatable fields", () => {
+  it("⭐ carries a range per parameter, each the one its own static setter honours", () => {
+    expect(AUTOMATION_RANGES.gainDb).toEqual({ min: -60, max: 6 });
+    expect(AUTOMATION_RANGES.pan, "the scale the console's pan knob and the strips use").toEqual({ min: -1, max: 1 });
+    // The sends are 0…1 gains: a negative send has no meaning, and above 1 would be more than full wet.
+    expect(AUTOMATION_RANGES.sendA).toEqual({ min: 0, max: 1 });
+    expect(AUTOMATION_RANGES.sendB).toEqual({ min: 0, max: 1 });
+  });
+
+  it("⭐ clamps each parameter by its own range, so a pan lane is not clamped like a level", () => {
+    // The defect this guards: clamping a pan curve to −60…6 would make every pan value 0 or 6.
+    expect(clampForParameter("pan", -3)).toBe(-1);
+    expect(clampForParameter("pan", 0.25)).toBe(0.25);
+    expect(clampForParameter("sendA", 4)).toBe(1);
+    expect(clampForParameter("sendB", -1)).toBe(0);
+    expect(clampForParameter("gainDb", 99)).toBe(6);
+    // A NaN reads as the floor of its own range rather than as a level's floor.
+    expect(clampForParameter("pan", Number.NaN)).toBe(-1);
   });
 });

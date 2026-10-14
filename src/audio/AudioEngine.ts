@@ -2350,13 +2350,21 @@ export class AudioEngine {
     const isStepActive = stepVal > 0;
     if (!isStepActive) return false;
 
-    // ⭐ The compiled automation curve wins over the static fader for this step (see the compile's `volumeByStep`).
-    const automated = track.volumeByStep?.[stepIdx];
-    if (typeof automated === "number" && Number.isFinite(automated)) {
+    // ⭐ The compiled curves win over the static fields for this step; one table, in the compile's `automatedSteps` shape.
+    const strip = this.trackStrips[trackIdx];
+    const automated: Array<[number[] | undefined, AudioParam | undefined, number, number]> = [
+      [track.volumeByStep, strip?.gain.gain, 0, 2],
+      [track.panByStep, strip?.panner?.pan, -1, 1],
+      [track.sendAByStep, strip?.sendA.gain, 0, 1],
+      [track.sendBByStep, strip?.sendB.gain, 0, 1],
+    ];
+    for (const [values, param, min, max] of automated) {
+      const value = values?.[stepIdx];
+      if (typeof value !== "number" || !Number.isFinite(value) || !param?.setValueAtTime) continue;
       try {
-        this.trackStrips[trackIdx]?.gain.gain.setValueAtTime?.(Math.max(0, Math.min(2, automated)), time);
+        param.setValueAtTime(Math.max(min, Math.min(max, value)), time);
       } catch {
-        /* a strip that cannot schedule must not fail the step */
+        /* a parameter that cannot schedule must not fail the step */
       }
     }
 

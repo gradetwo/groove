@@ -164,6 +164,16 @@ export interface SequencerTrack {
   /** ⭐ The lane's level per step when its arrangement track automates one — the curve expanded at compile time, on the
    *  same linear-fader scale as `volume`. Absent means not automated. */
   volumeByStep?: number[];
+  /**
+   * ⭐ **The same expansion for a pan lane and the two send lanes.**
+   *
+   * One array per automatable field rather than one map, because the readers already index these arrays per step and a
+   * map would be a second shape for the same idea. Absent means that field is not automated, so a project with no
+   * automation compiles to exactly the lane it always did.
+   */
+  panByStep?: number[];
+  sendAByStep?: number[];
+  sendBByStep?: number[];
   pan?: number; // -1 to 1
   swing?: number; // per-track swing offset (-50 to 50)
   sendA?: number; // Reverb send level 0 - 1

@@ -143,7 +143,15 @@ const FILE_CAPS: Record<string, number> = {
    *
    * **This number may only go down from here.**
    */
-  "src/audio/AudioEngine.ts": 3327,
+  /**
+   * ⭐ **3327 → 3335 on 2026-10-14, for parameter-aware automation.** A pan lane and the two send lanes had to be applied
+   * per step alongside the level, and the honest way to do that is one table of (curve, parameter, range) rather than a
+   * fourth copy of the same `if` — so this grew by a table and a loop, and in exchange a newly automatable field is wired
+   * everywhere at once instead of in one place and forgotten in the others.
+   *
+   * **This number may only go down from here.**
+   */
+  "src/audio/AudioEngine.ts": 3335,
   /**
    * ⭐ **Re-measured on 2026-10-12, when the per-render O(n²) note lookups became a Map index** (perf audit ROI #2).
    * The file grew 3241 → 3264 lines with `noteIndex` — one `useMemo` building `byCell`/`byStep`, its comment, and the

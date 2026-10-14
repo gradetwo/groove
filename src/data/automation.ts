@@ -29,7 +29,15 @@ export interface AutomationPoint {
   value: number;
 }
 
-export type AutomationParameter = "gainDb";
+/**
+ * ⭐ **The fields a lane may automate, and nothing else.**
+ *
+ * Each name is a field the arrangement model already carries on a track (`gainDb`, `pan`, `sendA`, `sendB`) — a lane adds
+ * a curve to a value that exists rather than inventing a target. Widening this union is what makes a new lane type
+ * automatable, and the compile maps each one through the **same conversion its static field uses**, so a lane's first
+ * point cannot disagree with the mixer's own value.
+ */
+export type AutomationParameter = "gainDb" | "pan" | "sendA" | "sendB";
 
 /** A track's envelope for one parameter. Tracks are the scope: one curve per parameter per track. */
 export interface AutomationLane {
@@ -107,4 +115,24 @@ export function samplePerStep(points: readonly AutomationPoint[], stepCount: num
 /** Clamp a gain envelope's value to the range the mixer itself honours, which both writers and readers go through. */
 export function clampGainDb(value: number): number {
   return Math.min(AUTOMATION_MAX_DB, Math.max(AUTOMATION_MIN_DB, value));
+}
+
+/**
+ * ⭐ **The range each automatable parameter may travel**, so one writer can clamp any lane without asking which it is.
+ *
+ * These are the fields' own ranges as the mixer and the renderer honour them: a level in dB, a pan on the −1…1 scale the
+ * strips use, and the two sends as 0…1 gains. Nothing here is invented — each pair is what the corresponding static
+ * setter already clamps to, which is why a lane and a fader cannot disagree about a value.
+ */
+export const AUTOMATION_RANGES: Record<AutomationParameter, { min: number; max: number }> = {
+  gainDb: { min: AUTOMATION_MIN_DB, max: AUTOMATION_MAX_DB },
+  pan: { min: -1, max: 1 },
+  sendA: { min: 0, max: 1 },
+  sendB: { min: 0, max: 1 },
+};
+
+/** Clamp any lane's value to the range its own parameter honours. */
+export function clampForParameter(parameter: AutomationParameter, value: number): number {
+  const range = AUTOMATION_RANGES[parameter];
+  return Number.isFinite(value) ? Math.min(range.max, Math.max(range.min, value)) : range.min;
 }

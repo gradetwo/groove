@@ -105,3 +105,50 @@ describe("an automated level on its compiled lane", () => {
     expect(loud.volumeByStep![0]).toBeLessThanOrEqual(2);
   });
 });
+
+/**
+ * ⭐ **A lane of any automatable kind reaches its own key, which is what "parameter-aware" has to mean.**
+ *
+ * The compile used to look up one hard-coded name (`"gainDb"`), so a pan or send lane would have been stored, drawn, and
+ * silently ignored — the same "two places, one thing" defect this codebase keeps removing. These cases assert the
+ * expansion per kind, and that each curve is **converted the way its own static field is**: a pan is not clamped like a
+ * level, and a send is not converted to a linear gain the way a dB level is.
+ */
+describe("an automated pan or send on its compiled lane", () => {
+  it("⭐ emits a per-step curve for pan, send A and send B, each under its own key", () => {
+    const lane = compileArrangementToLanes(
+      arrangementWith({
+        pan: 0,
+        sendA: 0,
+        sendB: 0,
+        automation: [
+          { parameter: "pan", points: [{ atBeats: 0, value: -1 }, { atBeats: 4, value: 1 }] },
+          { parameter: "sendA", points: [{ atBeats: 0, value: 0 }, { atBeats: 4, value: 1 }] },
+          { parameter: "sendB", points: [{ atBeats: 0, value: 0.5 }] },
+        ],
+      })
+    )[0]!.track;
+
+    expect(lane.panByStep, "pan has its own key").toBeDefined();
+    expect(lane.sendAByStep).toBeDefined();
+    expect(lane.sendBByStep, "a single point is still a curve").toBeDefined();
+    expect(lane.volumeByStep, "and a level that is not automated emits nothing").toBeUndefined();
+
+    // A pan travels the −1…1 scale, so its first step is −1 — not clamped to a level's −60…6, nor converted to linear.
+    expect(lane.panByStep![0]).toBeCloseTo(-1, 6);
+    expect(lane.sendAByStep![0]).toBeCloseTo(0, 6);
+    // The pan's static field is still written, so a reader that knows nothing about automation uses it.
+    expect(lane.pan).toBe(0);
+  });
+
+  it("⭐ keeps a level lane working unchanged, so the widening changed nothing for it", () => {
+    const lane = compileArrangementToLanes(
+      arrangementWith({
+        gainDb: 0,
+        automation: [{ parameter: "gainDb", points: [{ atBeats: 0, value: 0 }, { atBeats: 4, value: -6.0206 }] }],
+      })
+    )[0]!.track;
+    expect(lane.volumeByStep![0]).toBeCloseTo(1, 6);
+    expect(lane.panByStep).toBeUndefined();
+  });
+});
