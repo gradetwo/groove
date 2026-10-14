@@ -25570,3 +25570,43 @@ GlueCompressor 等已有 DSP 的编辑与使用路径 ✓。
   ⭐ 还有一次自己的错 ✓：`it.skipIf(!available)` 在**收集期**求值 ✓ ⇒ 用 `beforeEach` 里的标志会把三条**全跳过** ✓
     （一个什么都没量的绿 ✓）⇒ 改为在**模块作用域**同步判定 ✓。
 ```
+
+## 四百零五、🎛️ **批 B（reverb/delay 协议入口）+ 批 A（参数化自动化）已发布 v2.43.0**（2026-10-14 ✓）
+
+```
+**核实那五条清单 ✓（两处更正 ✓）**
+  · **1 Reverb/Delay MCP 无入口 ✓ 成立**，且比想的好做 ✓：`ReverbBus.setParams`（`:312` ✓）/`DelayBus.setParams` ✓
+    **是实时的** ✓ ⇒ 改动立即生效、**不重建、不切断音符** ✓（与压缩器/限幅器不同 ✓）。
+  · **2 EffectsRack MCP 无入口 ✓ 成立**，但多一个坑 ✓：引擎有 4 个在线 setter ✓，而 `effectsRack` 存在
+    **`GrooveProject`（项目级）** ✓ 且 **MCP 渲染路径完全不消费它** ✓ ⇒ 先要决定它归谁 ✓。**未做 ✓。**
+  · **3 声像自动化 ✓ / 4 sends・EQ 自动化 ✓ 成立**，且**同一机制** ✓：`AutomationParameter` 原为单一字面量
+    `"gainDb"` ✓，**编译期硬编码该名字** ✓ ⇒ 其它任何 lane 会被存储、被画、然后**被静默忽略** ✓。
+  · **5 Web EQ 控件 ❌ 不成立 ✓**：`TrackInspector` 有 52 个 `SliderRow/testId` ✓（low/mid/high 各
+    enable/Hz/gain/Q ✓ + 压缩器 threshold/ratio ✓ + 三条实时曲线 ✓）。`InsertFlowStrip` **本来就只是"选哪个阶段"** ✓
+    ⇒ 参数编辑器在其下方按选中阶段显示 ✓，正是它注释写的设计 ✓。
+
+**批 B ✓（`19832ce` ✓）**：`data/effectsOverrides.ts` ✓（对 genre 档的**补丁** ✓，不是替代 ✓ ——
+  genre 档带着混响脉冲特征与延迟的节拍分组 ✓，那是编排级覆写无权整体替换的音乐决定 ✓）；越界钳位 ✓、
+  `feedback` 止步 1 以下 ✓（=1 永不衰减 ✓）、未知键丢弃 ✓、未声明字段保持缺省 ✓ ⇒ "genre 说了算"能穿过往返 ✓。
+  ⭐ **接线时发现一个真缺陷 ✓**：`applyGenreFx` 在 genre 无档时**提前 return** ✓ ⇒ 把补丁放在它之后会让补丁
+    对**自定义编排**完全失效 ✓ —— 而自定义编排正是 agent 最可能在工作对象 ✓。引擎与导出器都已改为
+    "在档之后、且在该判断之外"应用 ✓。
+  渲染路径也携带它 ✓（含**独奏测峰那一趟** ✓：不在工程补丁下量的峰值不是这个混音的峰值 ✓）。
+  MCP：`set_arrangement_effects` ✓ + 每编排存储 + 唯一读取口 + 摘要报告 ✓；`tools/list` 经 stdio 复验 ✓。
+
+**批 A ✓（`a3ed700` + `9a5997c` ✓）**：`AutomationParameter` 扩为
+  `"gainDb" | "pan" | "sendA" | "sendB"` ✓，`AUTOMATION_RANGES` 给每个字段**它自己静态 setter 已遵守的量程** ✓
+  （且含键盘微调的 `step` ✓）；编译期改为**按参数查表** ✓ 并按字段发出
+  `volumeByStep`/`panByStep`/`sendAByStep`/`sendBByStep` ✓，每个都走**它静态字段用的同一个换算** ✓；
+  引擎每步用**一张 (曲线, 参数, 范围) 表**应用 ✓ 而不是第四份 `if` ✓。
+  车道视图按参数取量程 ✓ —— ⚠️ 这个错误**是隐形的** ✓：画在 −60…+6 dB 轴上时**每个声像值都会贴在车道最底部** ✓
+    且每次拖动都返回 dB ✓（看着像对、其实毫无意义 ✓）；轨道头加了下拉选择 ✓（只列模型真能自动化的参数 ✓）。
+  ⭐ 我第一版把微调步长按量程比例算 ✓ ⇒ 1 dB 变成 **0.66 dB** ✓，被既有判据抓到 ✓ ⇒ 改为每参数自己的 `step` ✓。
+  ⭐ 门禁又拦对一次 ✓：`mobileTouchTargets` 要求轨道头 testid 以 `-header` 结尾 ✓（列表与头部不能共用 ✓）⇒ 改名 ✓。
+
+**发版 ✓**：`v2.43.0` ✓（`9b0cbd8` ✓，tag = dev = main ✓）。线上复验 ✓：`version.json` 2.43.0 ✓、
+  封面 4/4 ✓、`/m` ✓、清单 159 条全指 `r2mirror.groove.wangda.today` ✓、真实音频 `200 audio/mpeg 400030B` ✓。
+  ⚠️ 全量本地跑里 `mobileClipProgress`（§402 记录的既有抖动 ✓）又出现一次 ✓，非本次改动 ✓。
+
+**❌ 唯一未做：清单第 2 条（EffectsRack 的 MCP 入口）** ✓ —— 前置决定见上 ✓。
+```
