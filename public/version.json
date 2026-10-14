@@ -1,23 +1,23 @@
 {
-  "version": "2.43.0",
+  "version": "2.44.0",
   "releaseDate": "2026-10-14",
   "changelogCount": 10,
   "latest": {
-    "version": "2.43.0",
+    "version": "2.44.0",
     "date": "2026-10-14",
     "category": "feature",
     "title": {
-      "zh": "混响/延迟可由协议调，声像与发送也能画包络",
-      "en": "Reverb and delay are settable over the protocol, and pan or send lanes can be drawn"
+      "zh": "效果机架跟着编排走：界面与协议都能改，且渲染真的带上",
+      "en": "The effect rack follows the arrangement — editable in the UI and over the protocol, and carried into a render"
     },
     "highlights": [
       {
-        "zh": "新增 set_arrangement_effects：按编排覆写混响 decay/damping/preDelay 与延迟 time/feedback/damp/pingPong，部分补丁、越界钳位。总线是实时参数，改动立即生效不切断音符。",
-        "en": "A new set_arrangement_effects overrides an arrangement's reverb (decay, damping, preDelay) and delay (time, feedback, damp, pingPong) — a partial patch, clamped. Both buses take live changes, so no note is cut."
+        "zh": "set_arrangement_effects 增加 rack：滤波 cutoff/Q/type、饱和 drive、合唱 mix/rate、位深，部分补丁、越界钳位。只改一个阶段不会重置其它阶段。",
+        "en": "set_arrangement_effects now takes a rack: filter cutoff/Q/type, saturation drive, chorus mix/rate and bit depth — a partial patch, clamped, where naming one stage leaves the others as the genre left them."
       },
       {
-        "zh": "自动化不再只支持音量：声像、混响/延迟发送都可画包络，各自按本参数的量程显示，轨道头可下拉切换。",
-        "en": "Automation is no longer level-only: pan and both sends can be drawn as envelopes, each on its own scale, with a field selector in the track header."
+        "zh": "修掉一个会静默丢设置的缺陷：界面的机架旋钮只推给引擎、没有存储，genre 变更或重载就会把它改回去。现在写入编排并与协议同一份存储。",
+        "en": "One silent defect fixed: the interface's rack knobs pushed values at the engine and stored nothing, so a genre change or a reload rewrote them. They now store on the arrangement, the same place the protocol writes."
       }
     ],
     "truncated": false
