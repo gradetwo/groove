@@ -25247,3 +25247,48 @@ describe("the grid's editing actions", () => {
 **下一个 session 的入口 ✓**：要么在 `armClock` 之前把 duration 定好 ✓（让窗口不存在 ✓），
   要么找出跨文件的顺序依赖 ✓（同一文件内的共享 `playMock` 是首要嫌疑 ✓）。
 ```
+
+## 四百零三、🎛️ **效果链的编辑路径：补丁合并 + EQ 面板落地；母带相关仍未做**（2026-10-14 ●）
+
+```
+**① 补丁 ✓ 已合并**（`37246ab` ✓）：`/tmp/groove-mcp-web-mobile-fixes-110902b7.patch`（718 行 / 14 文件 ✓）。
+  核实方式 ✓：`git apply --check` 干净 ✓ → 隔离 worktree 里应用后 `tsc` 0 ✓、它自带两份判据通过 ✓ → 再合并 ✓。
+  内容是一**捆** ✓，逐项写明而非混在一起 ✓：MCP `set_arrangement_track_sends` ✓（混响/延迟发送 ✓）、
+  `set_arrangement_track_insert` ✓（HPF + 三段 EQ + 压缩 + 失真 ✓）、`setTrackNoteSyllable` ✓
+  + `set_arrangement_vocal_melody` ✓；Web 歌词面板 `VocalLyricsPanelV2` ✓、MusicXML/Logic 导出入口 ✓；
+  手机返回键真 bug ✓（`navigate` 是**合并**语义 ✓ ⇒ 漏传 `genreId` 保留了旧值 ✓ ⇒ 详情页关不掉 ✓）。
+  ⭐ **它触发了 9 条门禁** ✓，逐条reconcile ✓（全部有据 ✓，无一条靠掩盖 ✓）：
+  · 生成表过期 ✓ → `node scripts/desktop_skins.mjs` 重生成 `desktopSkins.css` ✓（新增 `#34d399` ✓，3 行 ✓）；
+  · 两个新导出格式 ✓ → 两张 `FORMATS` 表 ✓、`package.json` ✓、`index.html` ✓、`help.ts` 引导句 ✓、
+    导览卡计数（**8 → 10 种导出格式** ✓）全部跟上 ✓；
+  · 桶重测 ✓ → 业主为自动化给 `AudioEngine.ts` 加的 9 行 ✓ 把它从 `atLeast1500` 移进 `atLeast2000` ✓
+    ⇒ 两个数各动 1 ✓（6→7、13→14 ✓），并写明"这是**一个文件的移动** ✓，不是趋势" ✓；
+  · `mcpDescriptionForm` 判 `(-18..18)` 为**受损连接**（两个句点 ✓）⇒ 改写成 "−18 to +18" ✓；
+  · `webEntryReachability` 要求给 `setTrackSends` 写账 ✓：控制台的发送旋钮写的是 seq store 的
+    `SET_TRACK_SENDS`（`ConsolePanel.tsx:298-299` ✓，作用于 `pattern.tracks[idx].sendA` ✓），
+    而该函数写 `TrackV2.sendA` ✓ ⇒ **两套模型并存** ✓，属于"混音决定归谁"的裁决问题 ✓，不是缺按钮 ✓。
+
+**② Web/MCP 单轨效果链 ✓：Web 侧补齐（`2a09feb` ✓）；MCP 侧由 ① 的补丁补齐 ✓**
+  ⭐ **真正的缺口是"面板建好了没人挂"** ✓：`TrackInspector` 带着信号链条 ✓ 与三条由实时参数算出的曲线 ✓
+  （`insertCurveViews` ✓），但 `grep -rn TrackInspector src/` **只有它自己和测试** ✓ ⇒ 整套 EQ/压缩/失真
+  在 Web 上**没有任何入口** ✓。已挂 ✓：
+  · 每个通道条新增 **EQ** 按钮 ✓（`console-insert-{idx}` ✓）⇒ 打开该通道的插入链 ✓；
+  · 面板显示**引擎正在跑的那条链** ✓（`engine.getTrackInsert` ✓）⇒ 回落 `resolveTrackInsertForGenre` ✓，
+    与 `SET_TRACK_INSERT` 合并用的是**同一个解析器** ✓ ⇒ 面板画的与耳朵听的不可能不同 ✓；
+  · 每次编辑都走 store **已有**动作 ✓（`SET_TRACK_INSERT` / `REPLACE_TRACK_INSERT` ✓），
+    复位用 genre 默认 ✓、旁通用 `bypassTrackInsert()` ✓ ⇒ 没有为 UI 另造写路径 ✓。
+  · 判据 3 条 ✓（`ConsolePanel.test.tsx` ✓，**红证明** ✓：把挂载改成 `false` 后三条全红 ✓）。
+
+**③ StereoWidth / MasterLimiter / GlueCompressor 的 Web+MCP 编辑路径 ❌ 未做**，已量清的障碍 ✓：
+  · **没有公开 API** ✓：`AudioEngine` 只有 `setMasterVolume` ✓，母线压缩/限幅/宽度参数只在
+    `buildMasterGraph` 构建时从 `MasterGraphOptions` 读一次 ✓（`masterGraph.ts:73-96` ✓），
+    ⇒ 要做需要**新增运行期 setter** + 可存可取的模型字段（项目级 ✓，因为母带是整曲决定 ✓）；
+  · **width 明确没接** ✓：`ChannelStripDsp.ts:445-447` 原文写着 “`p.width` is deliberately **not** wired here yet”
+    ✓ —— 阶段存在且有测试（`StereoWidth.ts` ✓），但**没有任何 genre 设 width** ✓；
+  · Web 侧现状 ✓：`AudioSettingsTab.tsx` 只有主音量 ✓ 与限幅器模式/前瞻 ✓（`limiterKind`/`limiterLookaheadMs` ✓
+    是组件**本地 state** ✓，并未接回引擎 ✓）；**没有任何 MCP 母带工具** ✓（`grep -niE "limiter|glue|width" mcp/registry*.ts`
+    无工具命中 ✓）。
+  ⇒ 下一轮范围 ✓：① 项目级 `master` 设置字段 + 引擎 setter（压缩阈值/膝/比/释放/makeup ✓、限幅 ceiling/释放 ✓、
+    width ✓）；② `AudioSettingsTab` 接上这些并**真的写回引擎** ✓；③ MCP 工具一个 ✓（读写整块母带设置 ✓）；
+    ④ 判据：改一处 → 引擎读到的值变 ✓ + 离线渲染输出真变 ✓（先证明量具 ✓）。
+```
