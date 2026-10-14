@@ -430,6 +430,18 @@ export class AudioEngine {
   /**
    * Initializes AudioContext safely (supports lazy activation on iOS / Safari)
    */
+  /** ⭐ The options every master graph is built with, shared by the constructor's build and the rebuild — two lists of
+   *  the same nine options would drift, and the one that drifted would be the rebuild's. */
+  private masterGraphOptions(): Parameters<typeof buildMasterGraph>[1] {
+    return {
+      analysers: true,
+      loudnessTrimDb: this.appliedLoudnessTrimDb,
+      ...masterGraphOptions(this.masterSettings),
+      busCompDetector: "internal",
+      limiterDetector: "internal",
+    };
+  }
+
   public initAudioContext(): AudioContext | null {
     if (typeof window === "undefined") return null;
 
@@ -441,15 +453,7 @@ export class AudioEngine {
           // E-17 / N-16: one shared master graph for playback and export. Chain:
           //   fader → FX rack → loudness trim → true-peak limiter → analyser taps,
           // with the reverb/delay returns summing into the fader, exactly as before.
-          const graph = buildMasterGraph(this.ctx, {
-            analysers: true,
-            loudnessTrimDb: this.appliedLoudnessTrimDb,
-            // The project's own mastering decisions, not the graph's build-time constants.
-            ...masterGraphOptions(this.masterSettings),
-            // The graph owns the detector bus (A2); the strips connect into it as they are built, below.
-            busCompDetector: "internal",
-            limiterDetector: "internal",
-          });
+          const graph = buildMasterGraph(this.ctx, this.masterGraphOptions());
           this.masterGraph = graph;
           this.masterGain = graph.masterGain;
           this.gs1Pool?.dispose();
@@ -1341,7 +1345,29 @@ export class AudioEngine {
    *  Returns what was accepted, clamped. */
   public setMasterSettings(next: unknown): MasterSettings {
     this.masterSettings = normaliseMasterSettings(next);
+    this.rebuildMasterGraph(); // apply now: `initAudioContext` early-returns, so "next build" would never come
     return this.masterSettings;
+  }
+
+  /** ⭐ Rebuilds the master chain and re-points the strips at it, because the compressors and the limiter are fixed
+   *  when a graph is built. `releaseTrackStrips` + `setupTrackStrips` is the engine's established pair (the
+   *  worklet-arrival path uses it); a voice sounding right now is cut, as `setSpatialMode` documents for its own. */
+  public rebuildMasterGraph(): void {
+    if (!this.ctx || typeof window === "undefined") return;
+    const wasPlaying = this.isPlaying;
+    if (wasPlaying) this.stop();
+    this.releaseTrackStrips();
+    this.masterGraph?.dispose();
+    this.masterGraph = buildMasterGraph(this.ctx, this.masterGraphOptions());
+    this.masterGain = this.masterGraph.masterGain;
+    this.masterLimiter = this.masterGraph.limiter;
+    this.masterFxRack = this.masterGraph.fxRack;
+    this.analyser = this.masterGraph.analyser;
+    this.masterAnalyser = this.masterGraph.masterAnalyser;
+    this.analyserL = this.masterGraph.analyserL;
+    this.analyserR = this.masterGraph.analyserR;
+    this.setupTrackStrips(Math.max(16, this.pattern?.tracks?.length || 0));
+    if (wasPlaying) void this.play();
   }
 
   public setMasterVolume(vol: number): void {

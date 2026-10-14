@@ -118,19 +118,19 @@ const FILE_CAPS: Record<string, number> = {
    * **This number may only go down from here.**
    */
   /**
-   * ⭐ **Raised 3268 → 3288 on 2026-10-14, by the owner's decision, for the mastering settings.** The owner approved
-   * 3286 for this feature; the measured result is 3288, and the two extra lines are the `AudioEngineOptions`
-   * `masterSettings` field, which the work turned out to need: the **constructor** calls `initAudioContext`, and
-   * `initAudioContext` returns early once a context exists — so a project's values are inert unless they are handed over
-   * at construction. That was found by the criterion, not assumed: the first version stored the settings and built the
-   * graph from the defaults anyway.
+   * ⭐ **Raised 3288 → 3314 on 2026-10-14, by the owner's decision, for the master-graph rebuild.** The third raise for
+   * this one feature, and the owner asked for it to be the last: the measured result is the cap, and further growth has
+   * to come from a refactor rather than another number.
    *
-   * Everything compressible was compressed first: the option mapping lives in `data/masterSettings.ts`, and the field
-   * and accessor comments are down to the shortest form that still says what the code does.
+   * The feature's net cost here is **53 lines** from v2.41.0's 3259, and each part is named: the `masterSettings` field
+   * and its accessors, the `masterGraphOptions()` extraction (which the rebuild shares, so the two builds cannot
+   * drift), and `rebuildMasterGraph()` — needed because the compressors and the limiter are fixed when a graph is
+   * built, so without it a settings panel would write values nothing reads. Every comment in those additions was
+   * compressed to its shortest honest form before each request.
    *
    * **This number may only go down from here.**
    */
-  "src/audio/AudioEngine.ts": 3288,
+  "src/audio/AudioEngine.ts": 3314,
   /**
    * ⭐ **Re-measured on 2026-10-12, when the per-render O(n²) note lookups became a Map index** (perf audit ROI #2).
    * The file grew 3241 → 3264 lines with `noteIndex` — one `useMemo` building `byCell`/`byStep`, its comment, and the

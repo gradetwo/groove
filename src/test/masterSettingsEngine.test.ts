@@ -47,6 +47,33 @@ function optionsUsed(): Record<string, unknown> {
 }
 
 describe("the engine's mastering settings", () => {
+  it("⭐ applies a change at once by rebuilding the graph, so a panel's knob is not dead", () => {
+    const engine = new AudioEngine();
+    buildMasterGraphSpy.mockClear();
+
+    engine.setMasterSettings({ limiter: { ceilingDb: -8 } });
+
+    // ⭐ The whole point: the constructor already built a graph, and `initAudioContext` early-returns, so without the
+    // rebuild this change would only take effect on a build that never comes.
+    expect(buildMasterGraphSpy, "a new graph was built").toHaveBeenCalled();
+    const used = buildMasterGraphSpy.mock.calls.at(-1)![0] as Record<string, unknown>;
+    expect(used.limiterCeilingDb, "and it was built with the new ceiling").toBe(-8);
+    expect(engine.getMasterSettings().limiter.ceilingDb).toBe(-8);
+  });
+
+  it("⭐ leaves the strips pointing at the fresh chain, so the change is heard and not just stored", () => {
+    const engine = new AudioEngine();
+    const strips = (engine as unknown as { trackStrips: unknown[] }).trackStrips;
+    const before = strips.length;
+    expect(before, "the constructor's build made strips").toBeGreaterThan(0);
+
+    engine.setMasterSettings({ busComp: { thresholdDb: -30 } });
+
+    // `releaseTrackStrips` + `setupTrackStrips` is the pair the worklet-arrival path already uses; a rebuild that
+    // dropped the second half would leave the engine silent, which is the regression this pins.
+    expect((engine as unknown as { trackStrips: unknown[] }).trackStrips.length, "the strips were remade for the new chain").toBe(before);
+  });
+
   it("⭐ builds the graph with the project's values instead of the build-time constants", () => {
     // ⭐ The settings are handed over **at construction**: the constructor is what builds the graph, and
     // `initAudioContext` returns early once a context exists — so this is the only moment that can take them.
