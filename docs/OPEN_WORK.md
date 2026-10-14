@@ -25364,3 +25364,32 @@ describe("the grid's editing actions", () => {
   （`expected +0 to be 200` ✓）—— 与 §402 记录的是**同一处、同一断言** ✓，**非本次改动引入** ✓
   （本轮改的是 `WavExporter` / `masterSettings` ✓，与手机片段模块无交集 ✓）。仍未找到污染源 ✓。
 ```
+
+### 四百零三之四：⭐ **量具已立（并且纠正了我上一轮的错误结论）**（2026-10-14 ✓）
+
+```
+**⭐ 上一轮"图在 harness 下是静音的"结论是错的 ✓，错在探针本身 ✓，必须更正 ✓。**
+  我把 `graph.output` 接到 `ctx.destination` ✓ —— 但 `graph.output` **本身就是** `ctx.destination` ✓
+  （或一个已经接到它的 analyser ✓，见 `masterGraph.ts:520,550` ✓）⇒ 多接一次把图**加倍** ✓ ⇒ 渲染回来是静音 ✓。
+  正确写法是**只**把源接到 `graph.input` ✓。实测 ✓：同一条链峰值 **1.36045** ✓（不再是 0 ✓）。
+  ⇒ 教训 ✓：**"量具显示 0"时先怀疑量具 ✓**，不要先下"物理上没信号"的结论 ✓。
+
+**⭐ 量具已立并证明 ✓（`a37b236` ✓）**：`masterGraphRenderMeasurable.test.ts` ✓ 在**真实
+  `node-web-audio-api` 离线上下文**上渲染 ✓ 并读样本 ✓（判据里自己安装 context ✓，与 Node host
+  `mcp/render/headless.ts` 同一条缝 ✓）。三条判据 ✓：
+  ① 真渲染出样本且非静音 ✓（排除"空判据" ✓）；
+  ② **可听的变化确实进到样本** ✓：`masterMakeupDb` 从 0 到 −12 ⇒ 峰值 `1.36045 → 0.35262` ✓；
+  ③ **如实记录相反的事实** ✓：`limiterCeilingDb` 取 −1 / −6 / −12 / −20 ⇒ 峰值**恒为 1.36045** ✓，
+     因为 Node 下 `graph.limiter.kind === "fallback"` ✓ ⇒ **fallback 路径不落实 ceiling** ✓。
+     所以这条判据断言的恰恰是"不变" ✓（若哪天 fallback 开始落实 ceiling ✓，这条会红 ✓ ——
+     那是"可以加强判据"的信号 ✓，不是回归 ✓）。
+
+**❌ 剩余（下一轮 ✓，依赖顺序不变 ✓）**
+  1. **"设置存哪"** ✓（MCP 工具的前置 ✓，项目级 ✓）
+  2. **面板写回引擎** ✓ —— ⚠️ 前置是**"重建母带图"** ✓：`setMasterSettings` 只对下一次建图生效 ✓，
+     而 `initAudioContext` 在 ctx 已存在时早退 ✓ ⇒ 没有重建路径的话 ✓，面板写的是"下次"的值 ✓，旋钮看起来是死的 ✓
+  3. **`ChannelStripDsp` 接上 width** ✓ —— 已量清 ✓：插入点是 `ChannelStripDsp.ts:453` 的 `const tail: AudioNode = this.output;` ✓
+     与 `:455-466` 那两个分支 ✓；注释自己写明这是"one `tail` here plus the genre it is for" ✓ 的**有意改动** ✓，
+     并记着 bundle 曾量到 220.6 KB / 上限 220 KB ✓（⚠️ 现在**没有**在跑的 bundle 体积门禁 ✓，
+     本轮 grep `scripts/` 与 `package.json` 未找到 ✓ ⇒ 若要做，需自己先量 bundle ✓）
+```
