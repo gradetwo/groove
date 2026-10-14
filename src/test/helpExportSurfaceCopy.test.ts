@@ -50,6 +50,8 @@ const SCORE = "src/components/arrangement/ScoreV2.tsx";
 const FORMATS: Array<{ id: string; source: string; labelKey: MessageKey; en: string; zh: string }> = [
   { id: "arrangement-export-midi", source: ARRANGEMENT_MENU, labelKey: "toolbar_export_midi", en: "MIDI", zh: "MIDI" },
   { id: "arrangement-export-als", source: ARRANGEMENT_MENU, labelKey: "toolbar_export_als", en: "Ableton", zh: "Ableton" },
+  { id: "arrangement-export-musicxml", source: ARRANGEMENT_MENU, labelKey: "toolbar_export_musicxml", en: "MusicXML", zh: "MusicXML" },
+  { id: "arrangement-export-logic", source: ARRANGEMENT_MENU, labelKey: "toolbar_export_logic", en: "Logic", zh: "Logic" },
   { id: "arrangement-export-groove", source: ARRANGEMENT_MENU, labelKey: "toolbar_export_groove", en: ".groove", zh: ".groove" },
   { id: "arrangement-export-wav", source: ARRANGEMENT_MENU, labelKey: "toolbar_export_wav", en: "WAV", zh: "WAV" },
   { id: "arrangement-export-mp3", source: ARRANGEMENT_MENU, labelKey: "toolbar_export_mp3", en: "MP3", zh: "MP3" },

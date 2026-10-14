@@ -41,7 +41,9 @@ import { setMcpArrangementBars, setMcpArrangementTempoMap, setMcpTrackAutomation
 import { catalogueAssetById, listSampleLibraries, nearestCatalogueAssetIds } from "./instruments";
 import { inspectSfzAt } from "./sfzInspectRemote";
 
-import { addMcpTake, setMcpTrackAsset, setMcpTrackInstrument, setMcpTrackPan, setMcpTrackParent, setMcpTrackRegion, setMcpTrackSteps } from "./arrangement";
+import { addMcpTake, setMcpTrackAsset, setMcpTrackInstrument, setMcpTrackPan,
+  setMcpTrackSends,
+  setMcpTrackInsert, setMcpTrackParent, setMcpTrackRegion, setMcpTrackSteps } from "./arrangement";
 
 import { assignMcpTakeRange, selectMcpTake, setMcpTrackCollapsed } from "./arrangement";
 
@@ -1025,6 +1027,62 @@ export const ARRANGEMENT_TOOLS: ToolDefinition[] = [
     },
   },
   {
+    name: "set_arrangement_track_sends",
+    title: "Set a track's reverb/delay sends",
+    description: "Send levels to the reverb bus (sendA) and delay bus (sendB), each 0 (dry) to 1 (full wet). Each side is optional; an omitted side is left unchanged. The MCP equivalent of the /console send knobs.",
+    readOnly: false,
+    inputSchema: {
+      arrangementId: z.string(),
+      trackId: z.string(),
+      sendA: z.number().min(0).max(1).optional().describe("reverb send, 0 dry to 1 full wet"),
+      sendB: z.number().min(0).max(1).optional().describe("delay send, 0 dry to 1 full wet"),
+    },
+    handler: (args) => {
+      try {
+        return setMcpTrackSends(String(args.arrangementId), String(args.trackId), {
+          ...(args.sendA === undefined ? {} : { sendA: Number(args.sendA) }),
+          ...(args.sendB === undefined ? {} : { sendB: Number(args.sendB) }),
+        });
+      } catch (error) {
+        return failure((error as Error).message);
+      }
+    },
+  },
+  {
+    name: "set_arrangement_track_insert",
+    title: "Set a track's EQ/compressor/drive",
+    description: "A track's insert chain (high-pass, 3-band EQ, compressor, drive) as a partial patch over the genre defaults. Only the fields present replace the default; an empty patch clears the override. EQ bands: low/high are shelves, mid is peaking. All gains in dB from −18 to +18, frequencies in Hz.",
+    readOnly: false,
+    inputSchema: {
+      arrangementId: z.string(),
+      trackId: z.string(),
+      hpfEnabled: z.boolean().optional(),
+      hpfHz: z.number().min(20).max(1000).optional(),
+      low: z.object({ enabled: z.boolean().optional(), hz: z.number().min(20).max(18000).optional(), gainDb: z.number().min(-18).max(18).optional(), q: z.number().optional() }).optional(),
+      mid: z.object({ enabled: z.boolean().optional(), hz: z.number().min(20).max(18000).optional(), gainDb: z.number().min(-18).max(18).optional(), q: z.number().optional() }).optional(),
+      high: z.object({ enabled: z.boolean().optional(), hz: z.number().min(20).max(18000).optional(), gainDb: z.number().min(-18).max(18).optional(), q: z.number().optional() }).optional(),
+      compEnabled: z.boolean().optional(),
+      compThresholdDb: z.number().optional(),
+      compRatio: z.number().min(1).max(20).optional(),
+      compAttackSec: z.number().min(0.001).max(1).optional(),
+      compReleaseSec: z.number().min(0.01).max(2).optional(),
+      compMakeupDb: z.number().min(0).max(24).optional(),
+      driveEnabled: z.boolean().optional(),
+      driveAmount: z.number().min(1).max(10).optional(),
+      driveMix: z.number().min(0).max(1).optional(),
+    },
+    handler: (args) => {
+      try {
+        const patch: Record<string, unknown> = {};
+        for (const key of ["hpfEnabled", "hpfHz", "low", "mid", "high", "compEnabled", "compThresholdDb", "compRatio", "compAttackSec", "compReleaseSec", "compMakeupDb", "driveEnabled", "driveAmount", "driveMix"] as const) {
+          if ((args as any)[key] !== undefined) patch[key] = (args as any)[key];
+        }
+        return setMcpTrackInsert(String(args.arrangementId), String(args.trackId), patch as any);
+      } catch (error) {
+        return failure((error as Error).message);
+      }
+    },
+  },  {
     name: "set_arrangement_region",
     title: "Place a track's region, or change its length",
     description:

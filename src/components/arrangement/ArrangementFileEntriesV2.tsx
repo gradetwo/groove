@@ -12,7 +12,7 @@
  * than fighting for it.
  */
 import { memo, useEffect, useRef, useState } from "react";
-import { ChevronDown, Download, FileAudio, FolderKanban, Layers, Loader2, Package, Upload } from "lucide-react";
+import { AudioLines, ChevronDown, Download, FileAudio, FileText, FolderKanban, Layers, Loader2, Package, Upload } from "lucide-react";
 import { useLanguage } from "../../i18n/LanguageContext";
 
 /** ⭐ `m:ss` left, from the fraction and the elapsed seconds the renderer's own callback carries. */
@@ -28,6 +28,8 @@ export interface ArrangementFileEntriesV2Props {
   busy?: boolean;
   onExportMidi: () => void;
   onExportAls: () => void;
+  onExportMusicXml?: () => void;
+  onExportLogic?: () => void;
   onExportGroove: () => void;
   onExportWav: () => void;
   onExportMp3: () => void;
@@ -54,6 +56,8 @@ export const ArrangementFileEntriesV2 = memo(function ArrangementFileEntriesV2({
   busy = false,
   onExportMidi,
   onExportAls,
+  onExportMusicXml,
+  onExportLogic,
   onExportGroove,
   onExportWav,
   onExportMp3,
@@ -156,6 +160,24 @@ onImportFile,
                   <span className="text-[10px] text-text-dim">{t("arrangement_export_hint_als")}</span>
                 </div>
               </button>
+              {onExportMusicXml && (
+              <button type="button" data-testid="arrangement-export-musicxml" onClick={run(onExportMusicXml)} className={ITEM}>
+                <FileText className="h-3.5 w-3.5 shrink-0 text-[#34d399]" />
+                <div className="flex flex-col">
+                  <span className="font-medium text-text">{t("toolbar_export_musicxml")}</span>
+                  <span className="text-[10px] text-text-dim">{t("arrangement_export_hint_musicxml")}</span>
+                </div>
+              </button>
+              )}
+              {onExportLogic && (
+              <button type="button" data-testid="arrangement-export-logic" onClick={run(onExportLogic)} className={ITEM}>
+                <AudioLines className="h-3.5 w-3.5 shrink-0 text-[#f472b6]" />
+                <div className="flex flex-col">
+                  <span className="font-medium text-text">{t("toolbar_export_logic")}</span>
+                  <span className="text-[10px] text-text-dim">{t("arrangement_export_hint_logic")}</span>
+                </div>
+              </button>
+              )}
               <button type="button" data-testid="arrangement-export-groove" onClick={run(onExportGroove)} className={ITEM}>
                 <FolderKanban className="h-3.5 w-3.5 shrink-0 text-accent" />
                 <div className="flex flex-col">

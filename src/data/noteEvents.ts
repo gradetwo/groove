@@ -214,6 +214,23 @@ export function setNoteVelocity(
   );
 }
 
+/**
+ * Set the sung syllable on one note. An empty string clears it back to
+ * unsung. Identified by pitch + start position, like velocity and length.
+ */
+export function setNoteSyllable(
+  notes: readonly NoteEvent[],
+  at: { pitch: number; startBeats: number },
+  syllable: string
+): NoteEvent[] {
+  const trimmed = syllable.trim().slice(0, 8);
+  return notes.map((note) =>
+    note.pitch === at.pitch && sameGridPosition(note, { pitch: at.pitch, startBeats: at.startBeats } as NoteEvent)
+      ? trimmed === "" ? { ...note, syllable: undefined } : { ...note, syllable: trimmed }
+      : note
+  );
+}
+
 export function setNoteLength(
   notes: readonly NoteEvent[],
   at: { pitch: number; startBeats: number },

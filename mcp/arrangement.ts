@@ -51,6 +51,8 @@ import {
   setTrackNoteVelocity,
   setTrackPan,
   setTrackParent,
+  setTrackSends,
+  setTrackInsert,
   setTrackRegion,
   setTrackSample,
   setTrackSteps,
@@ -59,6 +61,7 @@ import {
   varyArrangementNotes,
   setTrackInstrument,
 } from "../src/data/arrangementEdits";
+import type { TrackInsertPatch } from "../src/data/trackInsert";
 import type { ArrangementV2, NoteEvent, TrackKindV2, TrackV2 } from "../src/types/arrangementV2";
 import type { PlannedTake } from "../src/data/takePlanning";
 import { flattenArrangementV2, laneInstrumentForTrack, laneRoleForTrack } from "../src/data/arrangementCompile";
@@ -337,6 +340,8 @@ function summariseTrack(track: TrackV2, arrangement: ArrangementV2): Arrangement
     collapsed: track.collapsed === true,
     ...(track.gainDb === undefined ? {} : { gainDb: track.gainDb }),
     ...(track.pan === undefined ? {} : { pan: track.pan }),
+    ...(track.sendA === undefined ? {} : { sendA: track.sendA }),
+    ...(track.sendB === undefined ? {} : { sendB: track.sendB }),
     ...(track.parentId ? { parentId: track.parentId } : {}),
     ...(track.sample ? { sampleAssetId: track.sample.assetId } : {}),
     sound: soundForTrack(track),
@@ -1650,6 +1655,37 @@ export function setMcpTrackAutomation(
 
 export function setMcpTrackPan(arrangementId: string, trackId: string, pan: number): ArrangementEditResult {
   return edit(arrangementId, (arrangement) => refuseUnknownTrack(arrangement, trackId, () => setTrackPan(arrangement, trackId, pan)));
+}
+
+/**
+ * A track's send levels to the reverb (A) and delay (B) buses, 0..1.
+ * Each side is optional; an omitted side is left unchanged. This is the
+ * MCP equivalent of the `/console` send knobs — the mix decision an agent
+ * makes here is stored on the track and honoured by the renderer.
+ */
+export function setMcpTrackSends(
+  arrangementId: string,
+  trackId: string,
+  sends: { sendA?: number; sendB?: number }
+): ArrangementEditResult {
+  return edit(arrangementId, (arrangement) =>
+    refuseUnknownTrack(arrangement, trackId, () => setTrackSends(arrangement, trackId, sends))
+  );
+}
+
+/**
+ * A track's insert-chain override (EQ / compressor / drive), as a partial patch
+ * over the genre defaults. Only the fields present replace the default; an empty
+ * patch clears the override. This is the MCP equivalent of per-track EQ knobs.
+ */
+export function setMcpTrackInsert(
+  arrangementId: string,
+  trackId: string,
+  patch: TrackInsertPatch
+): ArrangementEditResult {
+  return edit(arrangementId, (arrangement) =>
+    refuseUnknownTrack(arrangement, trackId, () => setTrackInsert(arrangement, trackId, patch))
+  );
 }
 
 /** Folding a folder. Display only, which the tool's own description repeats because a client reads that and not this. */

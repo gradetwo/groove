@@ -1,7 +1,7 @@
 import { DEFAULT_SAMPLER_ASSET } from "../data/defaultContent";
 import type { ArrangementV2 } from "../types/arrangementV2";
 import { beforeEach, describe, expect, it } from "vitest";
-import { addTake, addTrack, addTrackNote, addTrackNotes, changeTrackKind, createArrangement, moveTrackNote, removeTrack, removeTrackNote, resetTrackIdsForTests, setArrangementTempoMap, setTrackAutomation, setTrackFlag, setTrackGain, setTrackNoteLength, setTrackPan, setTrackParent, setTrackSample, setTrackSteps, toggleStep } from "../data/arrangementEdits";
+import { addTake, addTrack, addTrackNote, addTrackNotes, changeTrackKind, createArrangement, moveTrackNote, removeTrack, removeTrackNote, resetTrackIdsForTests, setArrangementTempoMap, setTrackAutomation, setTrackFlag, setTrackGain, setTrackNoteLength, setTrackPan, setTrackParent, setTrackSends, setTrackInsert, setTrackSample, setTrackSteps, toggleStep } from "../data/arrangementEdits";
 import { setTrackAutomationCommand } from "../data/arrangementHistory";
 import type { AutomationLane } from "../data/automation";
 
@@ -468,6 +468,55 @@ describe("changing a track's kind", () => {
     const id = added.tracks[0]!.id;
     const withTrack = setTrackSample(added, id, "salamander-grand");
     expect(changeTrackKind(withTrack, id, "drumkit").tracks[0]!.sample).toBeUndefined();
+  });
+});
+
+describe("a track's sends to the reverb/delay buses", () => {
+  it("sets sendA/sendB independently, each side optional", () => {
+    const withTrack = addTrack(emptyArrangement(), "synth", "Keys");
+    const id = withTrack.tracks[0]!.id;
+    const both = setTrackSends(withTrack, id, { sendA: 0.5, sendB: 0.25 });
+    expect(both.tracks[0]!.sendA).toBe(0.5);
+    expect(both.tracks[0]!.sendB).toBe(0.25);
+    // Omitted side is left unchanged
+    const oneSide = setTrackSends(both, id, { sendA: 0.8 });
+    expect(oneSide.tracks[0]!.sendA).toBe(0.8);
+    expect(oneSide.tracks[0]!.sendB).toBe(0.25);
+  });
+
+  it("clamps to 0..1, the range the mixer honours", () => {
+    const withTrack = addTrack(emptyArrangement(), "synth", "Keys");
+    const id = withTrack.tracks[0]!.id;
+    const clamped = setTrackSends(withTrack, id, { sendA: 2, sendB: -1 });
+    expect(clamped.tracks[0]!.sendA).toBe(1);
+    expect(clamped.tracks[0]!.sendB).toBe(0);
+  });
+});
+
+describe("a track's insert-chain override", () => {
+  it("stores a partial patch over genre defaults", () => {
+    const withTrack = addTrack(emptyArrangement(), "synth", "Keys");
+    const id = withTrack.tracks[0]!.id;
+    const patched = setTrackInsert(withTrack, id, { mid: { gainDb: -3, hz: 800 } });
+    expect(patched.tracks[0]!.insert).toEqual({ mid: { gainDb: -3, hz: 800 } });
+  });
+
+  it("empty patch clears the override", () => {
+    const withTrack = addTrack(emptyArrangement(), "synth", "Keys");
+    const id = withTrack.tracks[0]!.id;
+    const patched = setTrackInsert(withTrack, id, { compEnabled: true });
+    expect(patched.tracks[0]!.insert).toBeDefined();
+    const cleared = setTrackInsert(patched, id, {});
+    expect(cleared.tracks[0]!.insert).toBeUndefined();
+  });
+
+  it("does not alias the caller's patch object", () => {
+    const withTrack = addTrack(emptyArrangement(), "synth", "Keys");
+    const id = withTrack.tracks[0]!.id;
+    const patch = { low: { gainDb: 2 } };
+    const result = setTrackInsert(withTrack, id, patch);
+    patch.low.gainDb = 99;
+    expect(result.tracks[0]!.insert?.low?.gainDb).toBe(2);
   });
 });
 

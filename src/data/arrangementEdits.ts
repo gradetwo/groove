@@ -12,7 +12,8 @@ import { normaliseTrackRegion, regionBars, sameTrackRegion } from "./arrangement
 import { stepCountFor, stepsPerBarFor } from "./noteEvents";
 import type { PlannedTake } from "./takePlanning";
 import { DEFAULT_SAMPLER_ASSET, defaultContentFor, type DefaultContent } from "./defaultContent";
-import { addNote, moveNote, notesFromSteps, removeNote, setNoteLength, setNoteVelocity, stepsFromNotes, STEPS_PER_BEAT } from "./noteEvents";
+import { addNote, moveNote, notesFromSteps, removeNote, setNoteLength, setNoteSyllable, setNoteVelocity, stepsFromNotes, STEPS_PER_BEAT } from "./noteEvents";
+import type { TrackInsertPatch } from "./trackInsert";
 import { chordVoicingForStep } from "../audio/chordVoicing";
 
 let nextId = 1;
@@ -474,6 +475,62 @@ export function setTrackPan(arrangement: ArrangementV2, trackId: string, pan: nu
   };
 }
 
+/**
+ * A track's send levels to the reverb (A) and delay (B) buses, 0..1.
+ * Each side is optional; an omitted side is left unchanged. Values are
+ * clamped to the range the mixer honours, mirroring the console's knobs.
+ */
+export function setTrackSends(
+  arrangement: ArrangementV2,
+  trackId: string,
+  sends: { sendA?: number; sendB?: number }
+): ArrangementV2 {
+  const clamp01 = (v: number) => Math.max(0, Math.min(1, v));
+  return {
+    ...arrangement,
+    tracks: arrangement.tracks.map((track) =>
+      track.id === trackId
+        ? {
+            ...track,
+            ...(sends.sendA === undefined ? {} : { sendA: clamp01(sends.sendA) }),
+            ...(sends.sendB === undefined ? {} : { sendB: clamp01(sends.sendB) }),
+          }
+        : track
+    ),
+  };
+}
+
+/**
+ * Set a track's insert-chain override (EQ / compressor / drive).
+ * A partial patch: only the fields present replace the genre default.
+ * An empty patch clears the override back to genre defaults.
+ * Values are clamped to the documented bounds in `trackInsert.ts`.
+ */
+export function setTrackInsert(
+  arrangement: ArrangementV2,
+  trackId: string,
+  patch: TrackInsertPatch
+): ArrangementV2 {
+  const clean: TrackInsertPatch = {};
+  // Shallow-clone only defined fields; deep-clone band patches to avoid aliasing.
+  for (const key of ["hpfEnabled", "hpfHz", "compEnabled", "compThresholdDb", "compRatio", "compAttackSec", "compReleaseSec", "compMakeupDb", "driveEnabled", "driveAmount", "driveMix", "width"] as const) {
+    if (patch[key] !== undefined) (clean as any)[key] = patch[key];
+  }
+  for (const band of ["low", "mid", "high"] as const) {
+    if (patch[band] !== undefined) clean[band] = { ...patch[band] };
+  }
+  return {
+    ...arrangement,
+    tracks: arrangement.tracks.map((track) =>
+      track.id === trackId
+        ? Object.keys(clean).length === 0
+          ? { ...track, insert: undefined }
+          : { ...track, insert: clean }
+        : track
+    ),
+  };
+}
+
 export function setCollapsed(arrangement: ArrangementV2, trackId: string, collapsed: boolean): ArrangementV2 {
   return { ...arrangement, tracks: arrangement.tracks.map((track) => (track.id === trackId ? { ...track, collapsed } : track)) };
 }
@@ -623,6 +680,12 @@ export function moveTrackNote(
 export function setTrackNoteVelocity(arrangement: ArrangementV2, trackId: string, at: { pitch: number; startBeats: number }, velocity: number): ArrangementV2 {
   const notes = arrangement.notesByTrack?.[trackId] ?? [];
   return { ...arrangement, notesByTrack: { ...(arrangement.notesByTrack ?? {}), [trackId]: setNoteVelocity(notes, at, velocity) } };
+}
+
+/** Set the sung syllable on one note of a track. Empty clears it. */
+export function setTrackNoteSyllable(arrangement: ArrangementV2, trackId: string, at: { pitch: number; startBeats: number }, syllable: string): ArrangementV2 {
+  const notes = arrangement.notesByTrack?.[trackId] ?? [];
+  return { ...arrangement, notesByTrack: { ...(arrangement.notesByTrack ?? {}), [trackId]: setNoteSyllable(notes, at, syllable) } };
 }
 
 /** Change how long a note is held. A note shorter than a step is not visible in the grid, so one step is the floor. */

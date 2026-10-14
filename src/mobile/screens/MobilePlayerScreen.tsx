@@ -91,13 +91,23 @@ export function MobilePlayerScreen(props: MobilePlayerScreenProps) {
   const { genreId } = props;
   const [genre, setGenre] = useState<Genre | null>(null);
   const [status, setStatus] = useState<"loading" | "ready" | "missing">("loading");
+  /**
+   * Once any record has resolved, keep it mounted while the next genre loads.
+   * Switching genres used to clear the record and render the `m-rise` loading
+   * frame, whose animation starts at opacity 0 — on the dark ground the whole
+   * screen flashed black (mobile, 2026-10-14). The loading frame now appears
+   * only when there is nothing to hold (first mount, or after a "missing"
+   * record). PlayerForGenre re-keys its bpm/elapsed state on genre.id, so the
+   * swap is clean.
+   */
+  const hasContentRef = useRef(false);
 
   useEffect(() => {
     let alive = true;
-    setStatus("loading");
-    setGenre(null);
+    if (!hasContentRef.current) setStatus("loading");
     void loadGenre(genreId).then((record) => {
       if (!alive) return;
+      if (record) hasContentRef.current = true;
       setGenre(record);
       setStatus(record ? "ready" : "missing");
     });

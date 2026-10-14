@@ -49,6 +49,12 @@ const EXPOSED: Record<string, string> = {
   setArrangementTempoMap: "set_arrangement_tempo_map",
   setArrangementTimeSignature: "set_arrangement_time_signature",
   setTrackPan: "set_arrangement_track_pan",
+  // The mix decisions the /console knobs make, reachable from the protocol: sends to the two buses, and the
+  // per-track insert chain (high-pass, three EQ bands, compressor, drive).
+  setTrackSends: "set_arrangement_track_sends",
+  setTrackInsert: "set_arrangement_track_insert",
+  // Binding a lyric to the note it is sung on — the Web entry is the lyrics panel, the protocol entry is this.
+  setTrackNoteSyllable: "set_arrangement_vocal_melody",
   setTrackNoteVelocity: "set_arrangement_note_velocity",
   addTake: "add_arrangement_take",
   selectTrackTake: "select_arrangement_take",

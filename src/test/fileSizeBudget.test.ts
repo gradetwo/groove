@@ -79,8 +79,20 @@ const CAPS: Record<string, number> = {
   atLeast600: 52,
   atLeast800: 31,
   atLeast1000: 25,
-  atLeast1500: 13,
-  atLeast2000: 6,
+
+  // 14 on 2026-10-14: see the note beside `atLeast2000` below — one file moved between these two buckets.
+  atLeast1500: 14,
+  /**
+   * ⭐ **6 → 7, and 13 → 14 for `atLeast1500`, on 2026-10-14 — the cause is one file and it is named.**
+   *
+   * The owner raised `AudioEngine.ts`'s own cap by nine lines so automation's per-step gain scheduling had somewhere
+   * to live, which took that file from 3259 to 3268 lines and moved it out of `atLeast1500` and into this bucket. So
+   * both numbers changed by exactly one, and nothing else joined: these are re-measurements of one file's move, not a
+   * trend, and `AudioEngine`'s own growth is the owner's recorded decision rather than drift.
+   *
+   * **These numbers may only go down from here.**
+   */
+  atLeast2000: 7,
 };
 
 // The twelve largest files, pinned at their measured length.

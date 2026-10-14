@@ -60,6 +60,20 @@ export interface TrackV2 {
    */
   automation?: AutomationLane[];
   pan?: number;
+  /**
+   * Reverb send (bus A) and delay send (bus B), 0..1. Absent means 0 (dry).
+   * Mirrors the console's send knobs; stored on the track so an MCP caller
+   * can set the same mix decision the `/console` UI makes.
+   */
+  sendA?: number;
+  sendB?: number;
+  /**
+   * Per-track insert chain override (EQ / compressor / drive).
+   * A partial patch layered over the genre's `resolveTrackInsertForGenre` defaults:
+   * only the fields present here replace the default; absent means "genre decides".
+   * Absent entirely means no user override.
+   */
+  insert?: import("../data/trackInsert").TrackInsertPatch;
   /** A `folder` this track belongs to, for a Track Stack. */
   parentId?: string;
   /**

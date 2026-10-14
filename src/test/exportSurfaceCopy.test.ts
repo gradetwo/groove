@@ -36,6 +36,10 @@ const read = (rel: string) => readFileSync(path.join(ROOT, rel), "utf8");
 const FORMATS: Array<{ id: string; source: string; prose: string }> = [
   { id: "arrangement-export-midi", source: "src/components/arrangement/ArrangementFileEntriesV2.tsx", prose: "MIDI" },
   { id: "arrangement-export-als", source: "src/components/arrangement/ArrangementFileEntriesV2.tsx", prose: "Ableton" },
+  // ⭐ MusicXML and Logic joined the arrangement menu, and both are project exports a person can pick there. MusicXML
+  // also keeps its score-view button (`score-export-musicxml`), which is the same format from the place a score is read.
+  { id: "arrangement-export-musicxml", source: "src/components/arrangement/ArrangementFileEntriesV2.tsx", prose: "MusicXML" },
+  { id: "arrangement-export-logic", source: "src/components/arrangement/ArrangementFileEntriesV2.tsx", prose: "Logic" },
   { id: "arrangement-export-groove", source: "src/components/arrangement/ArrangementFileEntriesV2.tsx", prose: ".groove" },
   { id: "arrangement-export-wav", source: "src/components/arrangement/ArrangementFileEntriesV2.tsx", prose: "WAV" },
   { id: "arrangement-export-mp3", source: "src/components/arrangement/ArrangementFileEntriesV2.tsx", prose: "MP3" },

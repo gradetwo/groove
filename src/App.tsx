@@ -376,7 +376,10 @@ const MainApp: React.FC = () => {
           onOpenPlayer={(genre) => navigate({ mobileShell: true, mobilePlayer: true, genreId: genre })}
           onCollapsePlayer={() => navigate({ mobileShell: true, mobilePlayer: false })}
           onOpenGenre={(genre) => navigate({ mobileShell: true, genreId: genre })}
-          onCloseGenre={() => navigate({ mobileShell: true })}
+          // 2026-10-14 (mobile): navigate MERGES ({...prev, ...next}), so omitting
+          // genreId kept the old one and the detail page never closed (dead back
+          // button). Passing it explicitly as undefined clears it.
+          onCloseGenre={() => navigate({ mobileShell: true, genreId: undefined })}
           onOpenSettings={() => setSettingsOpen(true)}
           onOpenUpdates={() => setUpdatesOpen(true)}
           onOpenHelp={() => setHelpOpen(true)}

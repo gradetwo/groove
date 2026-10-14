@@ -107,6 +107,11 @@ const UI_LEDGER: Record<string, Ruling> = {
     reason:
       "Census G4. A track in the arrangement cannot be renamed from the interface at all: `TrackHeaderV2.tsx` only reads `track.name` (:97 aria-label, :295 trackName) and the track list's own comment names `renameTrack` among the functions it uses while the component never calls it. The MCP tool `rename_arrangement_track` reaches it, which is why `mcpCoverage` is green. Wiring it up needs a command shell in `src/data/arrangementHistory.ts` — inside the read-only `src/data/**` this round is not allowed to touch — so the owner has to rule first.",
   },
+  setTrackSends: {
+    status: "pending-owner-ruling",
+    reason:
+      "The console's send knobs write the sequencer store's own `SET_TRACK_SENDS` (`ConsolePanel.tsx:298-299`) against `pattern.tracks[idx].sendA`, while this function writes `TrackV2.sendA` — the field the arrangement model, the MCP tool `set_arrangement_track_sends` and the compiled lane read. The two models are live at once here, so wiring this up is a question about which one owns a mix decision rather than a missing button, and the owner has to rule first. `mcpCoverage` is green because the protocol tool reaches it.",
+  },
   setTrackParent: {
     status: "pending-owner-ruling",
     reason:

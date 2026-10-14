@@ -92,6 +92,7 @@ import { useLanguage } from "../../i18n/LanguageContext";
 import { NewProjectPanelV2 } from "./NewProjectPanelV2";
 import { KIND_LABEL_KEY, TRACK_KIND_ORDER } from "./kindLabels";
 import { ArrangementFileEntriesV2 } from "./ArrangementFileEntriesV2";
+import { VocalLyricsPanelV2 } from "./VocalLyricsPanelV2";
 import { ImportInstrumentMappingV2 } from "./ImportInstrumentMappingV2";
 import { useArrangementFileActions } from "../../features/arrangement/useArrangementFileActions";
 import { playArrangementV2, type ArrangementPlayer, type ArrangementTransportState } from "../../audio/playArrangementV2";
@@ -1869,6 +1870,8 @@ export function ArrangementViewV2({ currentSong, songId, capture, bar = 0, playe
           busy={files.busy}
           onExportMidi={files.exportMidi}
           onExportAls={files.exportAls}
+          onExportMusicXml={files.exportMusicXml}
+          onExportLogic={files.exportLogic}
           onExportGroove={files.exportGroove}
           onExportWav={files.exportWav}
           onExportMp3={files.exportMp3}
@@ -1880,6 +1883,18 @@ export function ArrangementViewV2({ currentSong, songId, capture, bar = 0, playe
           onCancelExport={files.cancelExport}
         />
         </span>
+        {/** Lyrics editor for the selected track — the Web entry for vocal melody binding. */}
+        {editableTrackId && (
+        <span className="relative flex items-center gap-1">
+          <VocalLyricsPanelV2
+            arrangement={arrangement}
+            trackId={editableTrackId}
+            trackName={arrangement.tracks.find((tr) => tr.id === editableTrackId)?.name ?? editableTrackId}
+            commit={commit}
+            t={t}
+          />
+        </span>
+        )}
       </div>
 
       {/**

@@ -644,7 +644,7 @@
 /*
  * The literal map: the desktop's hardcoded hexes, by role.
  *
- * 595 rules, generated from the literals the source actually uses. Because each rule names a
+ * 596 rules, generated from the literals the source actually uses. Because each rule names a
  * **token**, the same rules serve all six skins — the skin decides what the token resolves to. The few
  * near-duplicate grounds and inks in the default theme therefore converge onto one value each, which is
  * what "the same palette on both surfaces" means in practice.
@@ -847,6 +847,8 @@
 [class~="hover:text-[#fbbf24]/80"]:hover { color: rgb(var(--d-accent-ink) / 0.80); }
 [class~="bg-[#fbbf24]"] { background-color: rgb(var(--d-accent)); }
 [class~="text-[#fbbf24]"] { color: rgb(var(--d-accent-ink)); }
+[class~="text-[#34d399]"] { color: rgb(var(--d-cat-electronic)); }
+[class~="text-[#f472b6]"] { color: rgb(var(--d-cat-pop)); }
 [class~="bg-[#0c0e12]"] { background-color: rgb(var(--d-panel2)); }
 [class~="border-[#b0b3ba]"] { border-color: rgb(var(--d-track-fx)); }
 [class~="bg-[#0e1117]"] { background-color: rgb(var(--d-panel)); }
@@ -905,7 +907,6 @@
 [class~="bg-[#0c0e16]"] { background-color: rgb(var(--d-panel2)); }
 [class~="bg-[#181c2b]"] { background-color: rgb(var(--d-surface)); }
 [class~="hover:bg-[#202538]"]:hover { background-color: rgb(var(--d-surface)); }
-[class~="text-[#f472b6]"] { color: rgb(var(--d-cat-pop)); }
 [class~="bg-[#0e101a]/95"] { background-color: rgb(var(--d-panel) / 0.95); }
 [class~="bg-[#0a0c14]/95"] { background-color: rgb(var(--d-panel2) / 0.95); }
 [class~="to-[#0a0c14]"] { --tw-gradient-to: rgb(var(--d-panel2)); }

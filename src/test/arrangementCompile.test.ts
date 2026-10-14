@@ -68,4 +68,27 @@ describe("compiling a v2 arrangement into engine lanes", () => {
     expect(lead!.gs1Patch).toBeUndefined();
     expect(lead!.gs1PatchOverrides).toBeUndefined();
   });
+
+  it("carries a track's send levels onto its lane, so the renderer can hear them", () => {
+    /**
+     * ⭐ **The field has to cross the compile or it is a value nothing hears.**
+     * `set_arrangement_track_sends` writes `sendA`/`sendB` on the arrangement track;
+     * `deriveTrackStates` and the `WavExporter` read them off the **lane**. The compile
+     * is the only bridge, and it used to drop both (the tool's value was stored but
+     * rendered at 0). A track that states no sends must compile to exactly the lane
+     * it always did, so both halves are pinned here.
+     */
+    const lanes = compileArrangementToLanes(
+      arr(
+        { id: "wet", kind: "synth", name: "Wet", fromTrackId: "wet", instrument: "warm_pad", sendA: 0.6, sendB: 0.25 },
+        { id: "dry", kind: "synth", name: "Dry", fromTrackId: "dry", instrument: "warm_pad" }
+      )
+    );
+    const [wet, dry] = lanes.map((lane) => lane.track);
+    expect(wet!.sendA).toBe(0.6);
+    expect(wet!.sendB).toBe(0.25);
+    // Absent fields stay absent: a track that states no sends does not gain them.
+    expect(dry!.sendA).toBeUndefined();
+    expect(dry!.sendB).toBeUndefined();
+  });
 });

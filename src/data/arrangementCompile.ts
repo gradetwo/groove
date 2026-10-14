@@ -20,6 +20,7 @@ import type { ArrangementV2, NoteEvent, TrackV2 } from "../types/arrangementV2";
 import { samplePerStep } from "./automation";
 import { STEPS_PER_BAR, STEP_BEATS, stepsFromNotes, stackFromNotes, stepCountFor, stepsPerBarFor } from "./noteEvents";
 import { requireTrackKind } from "./arrangementEdits";
+import { applyInsertPatch, resolveTrackInsertForGenre } from "./genreInsert";
 import { sampledAssetForLane } from "./sampledInstruments";
 import { flattenSong } from "./songFlatten";
 import type { Song } from "../types/song";
@@ -238,12 +239,40 @@ export function compileArrangementToLanes(arrangement: ArrangementV2, notes: Not
         })(),
         ...(typeof track.pan === "number" && Number.isFinite(track.pan) ? { pan: Math.max(-1, Math.min(1, track.pan)) } : {}),
         /**
+         * ⭐ **The track's send levels travel with the lane, or the render cannot honour them.**
+         *
+         * `set_arrangement_track_sends` writes `sendA`/`sendB` onto the arrangement
+         * track; without this carry the compiled lane drops both and `deriveTrackStates`
+         * falls back to 0 — the tool's value would be stored but never heard, the same
+         * omission gain/pan/mute/solo each had before they got their own carry block.
+         * Spread only when stated, so a track with no sends compiles to exactly the
+         * lane it always did (and the exporter's own genre-default lookup is untouched).
+         */
+        ...(typeof track.sendA === "number" && Number.isFinite(track.sendA)
+          ? { sendA: Math.max(0, Math.min(1, track.sendA)) }
+          : {}),
+        ...(typeof track.sendB === "number" && Number.isFinite(track.sendB)
+          ? { sendB: Math.max(0, Math.min(1, track.sendB)) }
+          : {}),
+        /**
          * ⭐ **Mute and solo travel too, for the same reason as the level above.** They were dropped by the same omission, so a muted arrangement track was
          * rendered anyway — and on the audio path in particular the early return used to sit above the renderer's mute check, so a muted lane was mixed *and*
          * listed as rendered. Spread only when true, so an unmuted lane compiles to exactly the lane it always did.
          */
         ...(track.muted ? { mute: true } : {}),
         ...(track.soloed ? { solo: true } : {}),
+        /**
+         * ⭐ **The track's insert-chain override travels too.** `track.insert` is a partial
+         * patch over the genre default; `applyInsertPatch` merges them so the lane carries
+         * the full resolved params the `ChannelStrip` reads. Spread only when the user
+         * actually overrode something, so a track with no override compiles to exactly
+         * the lane it always did (and the exporter's own genre-default lookup still applies).
+         */
+        ...(() => {
+          if (!track.insert || Object.keys(track.insert).length === 0) return {};
+          const base = resolveTrackInsertForGenre(trackId, undefined);
+          return { insert: applyInsertPatch(base, track.insert) };
+        })(),
       } as SequencerTrack,
     });
   }
