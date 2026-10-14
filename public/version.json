@@ -1,23 +1,23 @@
 {
-  "version": "2.44.0",
+  "version": "2.45.0",
   "releaseDate": "2026-10-14",
   "changelogCount": 10,
   "latest": {
-    "version": "2.44.0",
+    "version": "2.45.0",
     "date": "2026-10-14",
     "category": "feature",
     "title": {
-      "zh": "效果机架跟着编排走：界面与协议都能改，且渲染真的带上",
-      "en": "The effect rack follows the arrangement — editable in the UI and over the protocol, and carried into a render"
+      "zh": "EQ 各频段的增益/频率/Q 也能画包络了",
+      "en": "An EQ band's gain, frequency and Q can now be drawn as envelopes"
     },
     "highlights": [
       {
-        "zh": "set_arrangement_effects 增加 rack：滤波 cutoff/Q/type、饱和 drive、合唱 mix/rate、位深，部分补丁、越界钳位。只改一个阶段不会重置其它阶段。",
-        "en": "set_arrangement_effects now takes a rack: filter cutoff/Q/type, saturation drive, chorus mix/rate and bit depth — a partial patch, clamped, where naming one stage leaves the others as the genre left them."
+        "zh": "自动化补齐 insert 链：低/中/高各频段的 gainDb、hz、q 共九项都能画包络，量程与面板滑杆同源（±18 dB、20–18000 Hz、Q 0.2–12）。",
+        "en": "Automation now covers the insert chain: gainDb, hz and q for each of the three EQ bands — nine fields — on the same ranges the panel's sliders use (±18 dB, 20–18000 Hz, Q 0.2–12)."
       },
       {
-        "zh": "修掉一个会静默丢设置的缺陷：界面的机架旋钮只推给引擎、没有存储，genre 变更或重载就会把它改回去。现在写入编排并与协议同一份存储。",
-        "en": "One silent defect fixed: the interface's rack knobs pushed values at the engine and stored nothing, so a genre change or a reload rewrote them. They now store on the arrangement, the same place the protocol writes."
+        "zh": "曲线画在已旁通的频段上会自动打开该频段（否则听不到，会让人以为功能坏了）；调度直接写 AudioParam，不会每步重建路由。",
+        "en": "A curve drawn on a bypassed band switches that band on — otherwise it would be inaudible and read as broken. The value is scheduled straight at the AudioParam, so routing is not rebuilt on every step."
       }
     ],
     "truncated": false
