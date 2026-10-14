@@ -25610,3 +25610,36 @@ GlueCompressor 等已有 DSP 的编辑与使用路径 ✓。
 
 **❌ 唯一未做：清单第 2 条（EffectsRack 的 MCP 入口）** ✓ —— 前置决定见上 ✓。
 ```
+
+## 四百零六、🎚️ **EffectsRack 归编排（业主决定）+ MCP 渲染消费它 —— 已发布 v2.44.0**（2026-10-14 ✓）
+
+```
+**业主决定 ✓（原话）**："就按每编排存储，和母带/effects 一致。EffectsRack 跟着编排走，不跟项目。
+  MCP 渲染路径消费编排里的 EffectsRack。" ✓
+
+**核实到的现状 ✓（决定了工作量）**
+  · Web **已经有**机架控件 ✓：`ArrangementViewV2.tsx:444-472`（7 个连续参数 + 4 个开关 ✓，`patchEffectsRack` ✓）。
+  · 但它们**只推给引擎、什么都不存** ✓ ⇒ genre 变更或重载会按 genre 档重写它 ✓
+    ⇒ **旋钮看起来有效、值却会变回来** ✓ —— 这是本轮修掉的真缺陷 ✓。
+  · `effectsRack` 原本只存在 **`GrooveProject`（项目级）** ✓，而 **MCP 渲染路径完全不消费它** ✓。
+  · 四个 rack setter（`setFilter/Saturation/Chorus/Bitcrusher`）**都是实时的** ✓ ⇒ 与总线一样，改动立即生效 ✓。
+
+**已做 ✓（`2347d7d` ✓）**
+  · rack 作为**第三块**并入 `data/effectsOverrides.ts` ✓（与 reverb/delay 同类：对 genre 档的补丁 ✓）：
+    上下界用 rack 自己文档的区间 ✓、未知键丢弃 ✓、四个阶段走**与 `applyGenreFxToGraph` 相同的 setter** ✓
+    （否则"一个 rack 状态意味着什么"会有第二份实现 ✓，项目补丁与 genre 档迟早会不一致 ✓）。
+  · ⭐ **要紧的是合并、不是写入** ✓：每个 setter 收**整个阶段** ✓ ⇒ 一个只提饱和器的补丁若给滤波三个字段传
+    `undefined`，就会**把滤波关掉** ✓ —— 这是"看起来成功"的失败 ✓（机架报告"饱和开" ✓，而 genre 要的滤波已静默消失 ✓）。
+    每次调用都取"补丁覆盖在当前值之上" ✓，并有判据断言**每个未命名的阶段原样不动** ✓。
+  · `set_arrangement_effects` 增加 `rack` 对象 ✓；渲染路径本来就携带 `effectsOverrides` ✓ ⇒
+    rack 与总线一起到达 `buildMasterGraph` ✓，无需新开一条线程 ✓。
+  · ⭐ 界面**把所应用的存下来** ✓：改走 `setEffectsOverrides` ✓，并经新增 `mergeEffectsOverrides` 合并 ✓
+    （否则一次机架微调会**顺手丢掉混响** ✓）；为支持该合并新增 `getEffectsOverrides` ✓。
+  · 判据 ✓：`effectsOverridesEngine.test.ts` +4 ✓（未命名阶段不动 ✓、逐字段钳位 ✓、后一次 rack 补丁保留先前的混响 ✓）、
+    `mcpEffectsOverrides.test.ts` +3 ✓（部分存储 ✓、**带到渲染路径** ✓、钳位 ✓）。红证明 ✓：跳过 rack 应用 ⇒
+    首条红（`expected false to be true` ✓）。
+**发版 ✓**：`v2.44.0` ✓（`f1aae78` ✓，tag = dev = main ✓）。线上复验 ✓：`version.json` 2.44.0 ✓、封面 4/4 ✓、
+  `/m` ✓、清单 159 条 ✓、真实音频 `200 audio/mpeg 400030B` ✓。全量本地 **730 文件 / 5407 用例** ✓。
+
+**至此那份五项清单 ✓：1 已做 ✓、2 已做（本条）✓、3・4 已做 ✓、5 经核实本就不成立 ✓。**
+```
