@@ -25491,3 +25491,34 @@ describe("the grid's editing actions", () => {
 **❌ 仅剩一项：`ChannelStripDsp` 接上 width ✓**（插入点 `:453` ✓；无在跑的 bundle 体积门禁 ✓；要做需先自己量 ✓）。
   ⚠️ 另外 ④ 的"渲染输出真的变"仍需两处接线 ✓：Web 侧现已有重建 ✓（改一处 → **引擎**读到的值变 ✓ **且**图重建 ✓ ✓）；
   **MCP 侧**渲染调用尚未消费那个块 ✓（本轮未动 ✓）。
+
+### 四百零三之九：⭐ **③ 全部完成**（2026-10-14 ✓）；④ 的 MCP 侧仍缺一层接线（●）
+
+```
+**✅ ③ 三项命名交付全部完成 ✓**
+  · **① 补丁合并 ✓**（`37246ab` ✓，含 9 条门禁的逐条 reconcile ✓）
+  · **② Web+MCP 双路径 ✓**：Web EQ 面板已挂 ✓（`2a09feb` ✓，`TrackInspector` 此前**零生产引用** ✓）；
+    MCP 发送/插入/歌词工具由 ① 补齐 ✓
+  · **③ 已有 DSP 接到 Web+MCP ✓**：
+    `data/masterSettings.ts` 模型 ✓（`0b8a196` ✓）→ 引擎建图用它 ✓（`4e0006d` ✓）→
+    导出用它 ✓（`78b3260` ✓）→ 工程能存它 ✓（`32b1a97` ✓）→ 面板能改它 ✓（`8f08d71` ✓）→
+    **改动立即生效（重建母线图）✓**（`8ee61f7` ✓）→ MCP 工具读写它 ✓（`f5684ff` ✓）→
+    **`width` 真的接上 ✓**（`d4b466e` ✓）
+**⭐ 量具 ✓**：`masterGraphRenderMeasurable.test.ts` ✓ 在**真实 `node-web-audio-api`** 上渲染读样本 ✓，
+  并**如实记录**限幅器 ceiling 在 Node 的 `fallback` 路径下**不可观测** ✓（断言的恰是"不变" ✓）。
+
+**⭐ `width` 那件事的结论值得单独记 ✓**：注释警告"接回来是 220.6 KB / 上限 220 KB 的有意改动" ✓ ——
+  **那是过时的** ✓。实测 ✓：`StereoWidth.ts` 打包后 **3.6 KB (minified)** ✓，只 import 一个常量 ✓、
+  节点都在运行时建 ✓；`ChannelStripDsp` 现 9.7 KB ✓ ⇒ 该阶段只值几 KB ✓，而且**本仓没有任何在跑的
+  bundle 体积门禁** ✓（我 grep 过 ✓）。⇒ **行动前先量 ✓**，否则会因一句过时的注释而不做该做的事 ✓。
+
+**❌ ④ 的 MCP 侧仍缺一层接线（下一轮的入口 ✓）**
+  **已确认的缺口 ✓**：MCP 的渲染路径**不消费** `set_arrangement_master` 存的块 ✓ ——
+  `mcp/render/worker.ts` 调 `renderPatternOffline` 时**只传** `bars/sampleRate/channels/loudnessTrimDb` 等 ✓，
+  **没有** `masterSettings` ✓（grep `masterMakeupDb|masterBusCompEnabled|limiterCeilingDb mcp/render/*.ts` **无命中** ✓）。
+  ⇒ 需要自下而上穿三层 ✓：① `RenderOptions` 加字段 ✓；② `worker.ts` 的两处
+  `renderPatternOffline` 调用转发它 ✓（`:833` ✓、`:908`（独奏）✓、`:1212` ✓）；
+  ③ 两个调用点传入 `masterSettingsFor(arrangementId)` ✓（`registryArrangement.ts:195`（**preview** ✓，
+  也就是 agent 做 A/B 用的那个 ✓）与 `:402` ✓）。
+  ⚠️ 然后才是 ④ 的端到端判据 ✓：**改一处 → 渲染真峰值变** ✓（Web 侧现在有重建 ✓；
+  MCP 侧就是上面这层 ✓）。**未做，不在本轮假装 ✓。**
