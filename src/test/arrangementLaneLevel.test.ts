@@ -152,3 +152,39 @@ describe("an automated pan or send on its compiled lane", () => {
     expect(lane.panByStep).toBeUndefined();
   });
 });
+
+/**
+ * ⭐ **An EQ band's field is automated under its own name, which is what lets new bands be added without a table row each.**
+ *
+ * The four track-level lanes have a fixed key (`volumeByStep`, `panByStep`, …), but the insert chain's fields are
+ * open-ended: three bands times three fields today, and a fourth band tomorrow. A fixed key per field would mean a row per
+ * band per field — and the one that was forgotten would be stored, drawn and silently ignored.
+ */
+describe("an automated EQ band field", () => {
+  it("⭐ emits a per-step curve keyed by the lane's own name", () => {
+    const lane = compileArrangementToLanes(
+      arrangementWith({
+        automation: [
+          { parameter: "low.gainDb", points: [{ atBeats: 0, value: -6 }, { atBeats: 4, value: 6 }] },
+          { parameter: "mid.hz", points: [{ atBeats: 0, value: 400 }] },
+        ],
+      })
+    )[0]!.track;
+
+    expect(lane.insertByStep, "the insert lanes travel as one map").toBeDefined();
+    expect(Object.keys(lane.insertByStep!).sort()).toEqual(["low.gainDb", "mid.hz"]);
+    // A gain is clamped to the band's own ±18 dB, not to the level's −60…+6.
+    expect(lane.insertByStep!["low.gainDb"]![0]).toBeCloseTo(-6, 6);
+    // A frequency is carried as Hz, not converted to a gain.
+    expect(lane.insertByStep!["mid.hz"]![0]).toBeCloseTo(400, 6);
+    // And the track-level keys are untouched, so the two families do not collide.
+    expect(lane.volumeByStep).toBeUndefined();
+  });
+
+  it("⭐ does not emit the map at all when no insert field is automated", () => {
+    const lane = compileArrangementToLanes(
+      arrangementWith({ automation: [{ parameter: "pan", points: [{ atBeats: 0, value: 0.5 }] }] })
+    )[0]!.track;
+    expect("insertByStep" in lane, "an empty map would be a key that means nothing").toBe(false);
+  });
+});

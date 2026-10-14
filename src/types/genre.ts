@@ -174,6 +174,11 @@ export interface SequencerTrack {
   panByStep?: number[];
   sendAByStep?: number[];
   sendBByStep?: number[];
+  /**
+   * ⭐ **The insert chain's automated fields, keyed by their lane name** (`low.gainDb`, `mid.q`, …). A map rather than one
+   * key per field, because an EQ band's fields are open-ended in a way the four track-level values are not.
+   */
+  insertByStep?: Record<string, number[]>;
   pan?: number; // -1 to 1
   swing?: number; // per-track swing offset (-50 to 50)
   sendA?: number; // Reverb send level 0 - 1

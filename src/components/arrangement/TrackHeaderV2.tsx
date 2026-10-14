@@ -18,6 +18,7 @@
 import { InstrumentBrowserV2 } from "./InstrumentBrowserV2";
 import type { InstrumentChoice } from "./TrackListV2";
 import { useLanguage } from "../../i18n/LanguageContext";
+import { INSERT_AUTOMATION_PARAMETERS } from "../../data/automation";
 import type { TrackKindV2, TrackV2 } from "../../types/arrangementV2";
 import { KIND_LABEL_KEY, TRACK_KIND_ORDER } from "./kindLabels";
 
@@ -196,9 +197,19 @@ export function TrackHeaderV2({
             onChange={(event) => onAutomationParameterChange(track.id, event.target.value)}
             className="h-7 shrink-0 rounded border border-[rgb(var(--d-line))] bg-transparent text-[10px] text-text"
           >
+            {/**
+              * ⭐ Every field the model can automate, from **one list** — the track-level values followed by the insert
+              * chain's band fields. A hard-coded set here is how a newly automatable field becomes a lane nobody can
+              * choose, which is the defect the widening was for.
+              */}
             {(["gainDb", "pan", "sendA", "sendB"] as const).map((parameter) => (
               <option key={parameter} value={parameter}>
                 {t(`arrangement_automation_${parameter}` as never)}
+              </option>
+            ))}
+            {INSERT_AUTOMATION_PARAMETERS.map((parameter) => (
+              <option key={parameter} value={parameter}>
+                {parameter}
               </option>
             ))}
           </select>

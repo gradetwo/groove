@@ -17,7 +17,7 @@
  */
 import type { SequencerPattern, SequencerTrack } from "../types/genre";
 import type { ArrangementV2, NoteEvent, TrackV2 } from "../types/arrangementV2";
-import { samplePerStep, type AutomationParameter } from "./automation";
+import { clampForParameter, isInsertParameter, samplePerStep, type AutomationParameter } from "./automation";
 import { STEPS_PER_BAR, STEP_BEATS, stepsFromNotes, stackFromNotes, stepCountFor, stepsPerBarFor } from "./noteEvents";
 import { requireTrackKind } from "./arrangementEdits";
 import { applyInsertPatch, resolveTrackInsertForGenre } from "./genreInsert";
@@ -96,9 +96,9 @@ function automatedValueSteps(track: TrackV2, parameter: AutomationParameter, ste
   const points = track.automation?.find((lane) => lane.parameter === parameter)?.points;
   if (!points || points.length === 0) return null;
   const raw = samplePerStep(points, stepCount, STEP_BEATS);
-  if (parameter === "gainDb") return raw.map(gainDbToLinear);
-  if (parameter === "pan") return raw.map((value) => Math.max(-1, Math.min(1, value)));
-  return raw.map((value) => Math.max(0, Math.min(1, value)));
+  // A level is converted (dB → the fader's linear scale); everything else is clamped to its own range, which is what its
+  // static field stores. No per-parameter branch beyond that, so a new lane cannot be wired here and forgotten.
+  return parameter === "gainDb" ? raw.map(gainDbToLinear) : raw.map((value) => clampForParameter(parameter, value));
 }
 
 /**
@@ -107,23 +107,47 @@ function automatedValueSteps(track: TrackV2, parameter: AutomationParameter, ste
  * One table rather than one helper per field: a second `if` per parameter is how a newly automatable field ends up wired
  * into the compile and forgotten everywhere else. Adding a lane means adding a row.
  */
+/** The parameter names this track has lanes for. */
+function laneParametersOf(track: TrackV2): AutomationParameter[] {
+  return (track.automation ?? []).map((lane) => lane.parameter);
+}
+
 function automatedSteps(track: TrackV2, stepCount: number): {
   volumeByStep?: number[];
   panByStep?: number[];
   sendAByStep?: number[];
   sendBByStep?: number[];
+  insertByStep?: Record<string, number[]>;
 } {
-  const out: { volumeByStep?: number[]; panByStep?: number[]; sendAByStep?: number[]; sendBByStep?: number[] } = {};
+  const out: {
+    volumeByStep?: number[];
+    panByStep?: number[];
+    sendAByStep?: number[];
+    sendBByStep?: number[];
+    insertByStep?: Record<string, number[]>;
+  } = {};
   const keys = {
     gainDb: "volumeByStep",
     pan: "panByStep",
     sendA: "sendAByStep",
     sendB: "sendBByStep",
   } as const;
-  for (const parameter of Object.keys(keys) as AutomationParameter[]) {
+  for (const parameter of Object.keys(keys) as Array<keyof typeof keys>) {
     const perStep = automatedValueSteps(track, parameter, stepCount);
     if (perStep !== null) out[keys[parameter]] = perStep;
   }
+  /**
+   * ⭐ **The insert lanes go in one map**, because their names are open-ended (`low.gainDb`, `mid.q`, …) in a way the four
+   * track-level keys are not: a fixed key per field would mean a table row per EQ band per field, and the next band added
+   * would be forgotten. The map is keyed by the lane's own parameter name, so a reader looks up what it drew.
+   */
+  const insert: Record<string, number[]> = {};
+  for (const parameter of laneParametersOf(track)) {
+    if (!isInsertParameter(parameter)) continue;
+    const perStep = automatedValueSteps(track, parameter, stepCount);
+    if (perStep !== null) insert[parameter] = perStep;
+  }
+  if (Object.keys(insert).length > 0) out.insertByStep = insert;
   return out;
 }
 

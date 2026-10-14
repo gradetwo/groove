@@ -37,7 +37,20 @@ export interface AutomationPoint {
  * automatable, and the compile maps each one through the **same conversion its static field uses**, so a lane's first
  * point cannot disagree with the mixer's own value.
  */
-export type AutomationParameter = "gainDb" | "pan" | "sendA" | "sendB";
+export type AutomationParameter =
+  | "gainDb"
+  | "pan"
+  | "sendA"
+  | "sendB"
+  /**
+   * ⭐ **The insert chain's own fields**, named `<stage>.<field>` — the shape `TrackInsertParams` already has nested.
+   *
+   * They are here rather than as a separate concept because a lane is a curve on a value that exists: `low.gainDb` is
+   * exactly `TrackV2.insert.low.gainDb`, so a lane and the panel's knob are the same number. The stages are the three EQ
+   * bands; the compressor and the high-pass are deliberately absent, because their stages are written as a whole block
+   * (`sendInsertCompressorSettings`) and a per-step value would be a second way to say the same thing.
+   */
+  | `${"low" | "mid" | "high"}.${"hz" | "gainDb" | "q"}`;
 
 /** A track's envelope for one parameter. Tracks are the scope: one curve per parameter per track. */
 export interface AutomationLane {
@@ -47,6 +60,17 @@ export interface AutomationLane {
 
 /** The value a parameter keeps where its lane has nothing to say. */
 export const AUTOMATION_DEFAULT_VALUE = 0;
+
+/**
+ * The insert fields' bounds, re-stated from `trackInsert.ts` so this module can clamp without importing the audio layer's
+ * whole type. The criterion pins them against that file's own constants, so the two cannot drift.
+ */
+const INSERT_EQ_MIN_HZ = 20;
+const INSERT_EQ_MAX_HZ = 18000;
+const INSERT_EQ_MIN_GAIN_DB = -18;
+const INSERT_EQ_MAX_GAIN_DB = 18;
+const INSERT_EQ_MIN_Q = 0.2;
+const INSERT_EQ_MAX_Q = 12;
 
 /**
  * The mixer's own ceiling, in dB — `gainDbToLinear` in `arrangementCompile` and the offline lane mixer both clamp at
@@ -131,7 +155,36 @@ export const AUTOMATION_RANGES: Record<AutomationParameter, { min: number; max: 
   pan: { min: -1, max: 1, step: 0.05 },
   sendA: { min: 0, max: 1, step: 0.05 },
   sendB: { min: 0, max: 1, step: 0.05 },
+  // The insert fields, on the ranges `trackInsert.ts` gives them — the same numbers the panel's sliders use, so a lane
+  // and a knob cannot travel different distances.
+  "low.hz": { min: INSERT_EQ_MIN_HZ, max: INSERT_EQ_MAX_HZ, step: 20 },
+  "low.gainDb": { min: INSERT_EQ_MIN_GAIN_DB, max: INSERT_EQ_MAX_GAIN_DB, step: 1 },
+  "low.q": { min: INSERT_EQ_MIN_Q, max: INSERT_EQ_MAX_Q, step: 0.1 },
+  "mid.hz": { min: INSERT_EQ_MIN_HZ, max: INSERT_EQ_MAX_HZ, step: 20 },
+  "mid.gainDb": { min: INSERT_EQ_MIN_GAIN_DB, max: INSERT_EQ_MAX_GAIN_DB, step: 1 },
+  "mid.q": { min: INSERT_EQ_MIN_Q, max: INSERT_EQ_MAX_Q, step: 0.1 },
+  "high.hz": { min: INSERT_EQ_MIN_HZ, max: INSERT_EQ_MAX_HZ, step: 20 },
+  "high.gainDb": { min: INSERT_EQ_MIN_GAIN_DB, max: INSERT_EQ_MAX_GAIN_DB, step: 1 },
+  "high.q": { min: INSERT_EQ_MIN_Q, max: INSERT_EQ_MAX_Q, step: 0.1 },
 };
+
+/** The insert fields an arrangement may automate, in the order a panel should offer them. */
+export const INSERT_AUTOMATION_PARAMETERS = [
+  "low.gainDb",
+  "low.hz",
+  "low.q",
+  "mid.gainDb",
+  "mid.hz",
+  "mid.q",
+  "high.gainDb",
+  "high.hz",
+  "high.q",
+] as const satisfies readonly AutomationParameter[];
+
+/** Whether a parameter names a field of the insert chain rather than a track-level value. */
+export function isInsertParameter(parameter: AutomationParameter): boolean {
+  return parameter.startsWith("low.") || parameter.startsWith("mid.") || parameter.startsWith("high.");
+}
 
 /** Clamp any lane's value to the range its own parameter honours. */
 export function clampForParameter(parameter: AutomationParameter, value: number): number {

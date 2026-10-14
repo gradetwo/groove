@@ -2371,6 +2371,12 @@ export class AudioEngine {
         /* a parameter that cannot schedule must not fail the step */
       }
     }
+    // ⭐ The insert lanes go through the strip: their targets live inside it, and `setParams` would re-route every step.
+    for (const [name, values] of Object.entries(track.insertByStep ?? {})) {
+      const value = values[stepIdx];
+      if (typeof value !== "number" || !Number.isFinite(value)) continue;
+      strip?.insert.scheduleInsertParam(name, value, time);
+    }
 
     // Probability check (Chance: 0 - 100)
     // V-01 note: this is the one place where live playback is deliberately NOT

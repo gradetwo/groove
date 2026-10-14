@@ -520,6 +520,48 @@ export class ChannelStrip {
    * than a ramp) so the graph is deterministic and the offline render sees the same value
    * from sample zero; the fallback covers doubles that expose only a plain `value`.
    */
+  /**
+   * ⭐ **Schedules one insert parameter at a time, without going through `setParams`.**
+   *
+   * `setParams` recomputes the routing signature and can **rewire the strip** when an enabled flag changes — correct for a
+   * UI edit, catastrophic if it happened on every step of an automated lane. So a curve is scheduled straight onto the
+   * `AudioParam`, which is what `applyParams` does for a static value (`writeParam`) and what the automation needs.
+   *
+   * ⭐ **A stage whose automation is running is switched on**, because a curve on a bypassed band is inaudible: the static
+   * `low.enabled` state and the automation are different facts, and the automation is the more specific one. That is the
+   * one place this method changes routing, and it does it through `params` so `routingSignature` stays truthful.
+   */
+  public scheduleInsertParam(name: string, value: number, time: number): void {
+    if (this.disposed || !Number.isFinite(value)) return;
+    const p = this.params;
+    const stage =
+      name.startsWith("low") ? "low" : name.startsWith("mid") ? "mid" : name.startsWith("high") ? "high" : null;
+    if (stage !== null && !p[stage].enabled) {
+      // Turn the band on through the ordinary path (this *is* a routing change), then schedule on top of it.
+      this.setParams({ [stage]: { ...p[stage], enabled: true } } as Partial<TrackInsertParams>);
+      return; // the scheduled value arrives on the next step; one rewire, not one per step
+    }
+
+    const bound = (param: AudioParam | null, min: number, max: number): void => {
+      if (param) this.writeParam(param, Math.max(min, Math.min(max, value)), time);
+    };
+    switch (name) {
+      case "low.hz": return bound(this.lowShelf.frequency, INSERT_EQ_MIN_HZ, INSERT_EQ_MAX_HZ);
+      case "low.gainDb": return bound(this.lowShelf.gain, INSERT_EQ_MIN_GAIN_DB, INSERT_EQ_MAX_GAIN_DB);
+      case "low.q": return bound(this.lowShelf.Q, INSERT_EQ_MIN_Q, INSERT_EQ_MAX_Q);
+      case "mid.hz": return bound(this.peaking.frequency, INSERT_EQ_MIN_HZ, INSERT_EQ_MAX_HZ);
+      case "mid.gainDb": return bound(this.peaking.gain, INSERT_EQ_MIN_GAIN_DB, INSERT_EQ_MAX_GAIN_DB);
+      case "mid.q": return bound(this.peaking.Q, INSERT_EQ_MIN_Q, INSERT_EQ_MAX_Q);
+      case "high.hz": return bound(this.highShelf.frequency, INSERT_EQ_MIN_HZ, INSERT_EQ_MAX_HZ);
+      case "high.gainDb": return bound(this.highShelf.gain, INSERT_EQ_MIN_GAIN_DB, INSERT_EQ_MAX_GAIN_DB);
+      case "high.q": return bound(this.highShelf.Q, INSERT_EQ_MIN_Q, INSERT_EQ_MAX_Q);
+      default:
+        // The compressor and the filter's cutoff are not automatable yet: their stages are worklets or a whole-block
+        // write (`sendInsertCompressorSettings`), so a per-step value would be a second way to say the same thing.
+        return;
+    }
+  }
+
   private writeParam(param: AudioParam, value: number, now: number): void {
     if (!Number.isFinite(value)) return;
     try {

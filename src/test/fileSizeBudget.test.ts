@@ -158,7 +158,14 @@ const FILE_CAPS: Record<string, number> = {
    *
    * **This number may only go down from here.**
    */
-  "src/audio/AudioEngine.ts": 3339,
+  /**
+   * ⭐ **3339 → 3345 on 2026-10-14, for the insert lanes.** A lane on an EQ band's gain, frequency or Q is applied per
+   * step through `ChannelStripDsp.scheduleInsertParam`, which needed a loop and an `Object.entries` over the compiled map
+   * — six lines, with the comment inline.
+   *
+   * **This number may only go down from here.**
+   */
+  "src/audio/AudioEngine.ts": 3345,
   /**
    * ⭐ **Re-measured on 2026-10-12, when the per-render O(n²) note lookups became a Map index** (perf audit ROI #2).
    * The file grew 3241 → 3264 lines with `noteIndex` — one `useMemo` building `byCell`/`byStep`, its comment, and the
