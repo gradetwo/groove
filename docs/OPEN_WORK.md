@@ -25326,3 +25326,41 @@ describe("the grid's editing actions", () => {
   4. **判据的下一步** ✓：目前证明到"builder 收到的 options 是工程的设置" ✓；
      目标里还要求证明**离线渲染输出真的变** ✓（改一处 → 渲染出的样本/真峰值变 ✓）——这是下一轮的第一条判据 ✓。
 ```
+
+### 四百零三之三：③ 离线渲染已读设置；面板/MCP/width 与"设置存哪"仍待做（2026-10-14 ●）
+
+```
+**本轮新增 ✓（`78b3260` ✓）**：`RenderWavOptions.masterSettings` ✓ —— 导出与活引擎用同一套工程设置 ✓，
+  不再"房间一个声、文件另一个声" ✓（这正是该导出器注释里已记录过的响度错配类 bug ✓）。判据 4 条 ✓，
+  红证明 ✓（去掉 fallback 后四条里三条红 ✓）。
+  ⭐ **判据抓到两个我自己的真缺陷 ✓**：
+    · **可加性** ✓：第一版用 `MASTER_DEFAULTS` 填缺省字段 ✓ ⇒ 覆盖了调用者从未提及的单值选项 ✓ ——
+      `limiterReleaseOptions.test.ts` 报 `expected 60 to be undefined` ✓（那个 release 原本留空、让处理器用自己的默认值 ✓）。
+      修法 ✓：新增 `statedMasterSettings` ✓，**只复制工程真正声明过的字段** ✓，缺省就保持缺省 ✓。
+    · **钳位键名不匹配** ✓：`statedMasterSettings` 的上下界原本用 `MASTER_LIMITS` 的**扁平图选项名**
+      （`limiterCeilingDb` ✓）却在按**小节字段名**（`ceilingDb` ✓）查找 ⇒ **一个字段都没被钳位** ✓
+      （判据报 `expected 12 to be +0` ✓）。修法 ✓：按小节分别给界 ✓。
+
+**⭐ "离线渲染输出真的变"这条量具的实测结论（重要 ✓，别再重复踩 ✓）**
+  在测试里用真实 `node-web-audio-api` 上下文过 `buildMasterGraph` 量峰值 ✓：**`0.00000` ✓**，
+  220 500 个样本里**非零 0 个** ✓（ceiling 取 −1 / −12 / −20 ✓、时长 5 秒 ✓），
+  而**同一个上下文**直接渲染一个裸振荡器峰值为 **0.5** ✓。⇒ **该图在这个 harness 下输出是静音的 ✓**，
+  原因不在设置 ✓（待查：`graph.output` 的对接点 ✓ 或 worklet 在 Node 下的行为 ✓）。
+  ⇒ 因此样本级判据现在等于在量那个静音 ✓，本轮改为量**交给 builder 的 options 对象** ✓（取自真实调用 ✓）。
+  **下一步查这条之前，先解决"图为何静音" ✓**，否则任何"渲染输出变了"的判据都是假的 ✓。
+
+**❌ 剩余（下一轮全部范围 ✓，按依赖排序 ✓）**
+  1. **"设置存哪"是另外两项的前置** ✓：一个 MCP 工具要**读写**整块设置 ✓，就必须有地方存 ✓
+     （项目级 ✓，因为母带是整曲决定 ✓）。本轮只做到"引擎接受它 + 导出读它" ✓，还没有"工程能存它" ✓。
+  2. **`AudioSettingsTab.tsx` 真正写回引擎** ✓：现在 `limiterKind` / `limiterLookaheadMs` 只是组件本地 state ✓，
+     **从未到达引擎** ✓。⚠️ 注意 ✓：`setMasterSettings` 目前只对**下一次建图**生效 ✓，
+     而 `initAudioContext` 在 ctx 已存在时早退 ✓ ⇒ **要让面板的改动立刻可听，必须先有"重建母带图"的路径** ✓
+     （否则面板写的是"下次"的值 ✓，用户会觉得旋钮没反应 ✓）。这是 ④ 之前必须解决的一步 ✓。
+  3. **`ChannelStripDsp` 接上 width** ✓：其注释仍写 "`p.width` is deliberately **not** wired here yet" ✓；
+     需按轨存 `width` ✓ 并驱动那个已有测试的阶段 ✓（`src/audio/StereoWidth.ts` ✓）。
+  4. **end-to-end 判据** ✓：先解决"图为何静音" ✓，再证明"改一处 → 渲染样本/真峰值变" ✓。
+
+**⚠️ 同一处既有抖动再度出现** ✓：本轮全量跑里 `mobileClipProgress.test.tsx` 的 clamp 用例又失败一次 ✓
+  （`expected +0 to be 200` ✓）—— 与 §402 记录的是**同一处、同一断言** ✓，**非本次改动引入** ✓
+  （本轮改的是 `WavExporter` / `masterSettings` ✓，与手机片段模块无交集 ✓）。仍未找到污染源 ✓。
+```
