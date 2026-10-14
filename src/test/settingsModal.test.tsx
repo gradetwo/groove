@@ -19,6 +19,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { fireEvent, render, screen } from "@testing-library/react";
 import { SettingsModal } from "../components/settings/SettingsModal";
 import { AudioEngine } from "../audio/AudioEngine";
+import { normaliseMasterSettings } from "../data/masterSettings";
 import { DEFAULT_GS1_ROUTING_ENABLED, setGs1RoutingEnabled } from "../audio/gs1/gs1Tracks";
 import { APP_VERSION } from "../version";
 import { loadLayoutPrefs } from "../features/sequencer/layoutPrefs";
@@ -37,6 +38,7 @@ function makeEngine(overrides: Partial<Record<string, unknown>> = {}) {
     limiterLatency: 0.003,
     ...overrides,
   };
+  let masterSettings = normaliseMasterSettings(overrides?.masterSettings);
   const engine = {
     getMasterVolume: () => state.masterVolume,
     getEffectiveMasterVolume: () => state.effectiveVolume,
@@ -46,6 +48,16 @@ function makeEngine(overrides: Partial<Record<string, unknown>> = {}) {
     getOutputLatency: () => 12,
     getMasterLimiterKind: () => state.limiterKind,
     getMasterLimiterLatencySeconds: () => state.limiterLatency,
+    /**
+     * ⭐ The mastering block, because the real engine answers both of these and the panel reads them. A double that
+     * omitted them made the panel throw rather than render — which is the double being incomplete, not the panel.
+     */
+    getMasterSettings: () => masterSettings,
+    setMasterSettings: vi.fn((next: unknown) => {
+      masterSettings = normaliseMasterSettings(next);
+      calls.push(`setMasterSettings:${masterSettings.limiter.ceilingDb}`);
+      return masterSettings;
+    }),
     isGs1Enabled: () => state.gs1,
     setMasterVolume: vi.fn((v: number) => {
       calls.push(`setMasterVolume:${v}`);

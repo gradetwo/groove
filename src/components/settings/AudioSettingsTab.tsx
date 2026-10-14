@@ -1,4 +1,6 @@
 import React, { useCallback, useEffect, useState } from "react";
+import { SlidersHorizontal } from "lucide-react";
+import { MASTER_DEFAULTS, type MasterSettings } from "../../data/masterSettings";
 
 import { useSyncExternalStore } from "react";
 import { useLanguage } from "../../i18n/LanguageContext";
@@ -50,6 +52,12 @@ export const AudioSettingsTab: React.FC<AudioSettingsTabProps> = ({
   const [outputLatency, setOutputLatency] = useState(0);
   const [limiterKind, setLimiterKind] = useState("fallback");
   const [limiterLookaheadMs, setLimiterLookaheadMs] = useState(0);
+  /**
+   * ⭐ **The project's mastering block.** `MASTER_DEFAULTS` until the engine answers, then whatever the engine would
+   * build its graph with — the value from `engine.getMasterSettings()`, not the one this panel last wrote, which is the
+   * convention the rest of this tab follows for the same reason (the engine clamps).
+   */
+  const [master, setMaster] = useState<MasterSettings>(MASTER_DEFAULTS);
 
   const readEngine = useCallback(() => {
     if (!engine) return;
@@ -61,6 +69,7 @@ export const AudioSettingsTab: React.FC<AudioSettingsTabProps> = ({
     setOutputLatency(engine.getOutputLatency());
     setLimiterKind(engine.getMasterLimiterKind());
     setLimiterLookaheadMs(Math.round(engine.getMasterLimiterLatencySeconds() * 1000));
+    setMaster(engine.getMasterSettings());
   }, [engine]);
 
   // Re-sync on mount: the toolbar or the mixing console can change the same values while the
@@ -100,6 +109,28 @@ export const AudioSettingsTab: React.FC<AudioSettingsTabProps> = ({
         ? "bg-accent/20 border-accent text-accent"
         : "bg-[#1d2028] border-line text-text-sub hover:text-text"
     }`;
+
+  /**
+   * ⭐ Writes one mastering field through the engine and reads the normalised block back, so the control shows what the
+   * engine accepted rather than what was asked for. The whole block goes each time because that is the shape the model
+   * stores: a project has one mastering decision, not four independent numbers.
+   */
+  const applyMaster = useCallback(
+    (key: string, value: number) => {
+      if (!engine) return;
+      const next: MasterSettings = {
+        busComp: { ...master.busComp },
+        limiter: { ...master.limiter },
+        width: { ...master.width },
+      };
+      if (key === "amount") next.width.amount = value;
+      else if (key === "ceilingDb") next.limiter.ceilingDb = value;
+      else if (key === "thresholdDb") next.busComp.thresholdDb = value;
+      else next.busComp.makeupDb = value;
+      setMaster(engine.setMasterSettings(next));
+    },
+    [engine, master]
+  );
 
   return (
     <div className="space-y-5" data-testid="settings-panel-audio">
@@ -276,6 +307,53 @@ export const AudioSettingsTab: React.FC<AudioSettingsTabProps> = ({
           </div>
         </div>
       </div>
+
+        {/**
+          * ⭐ **Mastering: the values the master graph is built with.**
+          *
+          * These were the audio layer's own constants until this block existed (`MASTER_BUS_COMP_*`, `MASTER_MAKEUP_DB`),
+          * so nothing could change them — a project had one fixed master. They now come from the project through
+          * `engine.getMasterSettings()` and go back through `engine.setMasterSettings(...)`, which normalises what it
+          * accepts and returns it, so a slider can show the value the engine will really use.
+          *
+          * ⚠️ **Stated, not hidden:** the compressor and the limiter are fixed when the master graph is built, so a change
+          * here applies to the **next** build. The hint says so rather than leaving a person to wonder why a knob "did
+          * nothing"; the rebuild path is the next piece of this work.
+          */}
+        <div className={sectionClass} data-testid="audio-settings-mastering">
+          <div className={sectionTitleClass}>
+            <SlidersHorizontal className="w-4 h-4" />
+            <span>{t("audio_settings_section_mastering")}</span>
+          </div>
+          {([
+            { key: "thresholdDb", label: t("audio_settings_bus_comp_threshold"), min: -60, max: 0, step: 1, value: master.busComp.thresholdDb, unit: " dB" },
+            { key: "makeupDb", label: t("audio_settings_bus_comp_makeup"), min: -12, max: 12, step: 0.5, value: master.busComp.makeupDb, unit: " dB" },
+            { key: "ceilingDb", label: t("audio_settings_limiter_ceiling"), min: -12, max: 0, step: 0.5, value: master.limiter.ceilingDb, unit: " dB" },
+            { key: "amount", label: t("audio_settings_stereo_width"), min: 0, max: 2, step: 0.05, value: master.width.amount, unit: "×" },
+          ] as const).map((row) => (
+            <label key={row.key} className="block space-y-1.5">
+              <div className="flex items-center justify-between">
+                <span className={rowLabelClass}>{row.label}</span>
+                <span className="text-xs font-mono text-text-sub" data-testid={`audio-settings-${row.key}-value`}>
+                  {row.value}
+                  {row.unit}
+                </span>
+              </div>
+              <input
+                type="range"
+                min={row.min}
+                max={row.max}
+                step={row.step}
+                value={row.value}
+                onChange={(e) => applyMaster(row.key, Number(e.target.value))}
+                aria-label={row.label}
+                data-testid={`audio-settings-${row.key}`}
+                className="w-full accent-[var(--color-accent,#f59e0b)]"
+              />
+            </label>
+          ))}
+          <div className={hintClass}>{t("audio_settings_mastering_hint")}</div>
+        </div>
     </div>
   );
 };
