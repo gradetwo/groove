@@ -35,7 +35,13 @@ let available = false;
 beforeEach(async () => {
   previous = (globalThis as { OfflineAudioContext?: unknown }).OfflineAudioContext;
   try {
-    const mod = (await import("node-web-audio-api")) as { OfflineAudioContext?: unknown };
+    /**
+     * ⭐ **Imported through a variable, because the package ships no types.** A literal specifier makes `tsc` resolve it
+     * and fail with TS2307 (`no declaration file`) — which CI caught while a warm local `tsc` cache hid it. The module is
+     * a dev-only host for this criterion, so it is treated as `unknown` and narrowed here.
+     */
+    const specifier = "node-web-audio-api";
+    const mod = (await import(/* @vite-ignore */ specifier)) as { OfflineAudioContext?: unknown };
     if (mod.OfflineAudioContext) (globalThis as { OfflineAudioContext?: unknown }).OfflineAudioContext = mod.OfflineAudioContext;
     resolveOfflineContextClass();
     available = true;
