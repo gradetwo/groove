@@ -14,10 +14,11 @@ import { exportAbletonLiveSet } from "../src/audio/AbletonExporter";
 
 import type { ToolDefinition } from "./toolKit";
 
-import { createMcpArrangement, getMcpArrangement, summariseArrangement } from "./arrangement";
+import { createMcpArrangement, getMcpArrangement, summariseArrangement, genreForArrangement } from "./arrangement";
 
 import { STRING_SITUATION_IDS, StringSituation } from "../src/data/stringTechniques";
 import { flattenMcpArrangement, undoMcpArrangement } from "./arrangement";
+import { getGenreLoudnessTrimDb } from "../src/data/genreMix";
 import { listCatalogueInstruments } from "./instruments";
 import { audioLaneReplyFields } from "./pattern";
 import { HEADLESS_POINTER_SENTENCE, headlessParameterDescription, renderBudgetSentence, renderCostSentence, renderOutputSentence } from "./render/budget";
@@ -43,7 +44,8 @@ import { inspectSfzAt } from "./sfzInspectRemote";
 
 import { addMcpTake, effectsOverridesForRender, masterSettingsForRender, setMcpEffectsOverrides, setMcpMasterSettings, setMcpTrackAsset, setMcpTrackInstrument, setMcpTrackPan,
   setMcpTrackSends,
-  setMcpTrackInsert, setMcpTrackParent, setMcpTrackRegion, setMcpTrackSteps } from "./arrangement";
+  setMcpTrackInsert, setMcpTrackParent, setMcpTrackRegion, setMcpTrackSteps,
+  makeDryPattern, makeDryEffectsOverrides } from "./arrangement";
 
 import { assignMcpTakeRange, selectMcpTake, setMcpTrackCollapsed } from "./arrangement";
 
@@ -147,6 +149,7 @@ export const ARRANGEMENT_TOOLS: ToolDefinition[] = [
       format: z.enum(["wav", "mp3"]).default("wav"),
       sampleRate: z.number().int().min(8000).max(96000).optional().describe("default 8000, which is the point of this tool"),
       channels: z.number().int().min(1).max(2).optional().describe("default 1, a mono analysis render"),
+      dry: z.boolean().optional().describe("true previews dry audio with all track inserts and send effects bypassed; volume and pan still apply"),
       headless: z.boolean().optional().describe(headlessParameterDescription()),
     },
     handler: async (args, ctx) => {
@@ -192,10 +195,14 @@ export const ARRANGEMENT_TOOLS: ToolDefinition[] = [
          * on — still began in silence).
          */
         ctx?.progress?.report(0, "starting the render engine — a first render in this session also starts a browser, which is the slow part");
-        const result = await renderAudio(flattened.pattern, {
+        const patternToRender = args.dry === true ? makeDryPattern(flattened.pattern) : flattened.pattern;
+        const effectsToRender = args.dry === true
+          ? makeDryEffectsOverrides(effectsOverridesForRender(String(args.arrangementId)))
+          : effectsOverridesForRender(String(args.arrangementId));
+        const result = await renderAudio(patternToRender, {
           // ⭐ Same block as the full render: an A/B where one side ignores the mastering is not an A/B.
           masterSettings: masterSettingsForRender(String(args.arrangementId)),
-          effectsOverrides: effectsOverridesForRender(String(args.arrangementId)),
+          effectsOverrides: effectsToRender,
           format: (args.format as "wav" | "mp3") ?? "wav",
           sampleRate: (args.sampleRate as number | undefined) ?? 8000,
           channels: (args.channels as 1 | 2 | undefined) ?? 1,
@@ -317,6 +324,10 @@ export const ARRANGEMENT_TOOLS: ToolDefinition[] = [
         .min(0)
         .optional()
         .describe("exclusive end of the span, with `startBar`; the bar it names is not rendered"),
+      dry: z
+        .boolean()
+        .optional()
+        .describe("true exports dry audio (bypasses all track inserts: EQ, comp, drive; and send effects: reverb, delay, chorus); volume, pan, and master loudness normalization still apply"),
     },
     handler: async (args, ctx) => {
       try {
@@ -381,6 +392,13 @@ export const ARRANGEMENT_TOOLS: ToolDefinition[] = [
          * options object **whole** — so a structurally wider object travels to `renderPatternHeadless` (which declares
          * the field) without the pinned file gaining a line.
          */
+        const arrangementGenre = genreForArrangement(String(args.arrangementId));
+        const genreId = arrangementGenre ?? "custom";
+        const trimDb = arrangementGenre ? getGenreLoudnessTrimDb(arrangementGenre) : undefined;
+        const patternToRender = args.dry === true ? makeDryPattern(flattened.pattern) : flattened.pattern;
+        const effectsToRender = args.dry === true
+          ? makeDryEffectsOverrides(effectsOverridesForRender(String(args.arrangementId)))
+          : effectsOverridesForRender(String(args.arrangementId));
         const renderOptions: Parameters<typeof renderAudio>[1] & { chunks?: number } = {
           /**
            * ⭐ **The arrangement's mastering block, so the file is mastered the way the project says.** Without this an
@@ -388,14 +406,15 @@ export const ARRANGEMENT_TOOLS: ToolDefinition[] = [
            * reporting an effect it did not have.
            */
           masterSettings: masterSettingsForRender(String(args.arrangementId)),
-          effectsOverrides: effectsOverridesForRender(String(args.arrangementId)),
+          effectsOverrides: effectsToRender,
           format: (args.format as "wav" | "mp3") ?? "wav",
           ...(args.sampleRate ? { sampleRate: args.sampleRate as number } : {}),
           ...(args.channels ? { channels: args.channels as 1 | 2 } : {}),
           // The flattened pattern *is* one arrangement; the pass count repeats it.
           bars: passes,
           bitrateKbps: args.bitrateKbps as number | undefined,
-          genreId: "custom",
+          genreId,
+          ...(Number.isFinite(trimDb) ? { loudnessTrimDb: trimDb } : {}),
           // Absent when the caller did not ask for it, so "default engine" is a missing key rather than `false`.
           ...(args.headless === true ? { headless: true } : {}),
           ...(ctx?.progress ? { progress: ctx?.progress } : {}),
@@ -409,7 +428,7 @@ export const ARRANGEMENT_TOOLS: ToolDefinition[] = [
          * written for: one phase, at budget 0, before the waiting begins.
          */
         ctx?.progress?.report(0, "starting the render engine — a first render in this session also starts a browser, which is the slow part");
-        const result = await renderAudio(flattened.pattern, renderOptions);
+        const result = await renderAudio(patternToRender, renderOptions);
         /**
          * The render's own lane report, not a second derivation: `renderAudio` mixes the lanes and says which ones reached the mix and which could not, and a
          * reply that recomputed the list here would be the "two places, one thing" failure that caused the gap.
@@ -994,28 +1013,36 @@ export const ARRANGEMENT_TOOLS: ToolDefinition[] = [
   },
   {
     name: "set_arrangement_track_automation",
-    title: "Set a track's level curve",
+    title: "Set a track's parameter automation curve",
     description:
-      "A track's level as a curve: points of `{ atBeats, value }`, where `value` is dB (0 unity, clamped to −60…+6) and `atBeats` is beats from the start. Between two points the line is straight; outside them the curve holds its value rather than extrapolating. An empty list removes the curve, and the track's own `gainDb` then stands. This is the only way to ask for a fade — setting one level per step is the work it replaces.",
+      "A track's parameter as a curve: points of `{ atBeats, value }`. Parameter can be 'gainDb' (default), 'pan', 'sendA', 'sendB', or EQ parameters: 'eq.low.gainDb' / 'low.gainDb', 'eq.mid.gainDb' / 'mid.gainDb', 'eq.high.gainDb' / 'high.gainDb', 'eq.low.hz' / 'low.hz', 'eq.mid.hz' / 'mid.hz', 'eq.high.hz' / 'high.hz', 'eq.mid.q' / 'mid.q'. An empty list removes the curve. Between two points the line is straight; outside them the curve holds its value.",
     readOnly: false,
     inputSchema: {
       arrangementId: z.string(),
       trackId: z.string(),
+      parameter: z
+        .string()
+        .optional()
+        .describe("the target parameter: gainDb (default), pan, sendA, sendB, eq.low.gainDb, eq.mid.gainDb, eq.high.gainDb, eq.low.hz, eq.mid.hz, eq.high.hz, eq.mid.q"),
       points: z
         .array(
-          z.object({
-            atBeats: z.number().min(0).describe("beats from the arrangement's start"),
-            value: z.number().min(-60).max(6).describe("dB at that position; 0 is unity"),
-          })
+          z.union([
+            z.object({
+              atBeats: z.number().min(0).describe("beats from the arrangement's start"),
+              value: z.number().describe("parameter value at that position; clamped to the valid range for the parameter"),
+            }),
+            z.tuple([z.number().min(0), z.number()]),
+          ])
         )
-        .describe("the curve, in any order; an empty list removes it"),
+        .describe("the curve as an array of { atBeats, value } or [atBeats, value] tuples; an empty list removes it"),
     },
     handler: (args) => {
       try {
         return setMcpTrackAutomation(
           String(args.arrangementId),
           String(args.trackId),
-          (args.points as Array<{ atBeats: number; value: number }>) ?? []
+          (args.points as Array<{ atBeats: number; value: number } | [number, number]>) ?? [],
+          args.parameter ? String(args.parameter) : undefined
         );
       } catch (error) {
         return failure((error as Error).message);

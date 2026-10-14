@@ -58,7 +58,7 @@ import { resolveTrackInsertForGenre } from "../data/genreInsert";
 import { resolveGroupBus } from "./trackBuses";
 import { Gs1VoicePool } from "./gs1/Gs1VoicePool";
 import { DEFAULT_GS1_ROUTING_ENABLED, setGs1RoutingEnabled } from "./gs1/gs1Tracks";
-import type { TrackInsertParams } from "../data/trackInsert";
+import { bypassTrackInsert, type TrackInsertParams } from "../data/trackInsert";
 import { applyGenreFxToGraph, delayParamsAtTempo, resolveGenreFx, type GenreFxProfile } from "../data/genreFx";
 export type { TrackState } from "./trackStates";
 import { isDrumTrack, getDefaultDrumKitForGenre } from "../utils/trackUtils";
@@ -253,6 +253,8 @@ export class AudioEngine {
   private spatialEnabled: boolean = false;
   /** Per-channel analysers for the console meters; off unless a view needs them. */
   private trackAnalysersEnabled: boolean = false;
+  /** Dry audition mode: bypasses channel strip inserts, send buses, and master FX for A/B comparison. */
+  private dryMode: boolean = false;
 
   // A-05: voice bookkeeping now lives in the shared VoiceRegistry (also used by the
   // chord engine) instead of a private copy per engine.
@@ -651,6 +653,71 @@ export class AudioEngine {
     return Array.from({ length: trackCount }, (_, i) => this.getSpatialSlot(i, trackCount));
   }
 
+  public isDryMode(): boolean {
+    return this.dryMode;
+  }
+
+  public getDryMode(): boolean {
+    return this.dryMode;
+  }
+
+  /**
+   * Dry/Wet monitoring toggle (A/B comparison).
+   *
+   * Dry mode bypasses all track inserts (HPF, EQ, Compressor, Drive), zeroes the reverb and delay
+   * send levels, and zeroes the master reverb/delay/chorus wet mix, providing pure dry stems
+   * with fader volume and pan preserved. Toggling back to Wet restores the exact previous state.
+   */
+  public setDryMode(enabled: boolean): void {
+    if (this.dryMode === enabled) return;
+    this.dryMode = enabled;
+    if (!this.ctx) return;
+    const now = this.ctx.currentTime;
+
+    // Apply bypass / restore to all track strips
+    this.trackStrips.forEach((strip, idx) => {
+      if (!strip) return;
+      if (enabled) {
+        strip.insert.setParams(bypassTrackInsert());
+        if (strip.sendA) this.rampParam(strip.sendA.gain, 0, now);
+        if (strip.sendB) this.rampParam(strip.sendB.gain, 0, now);
+      } else {
+        const track = this.pattern?.tracks[idx];
+        const insert = track ? this.resolveInsertFor(track) : bypassTrackInsert();
+        strip.insert.setParams(insert);
+        const state = this.trackStates[idx];
+        const isSilenced = !this.isTrackAudible(track, idx, this.trackStates.some((t) => t.solo));
+        if (strip.sendA && state?.sendA !== undefined) {
+          this.rampParam(strip.sendA.gain, isSilenced ? 0 : Math.max(0, Math.min(1.0, state.sendA)), now);
+        }
+        if (strip.sendB && state?.sendB !== undefined) {
+          this.rampParam(strip.sendB.gain, isSilenced ? 0 : Math.max(0, Math.min(1.0, state.sendB)), now);
+        }
+      }
+    });
+
+    // Master effects overrides
+    if (this.masterGraph) {
+      if (enabled) {
+        applyEffectsOverrides(this.masterGraph, {
+          reverb: { enabled: false },
+          delay: { enabled: false, feedback: 0 },
+          rack: {
+            filterEnabled: false,
+            saturationEnabled: false,
+            chorusEnabled: false,
+            bitcrusherEnabled: false,
+          },
+        });
+      } else {
+        if (this.appliedGenreFx) {
+          applyGenreFxToGraph(this.masterGraph, this.appliedGenreFx, this.pattern?.bpm || this.bpm);
+        }
+        applyEffectsOverrides(this.masterGraph, this.effectsOverrides);
+      }
+    }
+  }
+
   /** Disconnects and drops the current strips (used when switching panner model). */
   private releaseTrackStrips(): void {
     for (const strip of this.trackStrips) {
@@ -717,8 +784,10 @@ export class AudioEngine {
       // character (see `genreInsert.ts`). Both live + export resolve through the same call.
       const insert = new ChannelStrip(
         this.ctx,
-        this.pattern?.tracks[i]?.insert ??
-          resolveTrackInsertForGenre(role, this.pattern?.genre_id)
+        this.dryMode
+          ? bypassTrackInsert()
+          : (this.pattern?.tracks[i]?.insert ??
+            resolveTrackInsertForGenre(role, this.pattern?.genre_id))
       );
 
       const duckGain = this.ctx.createGain();
@@ -908,7 +977,7 @@ export class AudioEngine {
       if (this.appliedInsertRefs[idx] === resolved) return;
       this.appliedInsertRefs[idx] = resolved;
       this.patternInsertApplications += 1;
-      this.setTrackInsert(idx, resolved);
+      this.setTrackInsert(idx, this.dryMode ? bypassTrackInsert() : resolved);
     });
     this.syncTrackGains();
     // Loudness matching is *not* a per-track mix concern: it only needs the pattern's
@@ -1111,10 +1180,10 @@ export class AudioEngine {
         this.applyPannerPosition(strip.spatialPanner, shifted);
       }
       if (state.sendA !== undefined && strip.sendA) {
-        this.rampParam(strip.sendA.gain, isSilenced ? 0 : Math.max(0, Math.min(1.0, state.sendA)), now);
+        this.rampParam(strip.sendA.gain, this.dryMode || isSilenced ? 0 : Math.max(0, Math.min(1.0, state.sendA)), now);
       }
       if (state.sendB !== undefined && strip.sendB) {
-        this.rampParam(strip.sendB.gain, isSilenced ? 0 : Math.max(0, Math.min(1.0, state.sendB)), now);
+        this.rampParam(strip.sendB.gain, this.dryMode || isSilenced ? 0 : Math.max(0, Math.min(1.0, state.sendB)), now);
       }
     });
   }
@@ -2359,8 +2428,8 @@ export class AudioEngine {
     const automated: Array<[number[] | undefined, AudioParam | undefined, number, number]> = [
       [track.volumeByStep, strip?.gain.gain, 0, 2],
       [track.panByStep, strip?.panner?.pan, -1, 1],
-      [track.sendAByStep, strip?.sendA.gain, 0, 1],
-      [track.sendBByStep, strip?.sendB.gain, 0, 1],
+      [this.dryMode ? undefined : track.sendAByStep, strip?.sendA.gain, 0, 1],
+      [this.dryMode ? undefined : track.sendBByStep, strip?.sendB.gain, 0, 1],
     ];
     for (const [values, param, min, max] of automated) {
       const value = values?.[stepIdx];
@@ -2372,10 +2441,12 @@ export class AudioEngine {
       }
     }
     // ⭐ The insert lanes go through the strip: their targets live inside it, and `setParams` would re-route every step.
-    for (const [name, values] of Object.entries(track.insertByStep ?? {})) {
-      const value = values[stepIdx];
-      if (typeof value !== "number" || !Number.isFinite(value)) continue;
-      strip?.insert.scheduleInsertParam(name, value, time);
+    if (!this.dryMode) {
+      for (const [name, values] of Object.entries(track.insertByStep ?? {})) {
+        const value = values[stepIdx];
+        if (typeof value !== "number" || !Number.isFinite(value)) continue;
+        strip?.insert.scheduleInsertParam(name, value, time);
+      }
     }
 
     // Probability check (Chance: 0 - 100)

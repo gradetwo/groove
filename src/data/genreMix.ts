@@ -33,6 +33,7 @@ import { GENRE_INDEX_MAP } from "./index/genresIndex";
 import { humaniseVelocity, patternSeed } from "../audio/noteEvents";
 import { applyGrooveTexture } from "./genreGroove";
 import { applyMidRangeFill } from "./genreMid";
+import { GENRE_INSERT, resolveTrackInsertForGenre } from "./genreInsert";
 
 /** The eight sequencer roles a mix profile assigns values to. */
 export const MIX_TRACK_IDS = [
@@ -296,7 +297,7 @@ export const GENRE_MIX: Record<string, GenreMix> = {
   "acid-house": { category: "Electronic", loudnessTrimDb: -2.38 },
   "acid-techno": { category: "Electronic", loudnessTrimDb: -1.12 },
   "afro-house": { category: "Electronic", loudnessTrimDb: 0, overrides: { percussion: { volume: 0.8, pan: -0.45, sendB: 0.26 } } },
-  "ambient": { humanise: 0.45, category: "Electronic", loudnessTrimDb: -1.55, overrides: { kick: { volume: 0.5, sendA: 0.2 }, snare: { volume: 0.42, sendA: 0.22 }, hihat: { volume: 0.38, pan: -0.34 }, percussion: { volume: 0.34 }, bass: { volume: 0.78 }, chords: { volume: 0.92, sendA: 0.38 }, lead: { volume: 0.68, sendA: 0.34 }, fx: { volume: 0.24, sendA: 0.3 } }, duck: { duckDb: 4, releaseMs: 280 } }, // almost nothing here is on the grid; the pads are played and breathe · there is no pumping here — a slow swell under a rare kick
+  "ambient": { humanise: 0.45, category: "Electronic", loudnessTrimDb: -0.75, overrides: { kick: { volume: 0.45, sendA: 0.25 }, snare: { volume: 0.38, sendA: 0.25 }, hihat: { volume: 0.32, pan: -0.34 }, percussion: { volume: 0.30 }, bass: { volume: 0.72 }, chords: { volume: 0.88, sendA: 0.50 }, lead: { volume: 0.72, sendA: 0.48 }, fx: { volume: 0.24, sendA: 0.45 } }, duck: { duckDb: 4, releaseMs: 280 } }, // almost nothing here is on the grid; the pads are played and breathe · there is no pumping here — a slow swell under a rare kick
   "ambient-dub": { humanise: 0.42, category: "Electronic", loudnessTrimDb: 0, overrides: { kick: { volume: 0.62 }, snare: { volume: 0.5, sendA: 0.2 }, hihat: { volume: 0.44, sendB: 0.24 }, bass: { volume: 0.9, sendA: 0.04 }, chords: { volume: 0.86, sendA: 0.36 }, lead: { volume: 0.6, sendA: 0.34 }, fx: { volume: 0.3, sendA: 0.26 } }  }, // dub mixing and hand-played keys over a slow pulse
   "ambient-techno": { humanise: 0.3, category: "Electronic", loudnessTrimDb: 0, overrides: { kick: { volume: 0.58 }, snare: { volume: 0.5 }, hihat: { volume: 0.46 }, percussion: { volume: 0.44 }, chords: { volume: 0.88, sendA: 0.32 }, lead: { volume: 0.66, sendA: 0.3 }, fx: { volume: 0.32, sendA: 0.24 } }, duck: { duckDb: 5, releaseMs: 240 } }, // the ambient side dominates: sparse, patient playing · sparse kicks, so the duck can breathe for longer
   "bass-house": { category: "Electronic", loudnessTrimDb: 0, overrides: { kick: { volume: 0.97 }, bass: { volume: 0.97 } } },
@@ -307,7 +308,7 @@ export const GENRE_MIX: Record<string, GenreMix> = {
   "brooklyn-drill": { humanise: 0.12, category: "Electronic", loudnessTrimDb: 0, overrides: { hihat: { volume: 0.8, pan: -0.4, sendB: 0.18 }, bass: { volume: 0.97 }, lead: { volume: 0.62 } }  }, // drill hats are hyper-programmed; variation reads as sloppiness
   "brostep": { humanise: 0.12, category: "Electronic", loudnessTrimDb: -2.67, overrides: { kick: { volume: 0.98 }, bass: { volume: 0.98, sendA: 0.0 } }  }, // see dubstep
   "chicago-drill": { category: "Electronic", loudnessTrimDb: 0, overrides: { hihat: { volume: 0.8, pan: -0.38 }, bass: { volume: 0.97 }, chords: { volume: 0.6 } } },
-  "chicago-house": { category: "Electronic", loudnessTrimDb: 0, overrides: { snare: { volume: 0.86, sendA: 0.14 }, chords: { volume: 0.78, sendA: 0.18 } } },
+  "chicago-house": { category: "Electronic", loudnessTrimDb: -8.9, overrides: { kick: { volume: 0.92 }, snare: { volume: 0.84, sendA: 0.16 }, hihat: { volume: 0.70, pan: -0.35, sendB: 0.18 }, percussion: { volume: 0.68, pan: 0.40, sendA: 0.16 }, bass: { volume: 0.92 }, chords: { volume: 0.78, pan: -0.22, sendA: 0.20 } } },
   "chillstep": { category: "Electronic", loudnessTrimDb: 0, overrides: { kick: { volume: 0.78 }, snare: { volume: 0.6, sendA: 0.22 }, hihat: { volume: 0.6 }, bass: { volume: 0.92 }, chords: { volume: 0.84, sendA: 0.3 }, lead: { volume: 0.72, sendA: 0.28 } } },
   "chillwave": { category: "Electronic", loudnessTrimDb: 0, overrides: { kick: { volume: 0.62 }, snare: { volume: 0.5 }, hihat: { volume: 0.5, pan: -0.28 }, bass: { volume: 0.84 }, chords: { volume: 0.9, sendA: 0.34 }, lead: { volume: 0.74, sendA: 0.3 }, fx: { volume: 0.3 } } },
   "chiptune": { humanise: 0.07, category: "Electronic", loudnessTrimDb: 0, overrides: { hihat: { volume: 0.8 }, lead: { volume: 0.88, pan: 0.1 }, chords: { volume: 0.78 }, fx: { volume: 0.5 } }  }, // trackers are grid-locked and the chips have no velocity to speak of
@@ -393,7 +394,7 @@ export const GENRE_MIX: Record<string, GenreMix> = {
   "east-coast-hip-hop": { category: "Hip Hop", loudnessTrimDb: 0, overrides: { kick: { volume: 0.95 }, snare: { volume: 0.9 }, hihat: { volume: 0.64 }, bass: { volume: 0.95 }, chords: { volume: 0.74, sendA: 0.14 } } },
   "emo-rap": { category: "Hip Hop", loudnessTrimDb: 0, overrides: { kick: { volume: 0.92 }, snare: { volume: 0.7, sendA: 0.2 }, hihat: { volume: 0.7, pan: -0.34 }, bass: { volume: 0.96 }, chords: { volume: 0.82, sendA: 0.3 }, lead: { volume: 0.84, sendA: 0.28 } } },
   "g-funk": { category: "Hip Hop", loudnessTrimDb: 0, overrides: { kick: { volume: 0.94 }, snare: { volume: 0.82 }, bass: { volume: 0.98 }, chords: { volume: 0.7, sendA: 0.14 }, lead: { volume: 0.88, pan: 0.24, sendA: 0.22 } } },
-  "lofi-hip-hop": { category: "Hip Hop", loudnessTrimDb: 0, overrides: { kick: { volume: 0.84 }, snare: { volume: 0.68, sendA: 0.16 }, hihat: { volume: 0.54, pan: -0.3 }, bass: { volume: 0.95 }, chords: { volume: 0.86, sendA: 0.28 }, lead: { volume: 0.68, sendA: 0.26 }, fx: { volume: 0.36 } } },
+  "lofi-hip-hop": { category: "Hip Hop", loudnessTrimDb: -7.0, overrides: { kick: { volume: 0.82 }, snare: { volume: 0.64, sendA: 0.22 }, hihat: { volume: 0.52, pan: -0.3 }, bass: { volume: 0.90 }, chords: { volume: 0.82, pan: -0.20, sendA: 0.32 }, lead: { volume: 0.70, pan: 0.20, sendA: 0.28 }, fx: { volume: 0.36 } } },
   "old-school-hip-hop": { category: "Hip Hop", loudnessTrimDb: 0, overrides: { kick: { volume: 0.95 }, snare: { volume: 0.92, sendA: 0.1 }, hihat: { volume: 0.68 }, percussion: { volume: 0.7, pan: 0.4 }, bass: { volume: 0.94 } } },
   "southern-hip-hop": { category: "Hip Hop", loudnessTrimDb: 0, overrides: { kick: { volume: 0.98 }, snare: { volume: 0.8 }, hihat: { volume: 0.74 }, bass: { volume: 0.99 }, chords: { volume: 0.72, sendA: 0.2 }, lead: { volume: 0.7, sendA: 0.2 } } },
   "trap-rap": { category: "Hip Hop", loudnessTrimDb: 0, overrides: { kick: { volume: 0.98 }, snare: { volume: 0.8 }, hihat: { volume: 0.84, pan: -0.42, sendB: 0.18 }, bass: { volume: 0.99 } }, duck: { duckDb: 7, releaseMs: 90 } }, // the 808 *is* the bass and the kick at once — producers duck it hard and quickly
@@ -413,34 +414,34 @@ export const GENRE_MIX: Record<string, GenreMix> = {
   "modal-jazz": { category: "Jazz/Blues", loudnessTrimDb: 0, overrides: { kick: { volume: 0.6 }, snare: { volume: 0.64, sendA: 0.12 }, hihat: { volume: 0.58 }, bass: { volume: 0.96 }, chords: { volume: 0.84, sendA: 0.18 }, lead: { volume: 0.78, sendA: 0.18 } } },
   "smooth-jazz": { category: "Jazz/Blues", loudnessTrimDb: 0, overrides: { kick: { volume: 0.6 }, snare: { volume: 0.56, sendA: 0.16 }, hihat: { volume: 0.5 }, percussion: { volume: 0.5, pan: 0.3 }, bass: { volume: 0.9 }, chords: { volume: 0.84, sendA: 0.24 }, lead: { volume: 0.8, sendA: 0.24 } } },
   "texas-blues": { category: "Jazz/Blues", loudnessTrimDb: 0, overrides: { kick: { volume: 0.8 }, snare: { volume: 0.8, sendA: 0.14 }, bass: { volume: 0.92 }, chords: { volume: 0.8, pan: -0.22 }, lead: { volume: 0.9, pan: 0.22, sendA: 0.2 } } },
-  "traditional-jazz": { category: "Jazz/Blues", loudnessTrimDb: 0, overrides: { kick: { volume: 0.66 }, snare: { volume: 0.72, sendA: 0.14 }, hihat: { volume: 0.52 }, percussion: { volume: 0.58, pan: 0.28 }, bass: { volume: 0.94 }, chords: { volume: 0.84, sendA: 0.18 }, lead: { volume: 0.8, sendA: 0.18 } } },
+  "traditional-jazz": { category: "Jazz/Blues", loudnessTrimDb: -7.9, overrides: { kick: { volume: 0.58, sendA: 0.12 }, snare: { volume: 0.68, sendA: 0.22 }, hihat: { volume: 0.48 }, percussion: { volume: 0.54, pan: 0.28 }, bass: { volume: 0.78 }, chords: { volume: 0.80, pan: -0.28, sendA: 0.24 }, lead: { volume: 0.78, pan: 0.28, sendA: 0.26 } } },
 
   // -------------------------------------------------------------- Latin/World
   "afrobeat": { humanise: 0.36, category: "Latin/World", loudnessTrimDb: 0, overrides: { snare: { volume: 0.7 }, percussion: { volume: 0.96, pan: -0.44, sendB: 0.2 }, bass: { volume: 0.9 }, chords: { volume: 0.76, pan: 0.18 }, lead: { volume: 0.74 } }  }, // a live percussion ensemble is the lead voice
   "amapiano": { category: "Latin/World", loudnessTrimDb: 0, overrides: { kick: { volume: 0.86 }, percussion: { volume: 0.88, pan: -0.36 }, bass: { volume: 0.94 }, chords: { volume: 0.82, sendA: 0.2 }, lead: { volume: 0.74, sendA: 0.2 } } },
   "bachata": { category: "Latin/World", loudnessTrimDb: 0, overrides: { kick: { volume: 0.78 }, snare: { volume: 0.68 }, percussion: { volume: 0.9, pan: -0.4 }, bass: { volume: 0.86 }, chords: { volume: 0.68 }, lead: { volume: 0.82, pan: 0.18, sendA: 0.2 } } },
-  "bossa-nova": { category: "Latin/World", loudnessTrimDb: -0.09, overrides: { kick: { volume: 0.5 }, snare: { volume: 0.46, sendA: 0.12 }, hihat: { volume: 0.48 }, percussion: { volume: 0.72, pan: -0.3 }, bass: { volume: 0.9 }, chords: { volume: 0.9, pan: 0.18, sendA: 0.22 }, lead: { volume: 0.8, sendA: 0.22 }, fx: { volume: 0.2 } } },
+  "bossa-nova": { category: "Latin/World", loudnessTrimDb: -8.1, overrides: { kick: { volume: 0.45 }, snare: { volume: 0.40, sendA: 0.16 }, hihat: { volume: 0.42 }, percussion: { volume: 0.65, pan: -0.35, sendA: 0.18 }, bass: { volume: 0.76 }, chords: { volume: 0.82, pan: 0.28, sendA: 0.28 }, lead: { volume: 0.82, sendA: 0.32 }, fx: { volume: 0.15 } } },
   "cumbia": { category: "Latin/World", loudnessTrimDb: 0, overrides: { percussion: { volume: 0.94, pan: -0.42 }, bass: { volume: 0.88 }, chords: { volume: 0.76, pan: 0.18 }, lead: { volume: 0.74 } } },
   "dancehall": { category: "Latin/World", loudnessTrimDb: 0, overrides: { kick: { volume: 0.9 }, bass: { volume: 0.97 }, percussion: { volume: 0.84, pan: -0.38, sendB: 0.2 }, chords: { volume: 0.68, sendA: 0.16 } } },
   "kuduro": { category: "Latin/World", loudnessTrimDb: 0, overrides: { kick: { volume: 0.92 }, percussion: { volume: 0.98, pan: -0.44, sendB: 0.22 }, bass: { volume: 0.94 } } },
-  "reggae": { category: "Latin/World", loudnessTrimDb: 0, overrides: { kick: { volume: 0.76 }, snare: { volume: 0.52, sendA: 0.2 }, hihat: { volume: 0.44 }, percussion: { volume: 0.6 }, bass: { volume: 1.0 }, chords: { volume: 0.84, sendA: 0.3 }, lead: { volume: 0.6, sendA: 0.26 }, fx: { volume: 0.3, sendA: 0.24 } } },
+  "reggae": { category: "Latin/World", loudnessTrimDb: -5.8, overrides: { kick: { volume: 0.74 }, snare: { volume: 0.55, sendA: 0.24, sendB: 0.28 }, hihat: { volume: 0.44 }, percussion: { volume: 0.6 }, bass: { volume: 0.98 }, chords: { volume: 0.82, pan: 0.28, sendA: 0.38, sendB: 0.32 }, lead: { volume: 0.64, pan: -0.24, sendA: 0.28, sendB: 0.25 }, fx: { volume: 0.3, sendA: 0.24 } } },
   "reggaeton": { category: "Latin/World", loudnessTrimDb: 0, overrides: { kick: { volume: 0.94 }, snare: { volume: 0.68 }, percussion: { volume: 0.9, pan: -0.42 }, bass: { volume: 0.96 }, lead: { volume: 0.74 } } },
   "salsa": { category: "Latin/World", loudnessTrimDb: 0, overrides: { kick: { volume: 0.7 }, snare: { volume: 0.66 }, percussion: { volume: 1.0, pan: -0.42, sendA: 0.16, sendB: 0.18 }, bass: { volume: 0.94 }, chords: { volume: 0.76, pan: 0.2 }, lead: { volume: 0.8, sendA: 0.18 } } },
   "samba": { category: "Latin/World", loudnessTrimDb: 0, overrides: { percussion: { volume: 1.0, pan: -0.44, sendB: 0.2 }, bass: { volume: 0.9 }, chords: { volume: 0.74, pan: 0.2 }, lead: { volume: 0.78 } } },
 
   // ------------------------------------------------------------------ Pop/R&B
   "alternative-rnb": { category: "Pop/R&B", loudnessTrimDb: 0, overrides: { kick: { volume: 0.8 }, hihat: { volume: 0.52, pan: -0.3 }, bass: { volume: 0.95 }, chords: { volume: 0.86, sendA: 0.3 }, lead: { volume: 0.88, sendA: 0.3 } } },
-  "city-pop": { category: "Pop/R&B", loudnessTrimDb: -0.07, overrides: { snare: { volume: 0.86, sendA: 0.16 }, bass: { volume: 0.9 }, chords: { volume: 0.8, pan: -0.26, sendA: 0.2 }, lead: { volume: 0.84, pan: 0.26, sendA: 0.2 } } },
+  "city-pop": { category: "Pop/R&B", loudnessTrimDb: -8.3, overrides: { kick: { volume: 0.84 }, snare: { volume: 0.80, sendA: 0.22 }, hihat: { volume: 0.62 }, bass: { volume: 0.88 }, chords: { volume: 0.80, pan: -0.32, sendA: 0.28, sendB: 0.12 }, lead: { volume: 0.85, pan: 0.28, sendA: 0.28, sendB: 0.15 } } },
   "contemporary-rnb": { category: "Pop/R&B", loudnessTrimDb: 0, overrides: { kick: { volume: 0.92 }, snare: { volume: 0.7 }, hihat: { volume: 0.7, pan: -0.34 }, bass: { volume: 0.97 }, lead: { volume: 0.92, sendA: 0.22 } } },
   "disco": { category: "Pop/R&B", loudnessTrimDb: 0, overrides: { snare: { volume: 0.86, sendA: 0.16 }, hihat: { volume: 0.7, pan: -0.28, sendB: 0.16 }, percussion: { volume: 0.8, pan: 0.4, sendB: 0.22 }, bass: { volume: 0.94 }, chords: { volume: 0.8, pan: -0.24, sendA: 0.2 }, lead: { volume: 0.82, pan: 0.24, sendA: 0.2 } }, duck: { duckDb: 5.5, releaseMs: 140 } }, // four-on-the-floor with a melodic bass line that has to come back between kicks
   "eurodance": { category: "Pop/R&B", loudnessTrimDb: 0, overrides: { kick: { volume: 0.96 }, bass: { volume: 0.94 }, chords: { volume: 0.82, sendA: 0.22 }, lead: { volume: 0.92, sendA: 0.24 }, fx: { volume: 0.72 } } },
-  "funk": { humanise: 0.38, category: "Pop/R&B", loudnessTrimDb: -0.01, overrides: { kick: { volume: 0.94 }, snare: { volume: 0.9 }, hihat: { volume: 0.74 }, percussion: { volume: 0.76, pan: 0.38 }, bass: { volume: 0.98 }, chords: { volume: 0.74, pan: -0.22 }, lead: { volume: 0.78, pan: 0.22 } }  }, // the one is hard, the ghosts are barely there; that gap is the genre
+  "funk": { humanise: 0.38, category: "Pop/R&B", loudnessTrimDb: -8.2, overrides: { kick: { volume: 0.86 }, snare: { volume: 0.84, sendA: 0.14 }, hihat: { volume: 0.68, pan: -0.26 }, percussion: { volume: 0.74, pan: 0.36 }, bass: { volume: 0.88 }, chords: { volume: 0.80, pan: -0.32, sendA: 0.16 }, lead: { volume: 0.82, pan: 0.32, sendA: 0.18 } } },
   "j-pop": { category: "Pop/R&B", loudnessTrimDb: 0, overrides: { kick: { volume: 0.92 }, snare: { volume: 0.86 }, hihat: { volume: 0.72 }, bass: { volume: 0.92 }, chords: { volume: 0.8, sendA: 0.18 }, lead: { volume: 0.94, sendA: 0.2 }, fx: { volume: 0.7 } } },
   "k-pop": { category: "Pop/R&B", loudnessTrimDb: -3.79, overrides: { kick: { volume: 0.94 }, snare: { volume: 0.88 }, bass: { volume: 0.94 }, lead: { volume: 0.94, sendA: 0.2 }, fx: { volume: 0.74 } } },
   "motown": { humanise: 0.36, category: "Pop/R&B", loudnessTrimDb: 0, overrides: { kick: { volume: 0.76 }, snare: { volume: 0.78, sendA: 0.16 }, hihat: { volume: 0.56 }, percussion: { volume: 0.72, pan: 0.36 }, bass: { volume: 0.94 }, chords: { volume: 0.76, sendA: 0.16 }, lead: { volume: 0.92, pan: 0.1, sendA: 0.22 } }  }, // see soul — same rooms, same players
   "neo-soul": { category: "Pop/R&B", loudnessTrimDb: 0, overrides: { kick: { volume: 0.78 }, snare: { volume: 0.72, sendA: 0.14 }, hihat: { volume: 0.54, pan: -0.26 }, bass: { volume: 0.95 }, chords: { volume: 0.88, pan: -0.18, sendA: 0.24 }, lead: { volume: 0.9, sendA: 0.26 } } },
   "soul": { humanise: 0.36, category: "Pop/R&B", loudnessTrimDb: 0, overrides: { kick: { volume: 0.78 }, snare: { volume: 0.78, sendA: 0.16 }, hihat: { volume: 0.58 }, percussion: { volume: 0.7, pan: 0.36 }, bass: { volume: 0.94 }, chords: { volume: 0.78, sendA: 0.16 }, lead: { volume: 0.94, sendA: 0.24 } }  }, // session players: Motown's own kit is famously dynamic
-  "synth-pop": { category: "Pop/R&B", loudnessTrimDb: -0.65, overrides: { kick: { volume: 0.9 }, bass: { volume: 0.9 }, chords: { volume: 0.82, pan: -0.24, sendA: 0.18 }, lead: { volume: 0.9, pan: 0.2, sendA: 0.2 } } },
+  "synth-pop": { category: "Pop/R&B", loudnessTrimDb: -2.0, overrides: { kick: { volume: 0.86 }, snare: { volume: 0.82, sendA: 0.24 }, bass: { volume: 0.88 }, chords: { volume: 0.80, pan: -0.25, sendA: 0.28 }, lead: { volume: 0.86, pan: 0.25, sendA: 0.30 } } },
   "traditional-pop": { category: "Pop/R&B", loudnessTrimDb: 0, overrides: { kick: { volume: 0.66 }, snare: { volume: 0.62, sendA: 0.16 }, hihat: { volume: 0.48 }, percussion: { volume: 0.5 }, bass: { volume: 0.86 }, chords: { volume: 0.78, sendA: 0.2 }, lead: { volume: 0.94, sendA: 0.26 }, fx: { volume: 0.24 } } },
 
   // --------------------------------------------------------------- Rock/Metal
@@ -450,7 +451,7 @@ export const GENRE_MIX: Record<string, GenreMix> = {
   "death-metal": { category: "Rock/Metal", loudnessTrimDb: 2.52, overrides: { kick: { volume: 1.0 }, snare: { volume: 0.95 }, chords: { volume: 0.88, pan: -0.5 }, lead: { volume: 0.8, pan: 0.5 } } },
   "doom-metal": { category: "Rock/Metal", loudnessTrimDb: -2.43, overrides: { kick: { volume: 0.92 }, snare: { volume: 0.84, sendA: 0.26 }, bass: { volume: 0.98 }, chords: { volume: 0.9, sendA: 0.2 }, lead: { volume: 0.76, sendA: 0.22 } } },
   "grunge": { category: "Rock/Metal", loudnessTrimDb: -0.94, overrides: { kick: { volume: 0.88 }, snare: { volume: 0.9, sendA: 0.18 }, chords: { volume: 0.88 }, lead: { volume: 0.78 } } },
-  "hard-rock": { category: "Rock/Metal", loudnessTrimDb: 0, overrides: { kick: { volume: 0.94 }, snare: { volume: 0.94, sendA: 0.16 }, chords: { volume: 0.9 }, lead: { volume: 0.88, sendA: 0.18 } } },
+  "hard-rock": { category: "Rock/Metal", loudnessTrimDb: -7.1, overrides: { kick: { volume: 0.90 }, snare: { volume: 0.88, sendA: 0.18 }, bass: { volume: 0.86 }, chords: { volume: 0.86, pan: -0.42, sendA: 0.14 }, lead: { volume: 0.86, pan: 0.40, sendA: 0.20 } } },
   "heavy-metal": { category: "Rock/Metal", loudnessTrimDb: 1.29, overrides: { kick: { volume: 0.96 }, snare: { volume: 0.93 }, chords: { volume: 0.9, pan: -0.5 }, lead: { volume: 0.84, pan: 0.5 } } },
   "math-rock": { category: "Rock/Metal", loudnessTrimDb: 0.11, overrides: { snare: { volume: 0.86, sendA: 0.12 }, chords: { volume: 0.88, pan: -0.4 }, lead: { volume: 0.86, pan: 0.4 }, fx: { volume: 0.36 } } },
   "metalcore": { category: "Rock/Metal", loudnessTrimDb: 2.07, overrides: { kick: { volume: 1.0 }, snare: { volume: 0.94 }, bass: { volume: 0.94 }, chords: { volume: 0.9, pan: -0.5 }, lead: { volume: 0.82, pan: 0.5 } } },
@@ -636,7 +637,8 @@ function copyPatternTracks(pattern: SequencerPattern): SequencerPattern {
  * never from `setPattern`, which also runs for every studio/console edit.
  */
 export function applyGenreMixDefaults(pattern: SequencerPattern, genreId?: string): SequencerPattern {
-  const resolved = resolveGenreMix(genreId ?? pattern.genre_id);
+  const id = genreId ?? pattern.genre_id;
+  const resolved = resolveGenreMix(id);
   const copy = copyPatternTracks(pattern);
   if (!resolved) return copy;
 
@@ -646,7 +648,15 @@ export function applyGenreMixDefaults(pattern: SequencerPattern, genreId?: strin
       const role = resolveMixTrackId(track);
       if (!role) return track;
       const mix = resolved[role];
-      return { ...track, volume: mix.volume, pan: mix.pan, sendA: mix.sendA, sendB: mix.sendB };
+      const insert = resolveTrackInsertForGenre(role, id);
+      return {
+        ...track,
+        volume: mix.volume,
+        pan: mix.pan,
+        sendA: mix.sendA,
+        sendB: mix.sendB,
+        insert,
+      };
     }),
   };
 }

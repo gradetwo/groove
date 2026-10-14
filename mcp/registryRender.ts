@@ -6,7 +6,7 @@
 import path from "node:path";
 import { legatoGapNote, legatoGapsFor } from "../src/data/legatoGaps";
 import { chordChangeReattackNote, chordChangeReattacks } from "../src/data/stringTechniques";
-import { flattenMcpArrangement, getMcpArrangement, summariseArrangement } from "./arrangement";
+import { flattenMcpArrangement, getMcpArrangement, summariseArrangement, makeDryPattern, makeDryEffectsOverrides, effectsOverridesForRender, masterSettingsForRender } from "./arrangement";
 import { audioLaneReplyFields } from "./pattern";
 import { HEADLESS_POINTER_SENTENCE, headlessParameterDescription, renderBudgetSentence, renderCostSentence } from "./render/budget";
 import { auditionInstrumentNote, renderStems } from "./render/worker";
@@ -61,6 +61,7 @@ export const RENDER_TOOLS: ToolDefinition[] = [
       startBar: z.number().int().min(0).optional().describe("first bar of the span, with endBar; 0 is the first bar"),
       endBar: z.number().int().min(0).optional().describe("exclusive end of the span, with startBar; the bar it names is not rendered"),
       channels: z.union([z.literal(1), z.literal(2)]).optional().describe("default 2, the exporter's own stereo"),
+      dry: z.boolean().optional().describe("true exports dry track stems with all track inserts and send effects bypassed; volume and pan still apply"),
       headless: z.boolean().optional().describe(headlessParameterDescription()),
     },
     handler: async (args, ctx) => {
@@ -84,8 +85,14 @@ export const RENDER_TOOLS: ToolDefinition[] = [
          */
         ctx?.progress?.report(0, "starting the render engine — a first render in this session also starts a browser, which is the slow part");
 
-        const result = await renderStems(flattened.pattern, {
+        const patternToRender = args.dry === true ? makeDryPattern(flattened.pattern) : flattened.pattern;
+        const effectsToRender = args.dry === true
+          ? makeDryEffectsOverrides(effectsOverridesForRender(String(args.arrangementId)))
+          : effectsOverridesForRender(String(args.arrangementId));
+        const result = await renderStems(patternToRender, {
           format: "wav",
+          effectsOverrides: effectsToRender,
+          masterSettings: masterSettingsForRender(String(args.arrangementId)),
           ...(args.sampleRate ? { sampleRate: args.sampleRate as number } : {}),
           ...(args.channels ? { channels: args.channels as 1 | 2 } : {}),
           bars: 1,

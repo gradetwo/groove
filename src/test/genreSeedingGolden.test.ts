@@ -26,6 +26,6 @@ describe("the v2 seeding path, pinned for one genre", () => {
       tracks: pattern.tracks.length,
       notes,
       digest: createHash("sha256").update(JSON.stringify(pattern)).digest("hex").slice(0, 16),
-    }).toEqual({ tracks: 8, notes: 1024, digest: "0a1994d8c0149c6c" });
+    }).toEqual({ tracks: 8, notes: 1024, digest: "7159ed94dec95c71" });
   });
 });

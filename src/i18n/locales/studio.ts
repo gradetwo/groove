@@ -1007,6 +1007,13 @@ export const studioMessages = {
     en: "Place the 8 tracks on a semicircle around you using HRTF binaural panning. Best with headphones; switching briefly interrupts playback.",
     zh: "使用 HRTF 双耳定位把 8 条轨道分布在你前方的半圆声场上。建议佩戴耳机；切换时会短暂中断播放。",
   },
+  console_dry_toggle: { en: "Global Dry/Wet", zh: "全局干湿声对比" },
+  console_dry: { en: "Dry", zh: "干声" },
+  console_wet: { en: "Wet", zh: "湿声" },
+  console_dry_hint: { en: "Bypass all effects for A/B dry comparison", zh: "一键旁通所有效果器（A/B 干湿对比）" },
+  console_wet_hint: { en: "Restore all effects", zh: "恢复所有效果器" },
+  console_bypass: { en: "Bypass", zh: "旁通" },
+  console_bypass_hint: { en: "Bypass this track's insert effects", zh: "旁通该轨道插入效果器" },
   console_open_studio: { en: "Open in Studio", zh: "在工作台打开" },
   console_empty_title: { en: "No channels", zh: "暂无通道" },
   console_empty_desc: {

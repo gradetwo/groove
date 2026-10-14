@@ -38,6 +38,9 @@ const { engineMock, AudioEngineCtor } = vi.hoisted(() => {
     getMasterVolume: vi.fn(() => 0.8),
     setSpatialMode: vi.fn(),
     getSpatialMode: vi.fn(() => false),
+    setDryMode: vi.fn(),
+    isDryMode: vi.fn(() => false),
+    getDryMode: vi.fn(() => false),
     play: vi.fn().mockResolvedValue(undefined),
     stop: vi.fn(),
     getIsPlaying: vi.fn(() => false),
@@ -292,3 +295,47 @@ describe("the console's insert chain", () => {
     expect(utils.container.querySelector("[data-testid='insert-flow-strip']")).toBeNull();
   });
 });
+
+describe("ConsolePanel · Dry/Wet and Track Bypass affordances", () => {
+  it("defaults to Wet mode and switches the engine to Dry mode when toggled", () => {
+    const utils = renderPanel();
+    const dryBtn = utils.container.querySelector("[data-testid='console-dry-btn']") as HTMLElement;
+    const wetBtn = utils.container.querySelector("[data-testid='console-wet-btn']") as HTMLElement;
+
+    expect(dryBtn).not.toBeNull();
+    expect(wetBtn).not.toBeNull();
+    expect(wetBtn).toHaveAttribute("aria-pressed", "true");
+    expect(dryBtn).toHaveAttribute("aria-pressed", "false");
+
+    // Click Dry
+    fireEvent.click(dryBtn);
+    expect(engineMock.setDryMode).toHaveBeenCalledWith(true);
+    expect(dryBtn).toHaveAttribute("aria-pressed", "true");
+    expect(wetBtn).toHaveAttribute("aria-pressed", "false");
+
+    // Click Wet
+    fireEvent.click(wetBtn);
+    expect(engineMock.setDryMode).toHaveBeenCalledWith(false);
+    expect(wetBtn).toHaveAttribute("aria-pressed", "true");
+    expect(dryBtn).toHaveAttribute("aria-pressed", "false");
+  });
+
+  it("offers a per-channel bypass button (BP) that toggles insert bypass", () => {
+    const utils = renderPanel();
+    const bpBtn = utils.container.querySelector("[data-testid='console-bypass-0']") as HTMLElement;
+    expect(bpBtn).not.toBeNull();
+    expect(bpBtn).toHaveAttribute("aria-pressed", "false");
+
+    // Toggle Bypass on channel 0
+    fireEvent.click(bpBtn);
+    const store = utils.getStore();
+    expect(store.state.pattern.tracks[0]?.insert?.compEnabled).toBe(false);
+    expect(store.state.pattern.tracks[0]?.insert?.driveEnabled).toBe(false);
+    expect(bpBtn).toHaveAttribute("aria-pressed", "true");
+
+    // Toggle Bypass off channel 0
+    fireEvent.click(bpBtn);
+    expect(bpBtn).toHaveAttribute("aria-pressed", "false");
+  });
+});
+

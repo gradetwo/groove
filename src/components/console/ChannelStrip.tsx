@@ -30,6 +30,10 @@ export interface ChannelStripProps {
    * `TrackInspector` had no production reference at all.
    */
   onOpenInspector?: (trackIdx: number) => void;
+  /** Whether this channel's insert chain is bypassed. */
+  isBypassed?: boolean;
+  /** Toggles bypass for this channel's insert chain. */
+  onToggleBypass?: (trackIdx: number) => void;
 }
 
 const FADER_TICKS_DB = [0, -6, -12, -24, -48];
@@ -127,6 +131,8 @@ export const ChannelStrip: React.FC<ChannelStripProps> = ({
   isPhaseInverted,
   onTogglePhase,
   onOpenInspector,
+  isBypassed = false,
+  onToggleBypass,
 }) => {
   const panInfo = panLabel(pan);
 
@@ -254,18 +260,6 @@ export const ChannelStrip: React.FC<ChannelStripProps> = ({
         >
           S
         </button>
-        {onOpenInspector && (
-          <button
-            type="button"
-            onClick={() => onOpenInspector(trackIdx)}
-            aria-label={`${name} ${t("console_insert_chain")}`}
-            title={t("console_insert_chain")}
-            data-testid={`console-insert-${trackIdx}`}
-            className="h-11 w-11 shrink-0 rounded-lg border border-line bg-[#15171d] text-[10px] font-bold text-text-sub transition-colors hover:text-text"
-          >
-            EQ
-          </button>
-        )}
         {/* Polarity inversion (Ø): flips the channel sign via a dedicated gain stage. */}
         <button
           type="button"
@@ -283,6 +277,41 @@ export const ChannelStrip: React.FC<ChannelStripProps> = ({
           Ø
         </button>
       </div>
+
+      {/* Insert chain opener (EQ) & Insert Bypass (BP) */}
+      {(onOpenInspector || onToggleBypass) && (
+        <div className="flex w-full items-center justify-between gap-1.5 pt-0.5">
+          {onOpenInspector && (
+            <button
+              type="button"
+              onClick={() => onOpenInspector(trackIdx)}
+              aria-label={`${name} ${t("console_insert_chain")}`}
+              title={t("console_insert_chain")}
+              data-testid={`console-insert-${trackIdx}`}
+              className="flex-1 h-8 rounded-lg border border-line bg-[#15171d] font-['JetBrains_Mono'] text-[10px] font-bold text-text-sub transition-colors hover:text-text"
+            >
+              EQ
+            </button>
+          )}
+          {onToggleBypass && (
+            <button
+              type="button"
+              onClick={() => onToggleBypass(trackIdx)}
+              aria-pressed={isBypassed}
+              aria-label={`${name} ${t("console_bypass")}`}
+              title={t("console_bypass_hint")}
+              data-testid={`console-bypass-${trackIdx}`}
+              className={`flex-1 h-8 rounded-lg border font-['JetBrains_Mono'] text-[10px] font-bold transition-colors ${
+                isBypassed
+                  ? "border-amber-400/70 bg-amber-500/20 text-amber-300"
+                  : "border-line bg-[#15171d] text-text-sub hover:text-text"
+              }`}
+            >
+              BP
+            </button>
+          )}
+        </div>
+      )}
     </div>
   );
 };

@@ -7,7 +7,7 @@
  * Every function returns a **new arrangement**, because a track list is state that an interface re-renders from; mutating in place is how a UI ends up showing something the model does not say.
  */
 import type { ArrangementV2, NoteEvent, TakeRegion, TrackKindV2, TrackV2, TrackRegion } from "../types/arrangementV2";
-import { clampGainDb, type AutomationLane } from "./automation";
+import { clampForParameter, clampGainDb, type AutomationLane } from "./automation";
 import { normaliseTrackRegion, regionBars, sameTrackRegion } from "./arrangementLanes";
 import { stepCountFor, stepsPerBarFor } from "./noteEvents";
 import type { PlannedTake } from "./takePlanning";
@@ -440,7 +440,7 @@ export function setTrackAutomation(
 ): ArrangementV2 {
   const ordered = lane.points
     .filter((point) => Number.isFinite(point.atBeats) && Number.isFinite(point.value))
-    .map((point) => ({ atBeats: Math.max(0, point.atBeats), value: clampGainDb(point.value) }))
+    .map((point) => ({ atBeats: Math.max(0, point.atBeats), value: clampForParameter(lane.parameter, point.value) }))
     .sort((a, b) => a.atBeats - b.atBeats);
   /**
    * Two points at one beat are folded, later winning, because a curve cannot turn twice at one position: clamping a
@@ -454,11 +454,11 @@ export function setTrackAutomation(
   }
   return {
     ...arrangement,
-    tracks: arrangement.tracks.map((track) =>
-      track.id === trackId
-        ? { ...track, automation: [{ parameter: lane.parameter, points }] }
-        : track
-    ),
+    tracks: arrangement.tracks.map((track) => {
+      if (track.id !== trackId) return track;
+      const existing = (track.automation ?? []).filter((l) => l.parameter !== lane.parameter);
+      return { ...track, automation: [...existing, { parameter: lane.parameter, points }] };
+    }),
   };
 }
 

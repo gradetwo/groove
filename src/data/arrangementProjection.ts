@@ -75,6 +75,11 @@ export function projectSongToV2(song: ProjectionInput): ArrangementV2 {
          * nothing keeps `undefined` rather than an empty string that would look like a name.
          */
         ...(track.instrument ? { instrument: track.instrument } : {}),
+        ...(typeof track.volume === "number" ? { gainDb: 20 * Math.log10(Math.max(0.0001, track.volume)) } : {}),
+        ...(typeof track.pan === "number" ? { pan: track.pan } : {}),
+        ...(typeof track.sendA === "number" ? { sendA: track.sendA } : {}),
+        ...(typeof track.sendB === "number" ? { sendB: track.sendB } : {}),
+        ...(track.insert ? { insert: track.insert } : {}),
       });
     }
   }

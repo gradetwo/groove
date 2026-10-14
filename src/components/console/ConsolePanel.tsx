@@ -7,7 +7,7 @@ import { EmptyState } from "../../ui";
 import { BookOpen, Headphones, X } from "lucide-react";
 import { TrackInspector } from "./TrackInspector";
 import { resolveTrackInsertForGenre } from "../../data/genreInsert";
-import { bypassTrackInsert } from "../../data/trackInsert";
+import { bypassTrackInsert, isTrackInsertBypassed, type TrackInsertParams } from "../../data/trackInsert";
 import type { MixTrackId } from "../../data/genreMix";
 import { ChannelStrip } from "./ChannelStrip";
 import { MasterStrip } from "./MasterStrip";
@@ -100,6 +100,10 @@ export const ConsolePanel: React.FC<ConsolePanelProps> = ({
   // N-02: binaural (HRTF) monitoring toggle. Off by default; the engine rebuilds its
   // channel strips when this changes, so the unused panner model costs no CPU.
   const [spatialEnabled, setSpatialEnabled] = useState(false);
+  // Dry/Wet monitoring toggle (A/B comparison).
+  const [isDry, setIsDry] = useState(() => (typeof engine.isDryMode === "function" ? engine.isDryMode() : false));
+  // Preserves last non-bypassed insert chain for each track for instant A/B restoration
+  const lastActiveInsertsRef = useRef<Record<number, TrackInsertParams>>({});
   /**
    * ⭐ **Which channel's chain is open below the desk.** View state, not model state: "I am looking at this track's
    * EQ" is a fact about the session on screen, the same reason the arrangement's own selection is local. Absent means
@@ -165,6 +169,22 @@ export const ConsolePanel: React.FC<ConsolePanelProps> = ({
   useEffect(() => {
     return () => {
       engine.setSpatialMode(false);
+    };
+  }, [engine]);
+
+  // ----- Dry/Wet monitoring mode (A/B comparison) ---------------------------
+  useEffect(() => {
+    if (typeof engine.setDryMode === "function") {
+      engine.setDryMode(isDry);
+    }
+  }, [engine, isDry]);
+
+  // Never leave the shared engine stuck in dry audition mode after close.
+  useEffect(() => {
+    return () => {
+      if (typeof engine.setDryMode === "function") {
+        engine.setDryMode(false);
+      }
     };
   }, [engine]);
 
@@ -340,6 +360,28 @@ export const ConsolePanel: React.FC<ConsolePanelProps> = ({
     [commit]
   );
 
+  const handleToggleBypass = useCallback(
+    (trackIdx: number) => {
+      const track = tracks[trackIdx];
+      if (!track) return;
+      const currentInsert =
+        track.insert ??
+        engine.getTrackInsert?.(trackIdx) ??
+        resolveTrackInsertForGenre(track.track_id, pattern.genre_id);
+      const bypassed = isTrackInsertBypassed(currentInsert);
+      if (bypassed) {
+        const restored =
+          lastActiveInsertsRef.current[trackIdx] ??
+          resolveTrackInsertForGenre(track.track_id, pattern.genre_id);
+        commit({ type: "REPLACE_TRACK_INSERT", trackIdx, insert: restored });
+      } else {
+        lastActiveInsertsRef.current[trackIdx] = currentInsert;
+        commit({ type: "SET_TRACK_INSERT", trackIdx, patch: bypassTrackInsert() });
+      }
+    },
+    [tracks, engine, pattern.genre_id, commit]
+  );
+
   const handleToggleTransport = useCallback(() => {
     if (onToggleTransport) {
       onToggleTransport();
@@ -401,6 +443,41 @@ export const ConsolePanel: React.FC<ConsolePanelProps> = ({
             <Headphones className="h-3.5 w-3.5" />
             <span>{t("console_spatial_toggle")}</span>
           </button>
+          {/* Dry / Wet Audition Toggle (A/B comparison) */}
+          <div
+            className="flex items-center rounded-lg border border-line bg-panel2 p-0.5"
+            role="group"
+            aria-label={t("console_dry_toggle")}
+          >
+            <button
+              type="button"
+              data-testid="console-dry-btn"
+              onClick={() => setIsDry(true)}
+              aria-pressed={isDry}
+              title={t("console_dry_hint")}
+              className={`rounded-md px-2.5 py-1 font-['JetBrains_Mono'] text-[11px] font-bold transition-colors ${
+                isDry
+                  ? "border border-amber-400/50 bg-amber-500/25 text-amber-300 shadow-sm"
+                  : "text-text-sub hover:text-text"
+              }`}
+            >
+              {t("console_dry")}
+            </button>
+            <button
+              type="button"
+              data-testid="console-wet-btn"
+              onClick={() => setIsDry(false)}
+              aria-pressed={!isDry}
+              title={t("console_wet_hint")}
+              className={`rounded-md px-2.5 py-1 font-['JetBrains_Mono'] text-[11px] font-bold transition-colors ${
+                !isDry
+                  ? "border border-accent/50 bg-accent/25 text-accent shadow-sm"
+                  : "text-text-sub hover:text-text"
+              }`}
+            >
+              {t("console_wet")}
+            </button>
+          </div>
           {onOpenStudio && (
             <button
               type="button"
@@ -449,6 +526,11 @@ export const ConsolePanel: React.FC<ConsolePanelProps> = ({
           <div className="flex min-w-max items-stretch gap-2.5">
             {tracks.map((track, trackIdx) => {
               const visual = getTrackVisual(track.track_id, trackIdx);
+              const trackInsert =
+                track.insert ??
+                engine.getTrackInsert?.(trackIdx) ??
+                resolveTrackInsertForGenre(track.track_id, pattern.genre_id);
+              const isBypassed = isDry || isTrackInsertBypassed(trackInsert);
               return (
                 <ChannelStrip
                   key={`${track.track_id}-${trackIdx}`}
@@ -474,6 +556,8 @@ export const ConsolePanel: React.FC<ConsolePanelProps> = ({
                   isPhaseInverted={Boolean(track.phaseInvert)}
                   onTogglePhase={handleTogglePhase}
                   onOpenInspector={setInspectedIdx}
+                  isBypassed={isBypassed}
+                  onToggleBypass={handleToggleBypass}
                 />
               );
             })}
@@ -521,7 +605,7 @@ export const ConsolePanel: React.FC<ConsolePanelProps> = ({
               insert: resolveTrackInsertForGenre(inspected.track_id, pattern.genre_id),
             })
           }
-          onBypassInsert={() => commit({ type: "SET_TRACK_INSERT", trackIdx: inspectedIdx!, patch: bypassTrackInsert() })}
+          onBypassInsert={() => handleToggleBypass(inspectedIdx!)}
           getGainReductionDb={() => engine.getTrackCompressorReductionDb(inspectedIdx!)}
           isPlaying={isPlaying}
           onInstrumentChange={() => {

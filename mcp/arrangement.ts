@@ -64,6 +64,8 @@ import {
 import type { TrackInsertPatch } from "../src/data/trackInsert";
 import { MASTER_DEFAULTS, normaliseMasterSettings, type MasterSettings } from "../src/data/masterSettings";
 import { normaliseEffectsOverrides, type EffectsOverrides } from "../src/data/effectsOverrides";
+import type { AutomationParameter } from "../src/data/automation";
+import type { SequencerPattern } from "../src/types/genre";
 import type { ArrangementV2, NoteEvent, TrackKindV2, TrackV2 } from "../src/types/arrangementV2";
 import type { PlannedTake } from "../src/data/takePlanning";
 import { flattenArrangementV2, laneInstrumentForTrack, laneRoleForTrack } from "../src/data/arrangementCompile";
@@ -597,8 +599,17 @@ export function createMcpArrangement(input: CreateMcpArrangementInput = {}): Arr
     ...(input.name === undefined ? {} : { name: input.name }),
   };
   const id = `arrangement-${++idSequence}`;
+  if (input.genreId) {
+    arrangementGenreMap.set(id, input.genreId);
+  }
   arrangements.set(id, base);
   return summariseArrangement(id, base);
+}
+
+const arrangementGenreMap = new Map<string, string>();
+
+export function genreForArrangement(arrangementId: string): string | undefined {
+  return arrangementGenreMap.get(arrangementId);
 }
 
 /**
@@ -1728,11 +1739,16 @@ export function setMcpTrackGain(arrangementId: string, trackId: string, gainDb: 
 export function setMcpTrackAutomation(
   arrangementId: string,
   trackId: string,
-  points: Array<{ atBeats: number; value: number }>
+  points: Array<{ atBeats: number; value: number } | [number, number]>,
+  parameter?: string
 ): ArrangementEditResult {
+  const normPoints = points.map((p) =>
+    Array.isArray(p) ? { atBeats: p[0], value: p[1] } : p
+  );
+  const normParam = ((parameter || "gainDb").replace(/^eq\./, "")) as AutomationParameter;
   return edit(arrangementId, (arrangement) =>
     refuseUnknownTrack(arrangement, trackId, () =>
-      setTrackAutomation(arrangement, trackId, { parameter: "gainDb", points })
+      setTrackAutomation(arrangement, trackId, { parameter: normParam, points: normPoints })
     )
   );
 }
@@ -1968,4 +1984,52 @@ export function describeMcpArrangement(arrangementId: string, format?: "text" | 
     return `  ${parts.join(" · ")}`;
   });
   return [`${summary.arrangementId} (${summary.trackCount} track(s))`, ...lines, ...summary.problems.map((problem) => `  ⚠ ${problem}`)].join("\n");
+}
+
+/**
+ * Create a dry version of the pattern for A/B comparison or dry stems/render.
+ * Bypasses all insert processing (HPF, EQ, compressor, drive) and send effects (reverb/delay sends).
+ * Track volume and pan remain untouched.
+ */
+export function makeDryPattern(pattern: SequencerPattern): SequencerPattern {
+  return {
+    ...pattern,
+    tracks: pattern.tracks.map((track) => ({
+      ...track,
+      sendA: 0,
+      sendB: 0,
+      insert: track.insert
+        ? {
+            ...track.insert,
+            hpfEnabled: false,
+            compEnabled: false,
+            driveEnabled: false,
+            low: { ...track.insert.low, enabled: false, gainDb: 0 },
+            mid: { ...track.insert.mid, enabled: false, gainDb: 0 },
+            high: { ...track.insert.high, enabled: false, gainDb: 0 },
+          }
+        : undefined,
+      insertByStep: undefined,
+    })),
+  };
+}
+
+/**
+ * Create a dry version of master effects overrides.
+ * Bypasses reverb, delay and chorus wet signals.
+ */
+export function makeDryEffectsOverrides(effectsOverrides?: EffectsOverrides): EffectsOverrides {
+  return {
+    ...effectsOverrides,
+    reverb: { ...effectsOverrides?.reverb, enabled: false },
+    delay: { ...effectsOverrides?.delay, enabled: false, feedback: 0 },
+    rack: {
+      ...effectsOverrides?.rack,
+      filterEnabled: false,
+      saturationEnabled: false,
+      chorusEnabled: false,
+      bitcrusherEnabled: false,
+      chorusMix: 0,
+    },
+  };
 }
