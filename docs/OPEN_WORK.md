@@ -25393,3 +25393,27 @@ describe("the grid's editing actions", () => {
      并记着 bundle 曾量到 220.6 KB / 上限 220 KB ✓（⚠️ 现在**没有**在跑的 bundle 体积门禁 ✓，
      本轮 grep `scripts/` 与 `package.json` 未找到 ✓ ⇒ 若要做，需自己先量 bundle ✓）
 ```
+
+### 四百零三之五：③-1 设置存哪 —— 已定并落地（2026-10-14 ✓）
+
+```
+**✅ "设置存哪"已解决 ✓（`32b1a97` ✓）**：`GrooveProject.masterSettings` ✓（可选 ✓，因为此前保存的工程都没有这个字段 ✓）
+  + **唯一读取口** `masterSettingsFromProject()` ✓。★ 读取口才是重点 ✓：现在有三个消费者要这块设置 ✓
+  （引擎建图 ✓、导出写母带 ✓、工具改它 ✓），**若各自决定"缺省意味着什么"** ✓，同一个工程就会
+  "房间一个声、文件另一个声" ✓ —— 正是这套模型要消灭的缺陷 ✓。⇒ 缺省读作 `MASTER_DEFAULTS` ✓
+  （即 `masterGraph` 自己的常量 ✓）⇒ 旧工程**不变** ✓ 而不是被静默清零 ✓。
+  ⚠️ 守着的一个坑 ✓：`width.amount` 的"没意见"是 **1** ✓ —— 若默认成 0 ✓，今天之前写的每个工程都会被**单声道化** ✓。
+  存储值出口即规范化 ✓（手改的 `.groove` 不能把 ceiling > 0 dBTP 或 ratio 900 送进 `AudioParam` ✓）。
+  判据 4 条 ✓（`masterSettings.test.ts` 2 条 ✓ + `projectDb.test.ts` 2 条 ✓），
+  含**`.groove` 包往返** ✓：`exportProjectPackage` 今天是 `...project` 展开 ✓，
+  但"展开"正是日后被一份显式字段表替换掉的东西 ✓ ⇒ 所以钉的是**行为**不是实现 ✓。
+
+**❌ 剩余，且顺序有依赖 ✓**
+  1. ⚠️ **"重建母带图"是面板的前置** ✓：`setMasterSettings` 只对**下一次**建图生效 ✓，
+     而 `initAudioContext` 在 ctx 已存在时早退 ✓ ⇒ 现在**没有任何东西会重建母带图** ✓。
+     在它之前接面板 ✓ ⇒ 旋钮看起来是死的 ✓。★ 已排除的做法 ✓：`destroy()` 会连带拆掉 worklet 时钟与 worker 桥 ✓
+     ⇒ 对"改个设置"过重 ✓，需要一条只重建母线图的路 ✓（并确认重建时各 strip 如何接回新图 ✓）。
+  2. **面板写回引擎** ✓（`AudioSettingsTab.tsx`：`limiterKind`/`limiterLookaheadMs` 目前只是本地 state ✓，
+     该文件既有约定是"写引擎 → 再读回引擎的钳位值" ✓，照它做 ✓）。
+  3. **MCP 工具读写整块** ✓（存储已就位 ✓）。
+  4. **`ChannelStripDsp` 接上 width** ✓（插入点 `:453` ✓；⚠️ 无在跑的 bundle 体积门禁 ✓，要做需先自己量 ✓）。
