@@ -67,3 +67,35 @@ describe("set_arrangement_effects", () => {
     expect(() => setMcpEffectsOverrides("nope", { reverb: { decaySec: 3 } })).toThrow(/no arrangement "nope"/);
   });
 });
+
+/**
+ * ⭐ **The rack is stored and carried with the rest, because the decision was that it follows the arrangement.**
+ *
+ * The rack lived on `GrooveProject` and the protocol's render path did not consume it at all, so an agent could not touch
+ * it even in principle. The chosen shape is the one the mastering block and the buses already use: stored per arrangement
+ * and passed to a render — which is what these cases assert, since "stored but not rendered" is the failure that looks
+ * like a working tool.
+ */
+describe("the master effect rack follows the arrangement", () => {
+  it("⭐ stores a partial rack patch and reports it in the summary", () => {
+    const result = setMcpEffectsOverrides(id, { rack: { saturationEnabled: true, saturationDrive: 4 } });
+    expect(result.summary.effects.rack?.saturationEnabled).toBe(true);
+    // A partial patch: the filter was not named, so it is not in the stored patch — the genre still decides it.
+    expect(result.summary.effects.rack?.filterEnabled, "an unnamed stage is not restated").toBeUndefined();
+  });
+
+  it("⭐ reaches the render path, which is the whole point of storing it per arrangement", () => {
+    setMcpEffectsOverrides(id, { rack: { bitcrusherEnabled: true, bitDepth: 6 } });
+    // The value a render is handed — the same one the summary reports, from one store.
+    const carried = effectsOverridesForRender(id);
+    expect(carried.rack?.bitcrusherEnabled).toBe(true);
+    expect(carried.rack?.bitDepth).toBe(6);
+  });
+
+  it("clamps rack fields that arrive over the wire", () => {
+    setMcpEffectsOverrides(id, { rack: { bitDepth: 999, filterQ: 0 } });
+    const stored = effectsOverridesForRender(id).rack!;
+    expect(stored.bitDepth).toBe(EFFECTS_LIMITS.bitDepth.max);
+    expect(stored.filterQ).toBe(EFFECTS_LIMITS.filterQ.min);
+  });
+});

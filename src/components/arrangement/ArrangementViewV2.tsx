@@ -109,6 +109,7 @@ import {
   subscribeArrangementSaveStatus,
 } from "../../features/sequencer/projectDb";
 import type { AudioEngine, EffectsRackState } from "../../audio/AudioEngine";
+import { mergeEffectsOverrides } from "../../data/effectsOverrides";
 import { DEFAULT_FX_STATE } from "../../audio/EffectsRack";
 import { generateEuclidean } from "../../audio/Euclidean";
 import { useDensityPreference } from "../../hooks/useDensityPreference";
@@ -467,6 +468,18 @@ export function ArrangementViewV2({ currentSong, songId, capture, bar = 0, playe
         engineNow.setMasterSaturation(next.saturationEnabled, next.saturationDrive);
         engineNow.setMasterChorus(next.chorusEnabled, next.chorusMix, next.chorusRate);
         engineNow.setMasterBitcrusher(next.bitcrusherEnabled, next.bitDepth);
+        /**
+         * ⭐ **And stored on the arrangement, not only pushed at the engine.** The engine's rack is current state; a
+         * genre change (or a reload) rewrites it from the genre's profile, so a value that lived only there would come
+         * back different. Storing it is what makes the interface's rack an arrangement decision — the same place MCP
+         * writes, so the two paths cannot disagree.
+         *
+         * Merged, not replaced: this callback knows only the stage that changed, and replacing the block would drop the
+         * reverb or delay the same arrangement had set.
+         */
+        engineNow.setEffectsOverrides(
+          mergeEffectsOverrides(engineNow.getEffectsOverrides(), { rack: { ...next } })
+        );
       }
       setFxState(next);
     },

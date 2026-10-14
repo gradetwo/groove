@@ -1343,6 +1343,10 @@ export class AudioEngine {
 
   /** ⭐ Applies a project's reverb/delay patch over the genre's profile, **now** — `setParams` needs no rebuild, so
    *  unlike the mastering block no note is cut. Returns what was accepted, clamped. */
+  /** ⭐ What the buses and the rack are currently patched with, so a caller can merge rather than replace. */
+  public getEffectsOverrides(): EffectsOverrides {
+    return this.effectsOverrides;
+  }
   public setEffectsOverrides(patch: unknown): EffectsOverrides {
     this.effectsOverrides = normaliseEffectsOverrides(patch);
     if (this.masterGraph) applyEffectsOverrides(this.masterGraph, this.effectsOverrides);

@@ -22,6 +22,7 @@
  * was missing was a place to keep the decision and one function that applies it on both the live and the offline path.
  */
 import type { DelayBus, DelayParams } from "../audio/DelayBus";
+import type { EffectsRack, EffectsRackState } from "../audio/EffectsRack";
 import type { ReverbBus, ReverbParams } from "../audio/ReverbBus";
 
 /** Reverb fields a project may override. `enabled` is here too: a project may want the bus off entirely. */
@@ -30,9 +31,17 @@ export type ReverbOverride = Partial<Pick<ReverbParams, "enabled" | "decaySec" |
 /** Delay fields a project may override. `timeSeconds` is explicit; the genre's tempo division still applies otherwise. */
 export type DelayOverride = Partial<Pick<DelayParams, "enabled" | "timeSeconds" | "feedback" | "dampHz" | "pingPong">>;
 
+/**
+ * The four effects a project may override on the master rack. Every field of {@link EffectsRackState} is here, because
+ * the rack is one decision about the whole mix and a partial patch over it is exactly what a protocol caller wants to
+ * send — "turn the saturator on" without restating the filter.
+ */
+export type RackOverride = Partial<EffectsRackState>;
+
 export interface EffectsOverrides {
   reverb?: ReverbOverride;
   delay?: DelayOverride;
+  rack?: RackOverride;
 }
 
 /**
@@ -50,6 +59,13 @@ export const EFFECTS_LIMITS = {
   timeSeconds: { min: 0.01, max: 4 },
   feedback: { min: 0, max: 0.95 },
   dampHz: { min: 200, max: 18000 },
+  // The rack's own documented ranges (`EffectsRackState`), so a slider and the DSP agree about the travel.
+  filterCutoff: { min: 20, max: 20000 },
+  filterQ: { min: 0.5, max: 15 },
+  saturationDrive: { min: 1, max: 6 },
+  chorusMix: { min: 0, max: 1 },
+  chorusRate: { min: 0.2, max: 5 },
+  bitDepth: { min: 4, max: 16 },
 } as const;
 
 const clamp = (value: number, min: number, max: number): number =>
@@ -63,7 +79,7 @@ const clamp = (value: number, min: number, max: number): number =>
  */
 export function normaliseEffectsOverrides(input: unknown): EffectsOverrides {
   if (input === null || typeof input !== "object") return {};
-  const raw = input as { reverb?: Record<string, unknown>; delay?: Record<string, unknown> };
+  const raw = input as { reverb?: Record<string, unknown>; delay?: Record<string, unknown>; rack?: Record<string, unknown> };
   const out: EffectsOverrides = {};
 
   const reverb: ReverbOverride = {};
@@ -98,13 +114,38 @@ export function normaliseEffectsOverrides(input: unknown): EffectsOverrides {
   }
   if (Object.keys(delay).length > 0) out.delay = delay;
 
+  /**
+   * The rack. Booleans and the filter's `type` are copied as they are; every number is clamped to the range the rack's
+   * own state documents. An unknown key is dropped, so a hand-edited file cannot reach a `setFilter` argument.
+   */
+  const rack: RackOverride = {};
+  if (raw.rack !== null && typeof raw.rack === "object") {
+    const source = raw.rack as Record<string, unknown>;
+    for (const key of ["filterEnabled", "saturationEnabled", "chorusEnabled", "bitcrusherEnabled"] as const) {
+      if (typeof source[key] === "boolean") rack[key] = source[key];
+    }
+    if (typeof source.filterType === "string") rack.filterType = source.filterType as EffectsRackState["filterType"];
+    for (const [key, limit] of [
+      ["filterCutoff", EFFECTS_LIMITS.filterCutoff],
+      ["filterQ", EFFECTS_LIMITS.filterQ],
+      ["saturationDrive", EFFECTS_LIMITS.saturationDrive],
+      ["chorusMix", EFFECTS_LIMITS.chorusMix],
+      ["chorusRate", EFFECTS_LIMITS.chorusRate],
+      ["bitDepth", EFFECTS_LIMITS.bitDepth],
+    ] as const) {
+      const value = source[key];
+      if (typeof value === "number") rack[key] = clamp(value, limit.min, limit.max);
+    }
+  }
+  if (Object.keys(rack).length > 0) out.rack = rack;
+
   return out;
 }
 
 /** Whether a patch would change anything, so a writer can drop an empty one rather than storing noise. */
 export function isEmptyEffectsOverrides(overrides: EffectsOverrides): boolean {
   const normalised = normaliseEffectsOverrides(overrides);
-  return normalised.reverb === undefined && normalised.delay === undefined;
+  return normalised.reverb === undefined && normalised.delay === undefined && normalised.rack === undefined;
 }
 
 /**
@@ -115,10 +156,47 @@ export function isEmptyEffectsOverrides(overrides: EffectsOverrides): boolean {
  * reports it. `setParams` is live on both buses, so this is cheap and needs no rebuild.
  */
 export function applyEffectsOverrides(
-  graph: { reverb: ReverbBus; delay: DelayBus },
+  graph: { reverb: ReverbBus; delay: DelayBus; fxRack: EffectsRack },
   overrides: EffectsOverrides
 ): void {
   const normalised = normaliseEffectsOverrides(overrides);
   if (normalised.reverb !== undefined) graph.reverb.setParams(normalised.reverb);
   if (normalised.delay !== undefined) graph.delay.setParams(normalised.delay);
+  /**
+   * ⭐ **The rack, through the same four setters the genre's profile uses.** `applyGenreFxToGraph` calls these directly;
+   * naming them here as well would be a second implementation of "what a rack state means", so a project's patch and a
+   * genre's profile would eventually disagree about one of them.
+   *
+   * Each call takes the **merged** value (patch over what the rack already reports), because the setters each take a
+   * whole stage: calling `setFilter` with three undefined fields would switch the filter off.
+   */
+  if (normalised.rack !== undefined) {
+    const patch = normalised.rack;
+    const current = graph.fxRack.getState();
+    graph.fxRack.setFilter(
+      patch.filterEnabled ?? current.filterEnabled,
+      patch.filterCutoff ?? current.filterCutoff,
+      patch.filterQ ?? current.filterQ,
+      patch.filterType ?? current.filterType
+    );
+    graph.fxRack.setSaturation(patch.saturationEnabled ?? current.saturationEnabled, patch.saturationDrive ?? current.saturationDrive);
+    graph.fxRack.setChorus(patch.chorusEnabled ?? current.chorusEnabled, patch.chorusMix ?? current.chorusMix, patch.chorusRate ?? current.chorusRate);
+    graph.fxRack.setBitcrusher(patch.bitcrusherEnabled ?? current.bitcrusherEnabled, patch.bitDepth ?? current.bitDepth);
+  }
+}
+
+/**
+ * ⭐ **A patch merged over what is already stored**, field by field, for callers that hold only the change.
+ *
+ * The engine and the protocol both take a patch, and a UI that reported only its own change would replace the whole
+ * block — so a rack tweak would silently drop the reverb the same project had set. Merging is one function rather than
+ * each caller spreading two objects and hoping the shapes line up.
+ */
+export function mergeEffectsOverrides(current: EffectsOverrides, patch: unknown): EffectsOverrides {
+  const next = normaliseEffectsOverrides(patch);
+  return normaliseEffectsOverrides({
+    reverb: { ...current.reverb, ...next.reverb },
+    delay: { ...current.delay, ...next.delay },
+    rack: { ...current.rack, ...next.rack },
+  });
 }

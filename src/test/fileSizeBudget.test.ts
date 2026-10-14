@@ -151,7 +151,14 @@ const FILE_CAPS: Record<string, number> = {
    *
    * **This number may only go down from here.**
    */
-  "src/audio/AudioEngine.ts": 3335,
+  /**
+   * ⭐ **3335 → 3339 on 2026-10-14, for the rack's read-back.** `getEffectsOverrides` is what lets a caller merge a patch
+   * over what is stored instead of replacing the block — without it a rack tweak in the interface would silently drop the
+   * reverb the same arrangement had set. Four lines: a doc line and a three-line accessor.
+   *
+   * **This number may only go down from here.**
+   */
+  "src/audio/AudioEngine.ts": 3339,
   /**
    * ⭐ **Re-measured on 2026-10-12, when the per-render O(n²) note lookups became a Map index** (perf audit ROI #2).
    * The file grew 3241 → 3264 lines with `noteIndex` — one `useMemo` building `byCell`/`byStep`, its comment, and the

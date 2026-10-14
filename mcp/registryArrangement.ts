@@ -1038,9 +1038,9 @@ export const ARRANGEMENT_TOOLS: ToolDefinition[] = [
   },
   {
     name: "set_arrangement_effects",
-    title: "Set an arrangement's reverb and delay",
+    title: "Set an arrangement's reverb, delay and effect rack",
     description:
-      "The arrangement's own reverb and delay settings, as a patch over the genre's profile. Reverb: decaySec, damping, preDelayMs, width, enabled. Delay: timeSeconds, feedback, dampHz, pingPong, enabled. A partial patch — only the fields given change, and everything else keeps the genre's answer, so a longer decay cannot reset the delay. Applied immediately (both buses take live parameter changes, so no note is cut) and reported in the arrangement's summary as `effects`. Bounds are clamped: feedback stops below 1, because at 1 the repeats never decay.",
+      "The arrangement's own reverb, delay and master effect-rack settings, as a patch over the genre's profile. Reverb: decaySec, damping, preDelayMs, width, enabled. Delay: timeSeconds, feedback, dampHz, pingPong, enabled. Rack: filterEnabled/filterType/filterCutoff/filterQ, saturationEnabled/saturationDrive, chorusEnabled/chorusMix/chorusRate, bitcrusherEnabled/bitDepth. A partial patch — only the fields given change, and everything else keeps the genre's answer, so a longer decay cannot reset the delay. Applied immediately: the buses and the rack all take live parameter changes, so no note is cut and reported in the arrangement's summary as `effects`. Bounds are clamped: feedback stops below 1, because at 1 the repeats never decay.",
     readOnly: false,
     inputSchema: {
       arrangementId: z.string(),
@@ -1062,12 +1062,33 @@ export const ARRANGEMENT_TOOLS: ToolDefinition[] = [
           pingPong: z.boolean().optional(),
         })
         .optional(),
+      /**
+       * ⭐ **The master effect rack**, per arrangement like the buses above. A partial patch: each setter takes a whole
+       * stage, so the fields are merged over what the rack already reports — "turn the saturator on" without restating
+       * the filter.
+       */
+      rack: z
+        .object({
+          filterEnabled: z.boolean().optional(),
+          filterType: z.enum(["lowpass", "highpass", "bandpass", "lowshelf", "highshelf", "peaking", "notch", "allpass"]).optional(),
+          filterCutoff: z.number().optional().describe("20 to 20000 Hz"),
+          filterQ: z.number().optional().describe("0.5 to 15"),
+          saturationEnabled: z.boolean().optional(),
+          saturationDrive: z.number().optional().describe("1 transparent to 6 driven"),
+          chorusEnabled: z.boolean().optional(),
+          chorusMix: z.number().optional().describe("0 to 1"),
+          chorusRate: z.number().optional().describe("0.2 to 5 Hz"),
+          bitcrusherEnabled: z.boolean().optional(),
+          bitDepth: z.number().optional().describe("4 to 16 bits"),
+        })
+        .optional(),
     },
     handler: (args) => {
       try {
         const patch: Record<string, unknown> = {};
         if (args.reverb !== undefined) patch.reverb = args.reverb;
         if (args.delay !== undefined) patch.delay = args.delay;
+        if (args.rack !== undefined) patch.rack = args.rack;
         return setMcpEffectsOverrides(String(args.arrangementId), patch);
       } catch (error) {
         return failure((error as Error).message);
