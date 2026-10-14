@@ -29,8 +29,6 @@ export interface MasterBusCompSettings {
   /** 1 is no compression. */
   ratio: number;
   /** Seconds. */
-  attackSec: number;
-  /** Seconds. */
   releaseSec: number;
   /** dB applied after compression, to put back what the reduction took. */
   makeupDb: number;
@@ -48,7 +46,13 @@ export interface MasterLimiterSettings {
   releaseSlowMs: number;
 }
 
-/** The stereo widener that sits on the master bus. */
+/**
+ * The stereo widener's amount.
+ *
+ * ⭐ **Per track, not a master setting** — `ChannelStripDsp.ts:445-447` says the stage is "deliberately not wired here
+ * yet", and it is fed a track's `width`. It lives in this block so a project has one place to store its mix, and the
+ * name says what it is: the wiring that reads it is per channel.
+ */
 export interface MasterWidthSettings {
   /** 0 is mono, 1 is unchanged, above 1 widens. */
   amount: number;
@@ -56,6 +60,18 @@ export interface MasterWidthSettings {
 
 /**
  * Everything a person may set on the whole mix.
+ *
+ * ⭐ **What is measured, not what would be nice.** Every field here is one `MasterGraphOptions` actually consumes
+ * (`masterBusCompEnabled/ThresholdDb/KneeDb/Ratio/ReleaseSec`, `busCompMakeupDb`, `limiterCeilingDb`,
+ * `limiterReleaseFastMs/SlowMs`) — checked field by field rather than assumed, and the check found two things that do
+ * **not** belong:
+ *
+ *   - **the bus compressor's attack is not settable.** `masterGraph` hard-codes `MASTER_BUS_COMP_ATTACK_SEC` (30 ms)
+ *     and exposes no option for it, so a slider here would be a control that changes nothing;
+ *   - **the stereo widener is not a master setting.** `ChannelStripDsp` builds it per track
+ *     (`(p.width ?? 0) > 0 ? 1 : 0`), and `MasterGraphOptions` has no `width` at all — so {@link MasterWidthSettings}
+ *     is carried here for the per-track wiring that is still to come, and its note says so instead of implying the
+ *     master bus already widens.
  *
  * Deliberately **not** here: the per-genre loudness trim. That number is fitted across all 159 genres so they match
  * each other (see `masterGraph.ts`'s note on why the trim sits after the FX rack), so a person editing it would break
@@ -73,7 +89,6 @@ export const MASTER_LIMITS = {
   busCompThresholdDb: { min: -60, max: 0 },
   busCompKneeDb: { min: 0, max: 40 },
   busCompRatio: { min: 1, max: 20 },
-  busCompAttackSec: { min: 0, max: 1 },
   busCompReleaseSec: { min: 0.01, max: 2 },
   busCompMakeupDb: { min: -12, max: 12 },
   /** The limiter's ceiling is always at or below 0 dBTP: a ceiling above it would clip. */
@@ -97,7 +112,6 @@ export const MASTER_DEFAULTS: MasterSettings = {
     thresholdDb: -16,
     kneeDb: 8,
     ratio: 2,
-    attackSec: 0.03,
     releaseSec: 0.22,
     makeupDb: 5,
   },
@@ -130,11 +144,6 @@ export function normaliseMasterSettings(input: unknown): MasterSettings {
       ),
       kneeDb: clamp(busComp.kneeDb ?? MASTER_DEFAULTS.busComp.kneeDb, MASTER_LIMITS.busCompKneeDb.min, MASTER_LIMITS.busCompKneeDb.max),
       ratio: clamp(busComp.ratio ?? MASTER_DEFAULTS.busComp.ratio, MASTER_LIMITS.busCompRatio.min, MASTER_LIMITS.busCompRatio.max),
-      attackSec: clamp(
-        busComp.attackSec ?? MASTER_DEFAULTS.busComp.attackSec,
-        MASTER_LIMITS.busCompAttackSec.min,
-        MASTER_LIMITS.busCompAttackSec.max
-      ),
       releaseSec: clamp(
         busComp.releaseSec ?? MASTER_DEFAULTS.busComp.releaseSec,
         MASTER_LIMITS.busCompReleaseSec.min,
@@ -178,4 +187,36 @@ export function normaliseMasterSettings(input: unknown): MasterSettings {
 /** Whether a block is exactly the defaults, so a writer can drop it from a file rather than storing noise. */
 export function isDefaultMasterSettings(settings: MasterSettings): boolean {
   return JSON.stringify(normaliseMasterSettings(settings)) === JSON.stringify(MASTER_DEFAULTS);
+}
+
+/**
+ * The subset of `MasterGraphOptions` these settings drive, named one for one.
+ *
+ * The engine spreads this into `buildMasterGraph`, so **the mapping lives beside the model** rather than as nine lines
+ * inside `AudioEngine` — the audio file is at its size cap, and this is also where a reader looking for "which option
+ * does `thresholdDb` become" should find the answer. Fields the graph does not consume are absent on purpose, which is
+ * the same list the type's own note gives.
+ */
+export function masterGraphOptions(settings: MasterSettings): {
+  masterBusCompEnabled: boolean;
+  masterBusCompThresholdDb: number;
+  masterBusCompKneeDb: number;
+  masterBusCompRatio: number;
+  masterBusCompReleaseSec: number;
+  busCompMakeupDb: number;
+  limiterCeilingDb: number;
+  limiterReleaseFastMs: number;
+  limiterReleaseSlowMs: number;
+} {
+  return {
+    masterBusCompEnabled: settings.busComp.enabled,
+    masterBusCompThresholdDb: settings.busComp.thresholdDb,
+    masterBusCompKneeDb: settings.busComp.kneeDb,
+    masterBusCompRatio: settings.busComp.ratio,
+    masterBusCompReleaseSec: settings.busComp.releaseSec,
+    busCompMakeupDb: settings.busComp.makeupDb,
+    limiterCeilingDb: settings.limiter.ceilingDb,
+    limiterReleaseFastMs: settings.limiter.releaseFastMs,
+    limiterReleaseSlowMs: settings.limiter.releaseSlowMs,
+  };
 }

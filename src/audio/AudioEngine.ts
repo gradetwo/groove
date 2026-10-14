@@ -48,6 +48,7 @@ import { resolveChordTreatment } from "../data/genreVoicing";
 import { VoiceRegistry } from "./voiceRegistry";
 import { type MasterLimiterHandle, type MasterLimiterKind } from "./MasterLimiter";
 import { buildMasterGraph, dbToGain, type MasterGraph } from "./masterGraph";
+import { MASTER_DEFAULTS, masterGraphOptions, normaliseMasterSettings, type MasterSettings } from "../data/masterSettings";
 import { polyVoiceVariation, variationSeedFrom } from "./noteVariation";
 import { patternSeed } from "./noteEvents";
 import { ChannelStrip } from "./ChannelStripDsp";
@@ -84,6 +85,9 @@ export interface StepCallbackInfo {
 const GS1_DISABLE_GRACE_MS = 3000;
 
 export interface AudioEngineOptions {
+  /** ⭐ The project's mastering settings, for the graph the constructor builds — the only moment that can take them,
+   *  since the constructor calls `initAudioContext` and that returns early once a context exists. */
+  masterSettings?: unknown;
   onStep?: (info: StepCallbackInfo) => void;
   onTrackTrigger?: (trackIndices: number[]) => void;
   onPlay?: () => void;
@@ -182,6 +186,8 @@ export class AudioEngine {
    * loudness match to hold (see `masterGraph.ts`).
    */
   private masterGraph: MasterGraph | null = null;
+  /** The project's mastering decisions; see `data/masterSettings.ts` for what may be set and why two things may not. */
+  private masterSettings: MasterSettings = MASTER_DEFAULTS;
 
   /**
    * P2.2 / A3: the seed for per-note timbre variation, cached per pattern.
@@ -401,6 +407,7 @@ export class AudioEngine {
   private loudnessTrimOverrideDb: number | null = null;
 
   constructor(options?: AudioEngineOptions) {
+    if (options?.masterSettings !== undefined) this.masterSettings = normaliseMasterSettings(options.masterSettings);
     if (options?.onStep) this.onStepCallback = options.onStep;
     if (options?.onTrackTrigger) this.onTrackTriggerCallback = options.onTrackTrigger;
     if (options?.onPlay) this.onPlayCallback = options.onPlay;
@@ -437,6 +444,8 @@ export class AudioEngine {
           const graph = buildMasterGraph(this.ctx, {
             analysers: true,
             loudnessTrimDb: this.appliedLoudnessTrimDb,
+            // The project's own mastering decisions, not the graph's build-time constants.
+            ...masterGraphOptions(this.masterSettings),
             // The graph owns the detector bus (A2); the strips connect into it as they are built, below.
             busCompDetector: "internal",
             limiterDetector: "internal",
@@ -1322,6 +1331,17 @@ export class AudioEngine {
     return this.hearingProtection
       ? Math.min(this.maxVolumeLimit, this.currentMasterVolume)
       : this.currentMasterVolume;
+  }
+
+  /** The settings the graph was built with, not the ones a caller last wrote. */
+  public getMasterSettings(): MasterSettings {
+    return this.masterSettings;
+  }
+  /** ⭐ The compressors and the limiter are fixed at construction, so this applies to the **next** build of the graph.
+   *  Returns what was accepted, clamped. */
+  public setMasterSettings(next: unknown): MasterSettings {
+    this.masterSettings = normaliseMasterSettings(next);
+    return this.masterSettings;
   }
 
   public setMasterVolume(vol: number): void {

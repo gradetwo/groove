@@ -35,6 +35,12 @@ describe("mastering settings", () => {
     expect(MASTER_DEFAULTS.busComp.makeupDb).toBe(MASTER_MAKEUP_DB);
     // And the makeup bounds are the graph's own, so a slider cannot travel past what the gain stage was measured for.
     expect(MASTER_LIMITS.busCompMakeupDb).toEqual({ min: MASTER_MAKEUP_MIN_DB, max: MASTER_MAKEUP_MAX_DB });
+    /**
+     * ⭐ And the attack is **absent on purpose**: `masterGraph` hard-codes `MASTER_BUS_COMP_ATTACK_SEC` and exposes no
+     * option, so a field here would be a slider that changes nothing. Asserting the absence keeps someone from adding it
+     * back as an obvious-looking omission.
+     */
+    expect("attackSec" in MASTER_DEFAULTS.busComp).toBe(false);
   });
 
   it("⭐ fills in a project that states nothing, and states it as the defaults rather than as zeroes", () => {
@@ -47,14 +53,13 @@ describe("mastering settings", () => {
 
   it("⭐ clamps every field to the range the DSP honours, and refuses a NaN rather than passing it to an AudioParam", () => {
     const wild = normaliseMasterSettings({
-      busComp: { thresholdDb: 999, kneeDb: -5, ratio: 0, attackSec: Number.NaN, releaseSec: 99, makeupDb: 400 },
+      busComp: { thresholdDb: 999, kneeDb: -5, ratio: 0, releaseSec: 99, makeupDb: 400 },
       limiter: { ceilingDb: 12, lookaheadMs: -3, releaseFastMs: 99_999, releaseSlowMs: Number.NaN },
       width: { amount: 40 },
     });
     expect(wild.busComp.thresholdDb).toBe(MASTER_LIMITS.busCompThresholdDb.max);
     expect(wild.busComp.kneeDb).toBe(MASTER_LIMITS.busCompKneeDb.min);
     expect(wild.busComp.ratio).toBe(MASTER_LIMITS.busCompRatio.min);
-    expect(wild.busComp.attackSec, "a NaN reads as the floor, not as the value").toBe(MASTER_LIMITS.busCompAttackSec.min);
     expect(wild.busComp.releaseSec).toBe(MASTER_LIMITS.busCompReleaseSec.max);
     expect(wild.busComp.makeupDb).toBe(MASTER_LIMITS.busCompMakeupDb.max);
     // ⭐ A ceiling above 0 dBTP would clip, which is the one thing the ceiling exists to prevent.
