@@ -25292,3 +25292,37 @@ describe("the grid's editing actions", () => {
     width ✓）；② `AudioSettingsTab` 接上这些并**真的写回引擎** ✓；③ MCP 工具一个 ✓（读写整块母带设置 ✓）；
     ④ 判据：改一处 → 引擎读到的值变 ✓ + 离线渲染输出真变 ✓（先证明量具 ✓）。
 ```
+
+### 四百零三之续：③ 母带设置已进引擎；面板/MCP/width 仍待做（2026-10-14 ●）
+
+```
+**已完成 ✓**
+  · `src/data/masterSettings.ts` ✓（`0b8a196` ✓）：一块带**默认值与上下界**的母带设置 ✓ + `normaliseMasterSettings`
+    （吃 `unknown` ✓，因为最常见的调用者是**文件** ✓：旧工程或手改过的工程必须能加载成可播放的东西 ✓，
+    而不是把 `NaN` 送进 `AudioParam` ✓）。判据 5 条 ✓，红证明 ✓（去掉钳位后 `expected 999 to be +0` ✓）。
+  · **引擎真的用它建图** ✓（`4e0006d` ✓）：`buildMasterGraph` 收到的是**工程的设置** ✓，不再是
+    `MASTER_BUS_COMP_*` / `MASTER_MAKEUP_DB` 这些构建期常量 ✓。判据 3 条 ✓（监听 builder 收到的 options 本身 ✓），
+    红证明 ✓（把 spread 去掉即全红 ✓）。
+  ⭐ **判据抓到了我第一版的真缺陷 ✓**：第一版"存起来、下次建图生效" ✓ —— 实测 builder 收到的是 `-16`（常量 ✓）
+    而不是我设的 `-24` ✓。根因 ✓：**构造函数自己调 `initAudioContext` ✓，而它在 ctx 已存在时直接 return** ✓
+    ⇒ 第一次建图永远用默认值 ✓，之后再也不会重建 ✓。"存了值但音频不采纳"正是本项要消灭的那个缺陷本身 ✓。
+    修法 ✓：设置改在**建图发生的地方**交进来 ✓ → 新增 `AudioEngineOptions.masterSettings` ✓。
+
+**⭐ 量 `MasterGraphOptions` 逐字段后发现的两件事（已写进类型注释 ✓）**
+  · **母线压缩的 attack 不可设** ✓：`masterGraph` 把 `MASTER_BUS_COMP_ATTACK_SEC`（30 ms）**写死** ✓ 且没有对应 option ✓
+    ⇒ 模型里**故意没有**这个字段 ✓，并有一条判据断言它不存在 ✓（免得后人当"漏了"补回来 ✓）。
+  · **width 不是母带设置** ✓：`ChannelStripDsp` 是**按轨**建的 ✓（`(p.width ?? 0) > 0 ? 1 : 0` ✓），
+    `MasterGraphOptions` 里根本没有 `width` ✓ —— `MasterWidthSettings` 的注释已改成说明它的真实归属 ✓。
+
+**❌ 仍未做（下一轮的全部范围 ✓）**
+  1. **`AudioSettingsTab.tsx` 真正写回引擎** ✓：现在 `limiterKind` / `limiterLookaheadMs` 只是组件**本地 state** ✓，
+     **从未到达引擎** ✓；控件要接 `getMasterSettings()` / `setMasterSettings()` ✓（并显示引擎的值 ✓，
+     而不是它自己上次写的值 ✓）。
+  2. **一个 MCP 工具读写整块母带设置** ✓：`grep -niE "limiter|glue|width" mcp/registry*.ts` **无工具命中** ✓；
+     需要先决定这块设置**存在哪** ✓（项目级 ✓，因为母带是整曲决定 ✓）——本轮只做到了"引擎接受它" ✓，
+     还没有"工程能存它、协议能改它" ✓。
+  3. **`ChannelStripDsp` 接上 width** ✓：它自己的注释仍写着 "`p.width` is deliberately **not** wired here yet" ✓；
+     应按轨存 `width` ✓ 并驱动那个已存在且有测试的阶段 ✓（`src/audio/StereoWidth.ts` ✓）。
+  4. **判据的下一步** ✓：目前证明到"builder 收到的 options 是工程的设置" ✓；
+     目标里还要求证明**离线渲染输出真的变** ✓（改一处 → 渲染出的样本/真峰值变 ✓）——这是下一轮的第一条判据 ✓。
+```
