@@ -25643,3 +25643,37 @@ GlueCompressor 等已有 DSP 的编辑与使用路径 ✓。
 
 **至此那份五项清单 ✓：1 已做 ✓、2 已做（本条）✓、3・4 已做 ✓、5 经核实本就不成立 ✓。**
 ```
+
+## 四百零七、🎚️ **EQ 各频段自动化（insert lanes）—— 已发布 v2.45.0**（2026-10-14 ✓）
+
+```
+**形状与 pan/sends 一致 ✓**（业主："按同样形状补" ✓）：insert 链的字段本来就是**面板旋钮已能设的数值** ✓
+  ⇒ 在它上面画一条 lane ✓ 就是给**已存在的值**加曲线 ✓ —— `low.gainDb` **就是** `TrackV2.insert.low.gainDb` ✓，
+  所以 lane 与旋钮是同一个数 ✓。
+
+**已做 ✓（`12f2fe8` ✓）**
+  · `AutomationParameter` 增加三频段 × 三字段（`low|mid|high` × `hz|gainDb|q`）✓，量程与**键盘步长**
+    取自 `trackInsert.ts` ✓ —— 与面板滑杆**同源** ✓ ⇒ lane 与旋钮不可能走出不同距离 ✓。
+    ⚠️ **压缩器与高通故意不在内** ✓：它们的阶段是**整块写入**的（`sendInsertCompressorSettings` ✓）✓，
+    每步一个值会是"同一件事的第二种说法" ✓。
+  · 编译期把它们装成**一张以 lane 自己的名字为键的 map**（`insertByStep` ✓）✓，不是"每字段一个固定键" ✓：
+    三频段 × 三字段今天是九项 ✓，加第四个频段就是十二项 ✓，而**被忘记的那一项会被存储、被画、然后静默忽略** ✓。
+    四个 track 级键原样不动 ✓ ⇒ 两族不可能相撞 ✓。
+  · ⭐ **strip 调度而不重建路由 ✓**：`ChannelStripDsp.scheduleInsertParam` 直接写 `AudioParam` ✓
+    （与 `applyParams` 对静态值用的是同一个 `writeParam` ✓）✓ —— 因为 `setParams` 会重算路由签名 ✓，
+    并在 `enabled` 变化时**重建 strip** ✓：对 UI 编辑是对的 ✓，**每步一次就是灾难** ✓。
+  · ⭐ **运行中的 lane 会把自己那一段打开** ✓：旁通频段上的曲线**听不见** ✓ ⇒ 有人在已关闭的频段上画了 EQ 扫频 ✓
+    会什么都听不到、然后判定功能坏了 ✓。这是本路径唯一的路由改动 ✓，且**有判据断言** ✓ 而不是假定 ✓。
+  · 轨道头下拉改为提供**模型能自动化的全部字段** ✓（取自 `INSERT_AUTOMATION_PARAMETERS` ✓，不是第二份硬编码清单 ✓）。
+
+**判据 ✓**：`insertAutomation.test.ts` 5 条 ✓ —— 值落在**该频段自己的** `AudioParam` 上且时间正确 ✓、
+  旁通频段被打开 ✓、钳位用频段自己的 ±18 dB 与 20 Hz 下限 ✓、未知名字被忽略 ✓；
+  ⭐ 频段按**滤波器类型**查找而非下标 ✓ —— 高通是**第一个**创建的 ✓ ⇒ `slice(0,3)` 会把高通当成 low shelf ✓
+  （我在探针里正是先踩了这个坑 ✓，后来把它固化成注释与实现 ✓）。
+  `arrangementLaneLevel.test.ts` +2 ✓（编译出 map ✓ / 没有 insert lane 时不产生空 map ✓）。
+  红证明 ✓：丢掉 insert lane 的发射 ⇒ `expected undefined to be defined` ✓。
+**发版 ✓**：`v2.45.0` ✓（`0c1fd3f` ✓，tag = dev = main ✓）。线上复验 ✓：`version.json` 2.45.0 ✓、封面 4/4 ✓、
+  `/m` ✓、清单 159 条 ✓、真实音频 `200 audio/mpeg 400030B` ✓。全量本地 **731 文件 / 5414 用例** ✓。
+
+**至此业主那份五项清单全部闭合 ✓，且第 4 项的两个半边（sends / EQ 参数）都已完成 ✓。**
+```
