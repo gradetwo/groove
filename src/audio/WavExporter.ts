@@ -47,6 +47,7 @@ import {
 } from "./chordVoicing";
 import { resolveChordTreatment } from "../data/genreVoicing";
 import { buildMasterGraph } from "./masterGraph";
+import { statedMasterSettings } from "../data/masterSettings";
 import { ensureInsertCompressorWorklet } from "./InsertCompressor";
 import { stepTiming, type TempoPoint } from "../data/tempoMap";
 import {
@@ -288,6 +289,9 @@ export interface RenderWavOptions {
   reverbSendHighpassHz?: number;
   /** Diagnostic: bypass the master FX rack (see `createMasterGraph`). */
   bypassFxRack?: boolean;
+  /** ⭐ The project's mastering settings (`data/masterSettings.ts`), so an export is as loud and as limited as the project
+   *  says rather than as the graph's build-time constants say. Omitted, nothing below changes. */
+  masterSettings?: unknown;
   /**
    * A short fade at each **section boundary** of the flattened arrangement, in milliseconds (0 disables it; 5–10 is the plan's
    * range).
@@ -1089,6 +1093,7 @@ async function renderPatternOfflineOnce(
   // dialled into FLT/DRIVE/CHORUS/LO-FI simply did not reach the file. It also used a
   // 0.85 fader against the live engine's 0.8, an unrelated ~0.5 dB offset; both now come
   // from `MASTER_FADER_DEFAULT`.
+  const master = statedMasterSettings(options.masterSettings); // only stated fields; filling gaps would not be additive
   const graph = buildMasterGraph(ctx, {
     loudnessTrimDb,
     // Diagnostic only; see the note in `createMasterGraph`'s chain wiring.
@@ -1100,15 +1105,15 @@ async function renderPatternOfflineOnce(
     // …and the same pre-duck bus for the ceiling's detector: at the operating point the trims set, the ceiling is
     // what eats the duck (measured: file median −0.2 dB against a −4.36 dB sidechain).
     limiterDetector: "internal",
-    masterMakeupDb: options.masterMakeupDb,
-    masterBusCompEnabled: options.masterBusCompEnabled,
-    masterBusCompReleaseSec: options.masterBusCompReleaseSec,
-    masterBusCompThresholdDb: options.masterBusCompThresholdDb,
-    masterBusCompKneeDb: options.masterBusCompKneeDb,
-    masterBusCompRatio: options.masterBusCompRatio,
-    limiterCeilingDb: options.limiterCeilingDb,
-    limiterReleaseFastMs: options.limiterReleaseFastMs,
-    limiterReleaseSlowMs: options.limiterReleaseSlowMs,
+    masterMakeupDb: options.masterMakeupDb ?? master.busComp?.makeupDb,
+    masterBusCompEnabled: options.masterBusCompEnabled ?? master.busComp?.enabled,
+    masterBusCompReleaseSec: options.masterBusCompReleaseSec ?? master.busComp?.releaseSec,
+    masterBusCompThresholdDb: options.masterBusCompThresholdDb ?? master.busComp?.thresholdDb,
+    masterBusCompKneeDb: options.masterBusCompKneeDb ?? master.busComp?.kneeDb,
+    masterBusCompRatio: options.masterBusCompRatio ?? master.busComp?.ratio,
+    limiterCeilingDb: options.limiterCeilingDb ?? master.limiter?.ceilingDb,
+    limiterReleaseFastMs: options.limiterReleaseFastMs ?? master.limiter?.releaseFastMs,
+    limiterReleaseSlowMs: options.limiterReleaseSlowMs ?? master.limiter?.releaseSlowMs,
   });
 
   // N-14: the genre's master FX and bus character, applied through the same shared

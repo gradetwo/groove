@@ -220,3 +220,69 @@ export function masterGraphOptions(settings: MasterSettings): {
     limiterReleaseSlowMs: settings.limiter.releaseSlowMs,
   };
 }
+
+/**
+ * The subset of {@link MasterSettings} a project's file is expected to state.
+ *
+ * `loudnessTrimDb` is absent for the reason the type's own note gives — it is fitted across the genres rather than
+ * chosen — and the widener is per track.
+ */
+export type MasterSettingsPatch = Omit<MasterSettings, "loudnessTrimDb">;
+
+/**
+ * ⭐ **The same block, but only for the fields a project actually stated.**
+ *
+ * This exists because a block of settings must be **additive**: `renderPatternOffline` already reads nine individual
+ * options, and a caller that passes no settings at all has to behave exactly as it did before. Filling the gaps with
+ * {@link MASTER_DEFAULTS} would not be additive — it would overwrite options the caller never mentioned, and a criterion
+ * caught exactly that (`limiterReleaseOptions.test.ts`: a release time that used to stay `undefined` so the processor
+ * kept its own default became the block's 60 ms).
+ *
+ * So an absent field stays absent. Values that *are* present are clamped, because a file is a file.
+ */
+export function statedMasterSettings(input: unknown): Partial<MasterSettingsPatch> {
+  if (input === null || typeof input !== "object") return {};
+  const raw = input as {
+    busComp?: Partial<MasterBusCompSettings>;
+    limiter?: Partial<MasterLimiterSettings>;
+    width?: Partial<MasterWidthSettings>;
+  };
+
+  /** One section's stated fields, clamped. A field absent from `bounds` is copied as it is (the booleans). */
+  const section = <T extends object>(
+    source: unknown,
+    bounds: Record<string, { min: number; max: number }>
+  ): Partial<T> => {
+    const out: Record<string, unknown> = {};
+    if (source === null || typeof source !== "object") return out as Partial<T>;
+    for (const [key, value] of Object.entries(source as Record<string, unknown>)) {
+      if (value === undefined) continue;
+      const bound = bounds[key];
+      out[key] = typeof value === "number" && bound ? clamp(value, bound.min, bound.max) : value;
+    }
+    return out as Partial<T>;
+  };
+
+  // ⭐ Each section's bounds are keyed by **its own field names**. The first version reused `MASTER_LIMITS`, whose keys
+  // are the graph's flat option names (`limiterCeilingDb`), so no field ever matched and nothing was clamped — a
+  // criterion caught it (`expected 12 to be +0`).
+  const busComp = section<MasterBusCompSettings>(raw.busComp, {
+    thresholdDb: MASTER_LIMITS.busCompThresholdDb,
+    kneeDb: MASTER_LIMITS.busCompKneeDb,
+    ratio: MASTER_LIMITS.busCompRatio,
+    releaseSec: MASTER_LIMITS.busCompReleaseSec,
+    makeupDb: MASTER_LIMITS.busCompMakeupDb,
+  });
+  const limiter = section<MasterLimiterSettings>(raw.limiter, {
+    ceilingDb: MASTER_LIMITS.limiterCeilingDb,
+    lookaheadMs: MASTER_LIMITS.limiterLookaheadMs,
+    releaseFastMs: MASTER_LIMITS.limiterReleaseFastMs,
+    releaseSlowMs: MASTER_LIMITS.limiterReleaseSlowMs,
+  });
+  const width = section<MasterWidthSettings>(raw.width, { amount: MASTER_LIMITS.widthAmount });
+  return {
+    ...(Object.keys(busComp).length ? { busComp } : {}),
+    ...(Object.keys(limiter).length ? { limiter } : {}),
+    ...(Object.keys(width).length ? { width } : {}),
+  } as Partial<MasterSettingsPatch>;
+}
