@@ -93,8 +93,8 @@ export const commonMessages = {
   audio_settings_limiter_ceiling: { en: "Limiter ceiling", zh: "限幅器上限" },
   audio_settings_stereo_width: { en: "Stereo width", zh: "立体声宽度" },
   audio_settings_mastering_hint: {
-    en: "Applied when the master chain is next built — the compressor and limiter are fixed while audio runs.",
-    zh: "在下次构建母带链时生效——压缩器与限幅器在音频运行期间是固定的。",
+    en: "Changing one of these rebuilds the master chain, which cuts any note sounding at that instant.",
+    zh: "改动这些会重建母带链，正在发声的音符会被切断。",
   },
   console_insert_chain: { en: "Insert chain: EQ, compressor, drive", zh: "插入链：EQ、压缩、失真" },
   arrangement_automation_show: { en: "Show the level curve", zh: "显示音量包络" },

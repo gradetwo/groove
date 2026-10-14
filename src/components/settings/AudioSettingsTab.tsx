@@ -316,9 +316,9 @@ export const AudioSettingsTab: React.FC<AudioSettingsTabProps> = ({
           * `engine.getMasterSettings()` and go back through `engine.setMasterSettings(...)`, which normalises what it
           * accepts and returns it, so a slider can show the value the engine will really use.
           *
-          * ⚠️ **Stated, not hidden:** the compressor and the limiter are fixed when the master graph is built, so a change
-          * here applies to the **next** build. The hint says so rather than leaving a person to wonder why a knob "did
-          * nothing"; the rebuild path is the next piece of this work.
+          * ⚠️ **Stated, not hidden:** the compressor and the limiter are fixed when a master graph is built, so a change
+          * here goes through `engine.rebuildMasterGraph()` — it takes effect at once, and it cuts any note sounding at
+          * that instant. The hint says so rather than letting a person discover the cut as a bug.
           */}
         <div className={sectionClass} data-testid="audio-settings-mastering">
           <div className={sectionTitleClass}>
