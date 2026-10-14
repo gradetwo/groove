@@ -63,6 +63,7 @@ import {
 } from "../src/data/arrangementEdits";
 import type { TrackInsertPatch } from "../src/data/trackInsert";
 import { MASTER_DEFAULTS, normaliseMasterSettings, type MasterSettings } from "../src/data/masterSettings";
+import { normaliseEffectsOverrides, type EffectsOverrides } from "../src/data/effectsOverrides";
 import type { ArrangementV2, NoteEvent, TrackKindV2, TrackV2 } from "../src/types/arrangementV2";
 import type { PlannedTake } from "../src/data/takePlanning";
 import { flattenArrangementV2, laneInstrumentForTrack, laneRoleForTrack } from "../src/data/arrangementCompile";
@@ -89,6 +90,14 @@ const arrangements = new Map<string, ArrangementV2>();
  * model's defaults, and it is reported in the summary rather than left invisible.
  */
 const masterSettingsByArrangement = new Map<string, MasterSettings>();
+
+/**
+ * ⭐ **The reverb/delay patch for each arrangement**, beside the mastering block and for the same reason: the protocol
+ * has no project object, so an arrangement id is its unit of work. `ReverbBus.setParams`/`DelayBus.setParams` are live,
+ * so unlike the mastering block applying this needs no rebuild — which is why the tool below is cheap and its criterion
+ * can read the buses themselves.
+ */
+const effectsOverridesByArrangement = new Map<string, EffectsOverrides>();
 let idSequence = 0;
 
 export function clearMcpArrangements(): void {
@@ -314,6 +323,8 @@ export interface ArrangementSummary {
   templates: string[];
   /** ⭐ The mastering block in force for this arrangement — what a render would use. */
   master: MasterSettings;
+  /** ⭐ The arrangement's reverb/delay patch over the genre's profile. Empty means the genre decides. */
+  effects: EffectsOverrides;
   /** How long the arrangement is, in bars — absent for an older file, which means "as long as its content needs". */
   bars?: number;
   /** Beats per minute — absent for an older file, which plays at 120, the value the compile used to hardcode. */
@@ -389,6 +400,31 @@ export function masterSettingsForRender(arrangementId: string): MasterSettings {
  * a settings write that silently created a document would make `getMcpArrangement` answer for something no caller
  * built.
  */
+/**
+ * The reverb/delay patch for an arrangement. Read through this rather than the map, so a caller never decides what an
+ * absent patch means — the same reason `masterSettingsForRender` exists. Exported for the **render** tools, which have to
+ * pass it on: a render that ignored it would be a file mastered by the genre rather than by the project.
+ */
+export function effectsOverridesForRender(arrangementId: string): EffectsOverrides {
+  return effectsOverridesByArrangement.get(arrangementId) ?? {};
+}
+
+/**
+ * Stores a reverb/delay patch for an arrangement. A **partial** patch merges over the current one, so asking for a
+ * longer reverb decay cannot silently reset the delay — values are clamped by `normaliseEffectsOverrides`, because this
+ * arrives over a wire. An unknown arrangement is refused for the same reason the mastering tool refuses one.
+ */
+export function setMcpEffectsOverrides(arrangementId: string, patch: unknown): ArrangementEditResult {
+  const current = getMcpArrangement(arrangementId);
+  if (!current) throw new Error(`no arrangement "${arrangementId}" — create one first`);
+  const merged = normaliseEffectsOverrides({
+    ...effectsOverridesForRender(arrangementId),
+    ...(patch as EffectsOverrides | undefined),
+  });
+  effectsOverridesByArrangement.set(arrangementId, merged);
+  return { summary: summariseArrangement(arrangementId, current), problems: [] };
+}
+
 export function setMcpMasterSettings(arrangementId: string, patch: unknown): ArrangementEditResult {
   const current = getMcpArrangement(arrangementId);
   if (!current) throw new Error(`no arrangement "${arrangementId}" — create one first`);
@@ -494,6 +530,8 @@ export function summariseArrangement(arrangementId: string, arrangement: Arrange
     // ⭐ Reported always, not only when it differs from the defaults: an agent that cannot see the current block
     // cannot tell whether its own change took, and "absent" would be a second way to say "the defaults".
     master: masterSettingsForRender(arrangementId),
+    /** ⭐ The reverb/delay patch in force — reported always, so an agent can see what its change did. */
+    effects: effectsOverridesForRender(arrangementId),
     trackCount: arrangement.tracks.length,
     tracks: arrangement.tracks.map((track) => summariseTrack(track, arrangement)),
     templates: TEMPLATES.map((template) => template.id),

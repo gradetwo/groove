@@ -67,6 +67,8 @@ export interface RenderOptions {
   loudnessTrimDb?: number;
   /** ⭐ The arrangement's mastering block (opaque: the model validates it), forwarded so a render is mastered as set. */
   masterSettings?: unknown;
+  /** ⭐ The arrangement's reverb/delay patch, forwarded like the mastering block. */
+  effectsOverrides?: unknown;
   /**
    * A slug for the file name, from the caller's own song title.
    *
@@ -798,7 +800,7 @@ function renderAudioInPage(
       bitrateKbps,
       trackPeaks,
       sampleRate,
-      channels: channelCount, masterSettings = {},
+      channels: channelCount, masterSettings = {}, effectsOverrides,
       loudnessTrimDb,
       manifestText: manifest,
       sampleRoot: mirrorRoot,
@@ -911,6 +913,7 @@ function renderAudioInPage(
               bars: barsArg,
               // ⭐ The block too: this pass reports a peak, and one taken without the project's mastering is not the mix's.
               ...(masterSettings as Record<string, unknown>),
+              ...(effectsOverrides ? { effectsOverrides } : {}), // a peak without the patch is not the mix's
               ...(audioCatalogue.length ? { audioLaneCatalogue: audioCatalogue } : {}),
             });
             const soloChannels: Float32Array[] = [];
@@ -971,6 +974,7 @@ function renderAudioInPage(
       trackPeaks: options.trackPeaks === true,
       sampleRate: options.sampleRate,
       masterSettings: options.masterSettings,
+      effectsOverrides: options.effectsOverrides,
       channels: options.channels,
       loudnessTrimDb: options.loudnessTrimDb,
       manifestText: catalogueRead.text,
@@ -1203,7 +1207,7 @@ function renderStemInPage(
 ) {
   return withRenderTimeout(
     page.evaluate(
-      async ({ pattern: patternArg, stemTrackIdx, bars, sampleRate: rate, channels: channelCount, masterSettings = {}, manifestText: manifest, sampleRoot: mirrorRoot, catalogueProblem }) => {
+      async ({ pattern: patternArg, stemTrackIdx, bars, sampleRate: rate, channels: channelCount, masterSettings = {}, effectsOverrides, manifestText: manifest, sampleRoot: mirrorRoot, catalogueProblem }) => {
         const specifier = (path: string) => path;
         const [wav, loudness, catalogue] = await Promise.all([
           import(/* @vite-ignore */ specifier("/src/audio/WavExporter.ts")),
@@ -1254,6 +1258,7 @@ function renderStemInPage(
         bars: options.bars,
         sampleRate: options.sampleRate,
         masterSettings: options.masterSettings,
+        effectsOverrides: options.effectsOverrides,
         channels: options.channels,
         manifestText: catalogueRead.text,
         sampleRoot,

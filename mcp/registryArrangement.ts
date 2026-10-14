@@ -41,7 +41,7 @@ import { setMcpArrangementBars, setMcpArrangementTempoMap, setMcpTrackAutomation
 import { catalogueAssetById, listSampleLibraries, nearestCatalogueAssetIds } from "./instruments";
 import { inspectSfzAt } from "./sfzInspectRemote";
 
-import { addMcpTake, masterSettingsForRender, setMcpMasterSettings, setMcpTrackAsset, setMcpTrackInstrument, setMcpTrackPan,
+import { addMcpTake, effectsOverridesForRender, masterSettingsForRender, setMcpEffectsOverrides, setMcpMasterSettings, setMcpTrackAsset, setMcpTrackInstrument, setMcpTrackPan,
   setMcpTrackSends,
   setMcpTrackInsert, setMcpTrackParent, setMcpTrackRegion, setMcpTrackSteps } from "./arrangement";
 
@@ -195,6 +195,7 @@ export const ARRANGEMENT_TOOLS: ToolDefinition[] = [
         const result = await renderAudio(flattened.pattern, {
           // ⭐ Same block as the full render: an A/B where one side ignores the mastering is not an A/B.
           masterSettings: masterSettingsForRender(String(args.arrangementId)),
+          effectsOverrides: effectsOverridesForRender(String(args.arrangementId)),
           format: (args.format as "wav" | "mp3") ?? "wav",
           sampleRate: (args.sampleRate as number | undefined) ?? 8000,
           channels: (args.channels as 1 | 2 | undefined) ?? 1,
@@ -387,6 +388,7 @@ export const ARRANGEMENT_TOOLS: ToolDefinition[] = [
            * reporting an effect it did not have.
            */
           masterSettings: masterSettingsForRender(String(args.arrangementId)),
+          effectsOverrides: effectsOverridesForRender(String(args.arrangementId)),
           format: (args.format as "wav" | "mp3") ?? "wav",
           ...(args.sampleRate ? { sampleRate: args.sampleRate as number } : {}),
           ...(args.channels ? { channels: args.channels as 1 | 2 } : {}),
@@ -1029,6 +1031,44 @@ export const ARRANGEMENT_TOOLS: ToolDefinition[] = [
     handler: (args) => {
       try {
         return setMcpTrackPan(String(args.arrangementId), String(args.trackId), Number(args.pan));
+      } catch (error) {
+        return failure((error as Error).message);
+      }
+    },
+  },
+  {
+    name: "set_arrangement_effects",
+    title: "Set an arrangement's reverb and delay",
+    description:
+      "The arrangement's own reverb and delay settings, as a patch over the genre's profile. Reverb: decaySec, damping, preDelayMs, width, enabled. Delay: timeSeconds, feedback, dampHz, pingPong, enabled. A partial patch — only the fields given change, and everything else keeps the genre's answer, so a longer decay cannot reset the delay. Applied immediately (both buses take live parameter changes, so no note is cut) and reported in the arrangement's summary as `effects`. Bounds are clamped: feedback stops below 1, because at 1 the repeats never decay.",
+    readOnly: false,
+    inputSchema: {
+      arrangementId: z.string(),
+      reverb: z
+        .object({
+          enabled: z.boolean().optional(),
+          decaySec: z.number().optional().describe("reverb tail length"),
+          damping: z.number().optional().describe("0 bright to 1 dark"),
+          preDelayMs: z.number().optional(),
+          width: z.number().optional().describe("0 mono to 1 full stereo"),
+        })
+        .optional(),
+      delay: z
+        .object({
+          enabled: z.boolean().optional(),
+          timeSeconds: z.number().optional().describe("explicit delay time, overriding the genre's tempo division"),
+          feedback: z.number().optional().describe("0 to 0.95; at 1 the repeats never decay"),
+          dampHz: z.number().optional().describe("low-pass on the repeats"),
+          pingPong: z.boolean().optional(),
+        })
+        .optional(),
+    },
+    handler: (args) => {
+      try {
+        const patch: Record<string, unknown> = {};
+        if (args.reverb !== undefined) patch.reverb = args.reverb;
+        if (args.delay !== undefined) patch.delay = args.delay;
+        return setMcpEffectsOverrides(String(args.arrangementId), patch);
       } catch (error) {
         return failure((error as Error).message);
       }

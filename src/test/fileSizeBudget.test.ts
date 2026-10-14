@@ -130,7 +130,20 @@ const FILE_CAPS: Record<string, number> = {
    *
    * **This number may only go down from here.**
    */
-  "src/audio/AudioEngine.ts": 3314,
+  /**
+   * ⭐ **3314 → 3327 on 2026-10-14, by the owner's decision, for the reverb/delay overrides.** The owner had said the
+   * previous raise was the last and was asked anyway, because the alternative was to bend the design: this needs a field,
+   * a setter, and the patch applied where the genre's profile is applied. Every comment in the addition is inline, and a
+   * getter was dropped rather than added — the read-back belongs in storage, not in the engine.
+   *
+   * ⭐ **The agreed next move is a refactor, not another number:** `setBpm`'s tempo-division branch re-derives the delay
+   * separately from `applyGenreFx`, which is why the override is applied in two places. Folding that branch back into
+   * `applyGenreFx` would apply the override once and remove lines; it is deferred only because it changes an existing
+   * tempo-sync path and deserves its own criterion.
+   *
+   * **This number may only go down from here.**
+   */
+  "src/audio/AudioEngine.ts": 3327,
   /**
    * ⭐ **Re-measured on 2026-10-12, when the per-render O(n²) note lookups became a Map index** (perf audit ROI #2).
    * The file grew 3241 → 3264 lines with `noteIndex` — one `useMemo` building `byCell`/`byStep`, its comment, and the
@@ -139,7 +152,16 @@ const FILE_CAPS: Record<string, number> = {
    * untouched. **This number may only go down from here.**
    */
   "src/components/sequencer/PianoRollLane.tsx": 3264,
-  "src/audio/WavExporter.ts": 2608,
+  /**
+   * ⭐ **2608 → 2613 on 2026-10-14, by the owner's decision, for the reverb/delay patch.** Threading the arrangement's
+   * patch into the offline master required a field, an applier call and an import. Everything compressible was compressed
+   * first — the note is inline, and the option is applied through the same shared applier the live engine uses rather
+   * than as a constructor template, which would also have been **wrong**: `applyGenreFxToGraph` runs after construction,
+   * so a template value would be overwritten by the genre's.
+   *
+   * **This number may only go down from here.**
+   */
+  "src/audio/WavExporter.ts": 2613,
   "src/views/GalaxyView.tsx": 2356,
   "src/audio/PolySynth.ts": 1949,
   "src/audio/DrumKitModels.ts": 1925,
@@ -179,7 +201,15 @@ const FILE_CAPS: Record<string, number> = {
    *
    * **This number may only go down from here.**
    */
-  "mcp/render/worker.ts": 1667,
+  /**
+   * ⭐ **1667 → 1672 on 2026-10-14, by the owner's decision, for the same patch.** This file has **three** payload
+   * literals (the full render, the per-track solo peak pass and the stems pass) and each one has to carry the value
+   * across the page boundary, which is most of the five lines. The solo pass is included deliberately: it reports a
+   * track's peak, and a peak measured without the project's patch is not the peak the mix has.
+   *
+   * **This number may only go down from here.**
+   */
+  "mcp/render/worker.ts": 1672,
   "src/views/ChordProgressionsView.tsx": 1559,
 };
 

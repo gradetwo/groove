@@ -49,6 +49,7 @@ import { VoiceRegistry } from "./voiceRegistry";
 import { type MasterLimiterHandle, type MasterLimiterKind } from "./MasterLimiter";
 import { buildMasterGraph, dbToGain, type MasterGraph } from "./masterGraph";
 import { MASTER_DEFAULTS, masterGraphOptions, normaliseMasterSettings, type MasterSettings } from "../data/masterSettings";
+import { applyEffectsOverrides, normaliseEffectsOverrides, type EffectsOverrides } from "../data/effectsOverrides";
 import { polyVoiceVariation, variationSeedFrom } from "./noteVariation";
 import { patternSeed } from "./noteEvents";
 import { ChannelStrip } from "./ChannelStripDsp";
@@ -188,6 +189,8 @@ export class AudioEngine {
   private masterGraph: MasterGraph | null = null;
   /** The project's mastering decisions; see `data/masterSettings.ts` for what may be set and why two things may not. */
   private masterSettings: MasterSettings = MASTER_DEFAULTS;
+  /** The project's reverb/delay patch; empty means the genre's profile decides. */
+  private effectsOverrides: EffectsOverrides = {};
 
   /**
    * P2.2 / A3: the seed for per-note timbre variation, cached per pattern.
@@ -1160,6 +1163,7 @@ export class AudioEngine {
     // off the beat the moment the user nudges the BPM.
     if (this.appliedGenreFx?.delayDivision && this.masterGraph) {
       this.masterGraph.delay.setParams(delayParamsAtTempo(this.appliedGenreFx, this.bpm));
+      applyEffectsOverrides(this.masterGraph, this.effectsOverrides); // an explicit time wins over the division
     }
     ecosystemBus.publishClockSync(this.bpm, this.isPlaying, this.currentStep);
   }
@@ -1337,6 +1341,13 @@ export class AudioEngine {
       : this.currentMasterVolume;
   }
 
+  /** ⭐ Applies a project's reverb/delay patch over the genre's profile, **now** — `setParams` needs no rebuild, so
+   *  unlike the mastering block no note is cut. Returns what was accepted, clamped. */
+  public setEffectsOverrides(patch: unknown): EffectsOverrides {
+    this.effectsOverrides = normaliseEffectsOverrides(patch);
+    if (this.masterGraph) applyEffectsOverrides(this.masterGraph, this.effectsOverrides);
+    return this.effectsOverrides;
+  }
   /** The settings the graph was built with, not the ones a caller last wrote. */
   public getMasterSettings(): MasterSettings {
     return this.masterSettings;
@@ -1467,12 +1478,14 @@ export class AudioEngine {
 
   private applyGenreFx(fx: GenreFxProfile | null, playingBpm: number): void {
     this.appliedGenreFx = fx;
-    // Unknown genre: leave the rack and buses exactly as the user left them.
-    if (!fx) return;
-
-    // One shared applier (see `genreFx.ts`), so playback and the offline bounce cannot
-    // diverge in how a genre's FX are applied.
-    if (this.masterGraph) applyGenreFxToGraph(this.masterGraph, fx, playingBpm);
+    if (this.masterGraph && fx) {
+      // One shared applier (see `genreFx.ts`), so playback and the offline bounce cannot
+      // diverge in how a genre's FX are applied.
+      applyGenreFxToGraph(this.masterGraph, fx, playingBpm);
+    }
+    // ⭐ After the profile (an explicit value wins) and outside the check above: a genre with no profile at all still
+    // has a project that may want its own reverb, and the old early `return` made the patch inert for exactly those.
+    if (this.masterGraph) applyEffectsOverrides(this.masterGraph, this.effectsOverrides);
   }
 
   /** The genre FX profile currently in effect, or null for an unknown genre. */

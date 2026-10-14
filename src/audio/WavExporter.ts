@@ -48,6 +48,7 @@ import {
 import { resolveChordTreatment } from "../data/genreVoicing";
 import { buildMasterGraph } from "./masterGraph";
 import { statedMasterSettings } from "../data/masterSettings";
+import { applyEffectsOverrides, normaliseEffectsOverrides } from "../data/effectsOverrides";
 import { ensureInsertCompressorWorklet } from "./InsertCompressor";
 import { stepTiming, type TempoPoint } from "../data/tempoMap";
 import {
@@ -292,6 +293,8 @@ export interface RenderWavOptions {
   /** ⭐ The project's mastering settings (`data/masterSettings.ts`), so an export is as loud and as limited as the project
    *  says rather than as the graph's build-time constants say. Omitted, nothing below changes. */
   masterSettings?: unknown;
+  /** ⭐ The arrangement's reverb/delay patch over the genre's profile (see `data/effectsOverrides.ts`). */
+  effectsOverrides?: unknown;
   /**
    * A short fade at each **section boundary** of the flattened arrangement, in milliseconds (0 disables it; 5–10 is the plan's
    * range).
@@ -1121,6 +1124,8 @@ async function renderPatternOfflineOnce(
   // `default_bpm`). An unknown/custom genre resolves to null and the graph keeps its
   // defaults, exactly as playback does.
   if (tailGenreFx) applyGenreFxToGraph(graph, tailGenreFx, bpm);
+  // ⭐ After it: the patch is the project's, so it wins — and outside the `if`, since a genre with no profile still has one.
+  applyEffectsOverrides(graph, normaliseEffectsOverrides(options.effectsOverrides));
   if (typeof options.reverbSendHighpassHz === "number") {
     // Last, on purpose: `applyGenreFxToGraph` writes the genre's own reverb profile.
     graph.reverb.setParams({ sendHighpassHz: options.reverbSendHighpassHz });
