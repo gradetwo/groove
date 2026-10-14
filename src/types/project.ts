@@ -2,6 +2,7 @@ import type { ClipSlot } from "./song";
 import { SequencerPattern } from "./genre";
 import type { SongSection } from "./song";
 import { EffectsRackState, DrumKitType } from "../audio/AudioEngine";
+import type { MasterSettings } from "../data/masterSettings";
 
 export interface ProjectSnapshotSummary {
   trackCount: number;
@@ -50,6 +51,16 @@ export interface GrooveProject {
   sections?: SongSection[];
   loopRange: [number, number] | null;
   effectsRack: EffectsRackState;
+  /**
+   * ⭐ **Mastering, as this project's own decision.** Optional because every project saved before it exists, and an
+   * absent block means {@link MASTER_DEFAULTS} — the same constants the master graph builds with — so an old project
+   * sounds exactly as it did. Read through `normaliseMasterSettings`, because this comes from a file.
+   *
+   * This is where the block is stored: `AudioEngine.setMasterSettings` takes it for the graph it builds, the exporter
+   * takes it for the file it writes, and a tool can change it — one field, three readers, which is the point of having
+   * a single model instead of three sets of numbers.
+   */
+  masterSettings?: MasterSettings;
   drumKit: DrumKitType;
   isMetronome: boolean;
   isCountIn: boolean;

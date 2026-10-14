@@ -21,6 +21,7 @@ import {
   LEGACY_STORAGE_KEY,
   LEGACY_MIGRATED_FLAG,
 } from "../features/sequencer/projectDb";
+import { MASTER_DEFAULTS, masterSettingsFromProject } from "../data/masterSettings";
 import { GENRES_MAP } from "../data/genres";
 import { APP_VERSION } from "../version";
 import { GrooveProject } from "../types/project";
@@ -321,4 +322,41 @@ describe("the .groove package carries an arrangement (C1)", () => {
     const pkg = exportProjectPackage(project, "2.34.0", { clips: {}, sections: [] } as never);
     expect(() => validateGroovePackage(pkg)).toThrow(/carries no clips/);
   });
+/**
+ * ⭐ **A project's mastering block has to survive the file it is written to.**
+ *
+ * `GrooveProject.masterSettings` is the one place the block is stored, and the engine and the exporter both read it from
+ * there. So the property that matters is the round trip: a `.groove` package that dropped the field would load as the
+ * defaults, which means a project would open sounding like an untouched one — silently, and only after a save. Reading
+ * `exportProjectPackage` shows it spreads the project, but a spread is exactly the kind of thing a later explicit field
+ * list replaces, so this pins the behaviour rather than the implementation.
+ */
+describe("a project's mastering settings survive its file", () => {
+  it("⭐ carries the block through export and validation", () => {
+    const proj = createBlankProject(Object.values(GENRES_MAP)[0], "Mastering Round Trip");
+    const withMaster = {
+      ...proj,
+      masterSettings: {
+        busComp: { enabled: false, thresholdDb: -24, kneeDb: 12, ratio: 4, releaseSec: 0.5, makeupDb: 2 },
+        limiter: { ceilingDb: -3, lookaheadMs: 5, releaseFastMs: 80, releaseSlowMs: 500 },
+        width: { amount: 1 },
+      },
+    };
+
+    const pkg = exportProjectPackage(withMaster);
+    const validated = validateGroovePackage(pkg);
+
+    // ⭐ Read it back the way the engine and the exporter do, so this asserts the stored shape and not just presence.
+    expect(masterSettingsFromProject(validated.project).busComp.thresholdDb).toBe(-24);
+    expect(masterSettingsFromProject(validated.project).busComp.enabled).toBe(false);
+    expect(masterSettingsFromProject(validated.project).limiter.ceilingDb).toBe(-3);
+  });
+
+  it("⭐ leaves a project that states nothing reading as the defaults, like every older file", () => {
+    const proj = createBlankProject(Object.values(GENRES_MAP)[0], "No Mastering");
+    const validated = validateGroovePackage(exportProjectPackage(proj));
+    expect(validated.project.masterSettings, "absent, not zeroed").toBeUndefined();
+    expect(masterSettingsFromProject(validated.project)).toEqual(MASTER_DEFAULTS);
+  });
+});
 });

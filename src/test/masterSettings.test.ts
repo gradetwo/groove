@@ -14,6 +14,7 @@ import {
   MASTER_DEFAULTS,
   MASTER_LIMITS,
   isDefaultMasterSettings,
+  masterSettingsFromProject,
   normaliseMasterSettings,
 } from "../data/masterSettings";
 import {
@@ -80,5 +81,31 @@ describe("mastering settings", () => {
     expect(isDefaultMasterSettings(normaliseMasterSettings({}))).toBe(true);
     expect(isDefaultMasterSettings(normaliseMasterSettings({ busComp: { ratio: 4 } }))).toBe(false);
     expect(isDefaultMasterSettings(normaliseMasterSettings({ width: { amount: 1.5 } }))).toBe(false);
+  });
+});
+
+/**
+ * ⭐ **Where a project's block is read from, and what "absent" means.**
+ *
+ * `GrooveProject.masterSettings` is optional because every project saved before it exists, so this reader is the single
+ * place that decides what its absence means. Three readers each answering that for themselves is how a project sounds
+ * loud in the room and quiet in the file — the defect the whole model exists to remove.
+ */
+describe("a project's stored mastering block", () => {
+  it("⭐ reads an absent block as the defaults, so an old project is unchanged rather than reset to zeroes", () => {
+    expect(masterSettingsFromProject(undefined)).toEqual(MASTER_DEFAULTS);
+    expect(masterSettingsFromProject(null)).toEqual(MASTER_DEFAULTS);
+    expect(masterSettingsFromProject({})).toEqual(MASTER_DEFAULTS);
+    // The trap this guards: `width.amount` defaulting to 0 would mono every old project.
+    expect(masterSettingsFromProject({}).width.amount).toBe(1);
+  });
+
+  it("⭐ normalises on the way out, so a hand-edited project cannot reach an AudioParam unclamped", () => {
+    const read = masterSettingsFromProject({ masterSettings: { limiter: { ceilingDb: 12 }, busComp: { ratio: 900 } } });
+    expect(read.limiter.ceilingDb).toBe(0);
+    expect(read.busComp.ratio).toBe(20);
+    // And the fields the project did not state keep their defaults rather than becoming undefined.
+    expect(read.busComp.thresholdDb).toBe(MASTER_DEFAULTS.busComp.thresholdDb);
+    expect(masterSettingsFromProject({ masterSettings: "loud" as unknown })).toEqual(MASTER_DEFAULTS);
   });
 });

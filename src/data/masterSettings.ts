@@ -286,3 +286,18 @@ export function statedMasterSettings(input: unknown): Partial<MasterSettingsPatc
     ...(Object.keys(width).length ? { width } : {}),
   } as Partial<MasterSettingsPatch>;
 }
+
+/**
+ * ⭐ **A project's stored block, read the one way.**
+ *
+ * A project's `masterSettings` is optional and comes from a file, so every reader — the engine that builds the graph,
+ * the exporter that writes the master, a tool that changes it — must go through this rather than reaching for the field
+ * and handling `undefined` itself. Three readers each deciding what "absent" means is how one project ends up loud in
+ * the room and quiet in the file.
+ *
+ * Absent (or junk) reads as {@link MASTER_DEFAULTS}, which are the graph's own constants, so an old project is
+ * unchanged rather than silently reset to zeroes.
+ */
+export function masterSettingsFromProject(project: { masterSettings?: unknown } | null | undefined): MasterSettings {
+  return normaliseMasterSettings(project?.masterSettings);
+}
