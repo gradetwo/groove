@@ -76,7 +76,14 @@ const CAPS: Record<string, number> = {
    *
    * **This number may only go down from here**, and all three raises above are on the record rather than silent.
    */
-  atLeast600: 52,
+  /**
+   * ⭐ **52 → 53 on 2026-10-15, at the merge.** `ConsolePanel.tsx` crossed 600 lines (553 → 637) with `bb9f05d`'s dry/wet
+   * toolbar toggle — its own decision, and its own commit; this bucket is a count, so what it records is that one more
+   * file is now over the line, not a drift in the files that were already counted.
+   *
+   * **This number may only go down from here.**
+   */
+  atLeast600: 53,
   atLeast800: 31,
   atLeast1000: 25,
 
@@ -165,7 +172,17 @@ const FILE_CAPS: Record<string, number> = {
    *
    * **This number may only go down from here.**
    */
-  "src/audio/AudioEngine.ts": 3345,
+  /**
+   * ⭐ **3345 → 3416 on 2026-10-15, at the merge.** Two independent changes had each raised this file: ours to 3345 (the
+   * mastering settings, the master-graph rebuild, and parameter-aware automation, all with their reasons recorded above),
+   * and `bb9f05d`'s to 3415 (dry/wet audition, insert bypass, automation passthrough). Neither pin could know about the
+   * other, so the merged size is the sum of both — **not** a new decision by either.
+   *
+   * The pin is the measurement: `git show fdbdb88:...` is 3344 lines and `git show bb9f05d:...` is 3415.
+   *
+   * **This number may only go down from here.**
+   */
+  "src/audio/AudioEngine.ts": 3416,
   /**
    * ⭐ **Re-measured on 2026-10-12, when the per-render O(n²) note lookups became a Map index** (perf audit ROI #2).
    * The file grew 3241 → 3264 lines with `noteIndex` — one `useMemo` building `byCell`/`byStep`, its comment, and the

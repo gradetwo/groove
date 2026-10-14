@@ -538,6 +538,7 @@
 [class~="border-amber-500/40"],
 [class~="border-orange-500/40"],
 [class~="border-yellow-500/40"] { border-color: rgb(var(--d-warning) / 0.40); }
+[class~="border-amber-400/50"],
 [class~="border-amber-500/50"] { border-color: rgb(var(--d-warning) / 0.50); }
 [class~="border-amber-300/70"],
 [class~="border-amber-400/70"] { border-color: rgb(var(--d-warning) / 0.70); }

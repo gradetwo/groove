@@ -1015,7 +1015,17 @@ export const ARRANGEMENT_TOOLS: ToolDefinition[] = [
     name: "set_arrangement_track_automation",
     title: "Set a track's parameter automation curve",
     description:
-      "A track's parameter as a curve: points of `{ atBeats, value }`. Parameter can be 'gainDb' (default), 'pan', 'sendA', 'sendB', or EQ parameters: 'eq.low.gainDb' / 'low.gainDb', 'eq.mid.gainDb' / 'mid.gainDb', 'eq.high.gainDb' / 'high.gainDb', 'eq.low.hz' / 'low.hz', 'eq.mid.hz' / 'mid.hz', 'eq.high.hz' / 'high.hz', 'eq.mid.q' / 'mid.q'. An empty list removes the curve. Between two points the line is straight; outside them the curve holds its value.",
+      "A track's parameter as a curve: points of `{ atBeats, value }`. " +
+      /**
+       * ⭐ **Split into sentences short enough to read, because the enumeration has no sentence ends of its own**: the
+       * dots inside `eq.low.gainDb` are not full stops, so one sentence listing nine parameters measured 273 characters
+       * and tripped `mcpDescriptionReadability`. Breaking at the colon keeps each sentence a list instead of a wall.
+       */
+      "Parameter can be 'gainDb' (default), 'pan', 'sendA' or 'sendB'. " +
+      "EQ gain: 'eq.low.gainDb' / 'low.gainDb', 'eq.mid.gainDb' / 'mid.gainDb', 'eq.high.gainDb' / 'high.gainDb'. " +
+      "EQ frequency: 'eq.low.hz' / 'low.hz', 'eq.mid.hz' / 'mid.hz', 'eq.high.hz' / 'high.hz'. " +
+      "EQ width: 'eq.mid.q' / 'mid.q'. " +
+      "An empty list removes the curve. Between two points the line is straight; outside them the curve holds its value.",
     readOnly: false,
     inputSchema: {
       arrangementId: z.string(),
