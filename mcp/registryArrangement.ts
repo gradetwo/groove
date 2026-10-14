@@ -41,7 +41,7 @@ import { setMcpArrangementBars, setMcpArrangementTempoMap, setMcpTrackAutomation
 import { catalogueAssetById, listSampleLibraries, nearestCatalogueAssetIds } from "./instruments";
 import { inspectSfzAt } from "./sfzInspectRemote";
 
-import { addMcpTake, setMcpMasterSettings, setMcpTrackAsset, setMcpTrackInstrument, setMcpTrackPan,
+import { addMcpTake, masterSettingsForRender, setMcpMasterSettings, setMcpTrackAsset, setMcpTrackInstrument, setMcpTrackPan,
   setMcpTrackSends,
   setMcpTrackInsert, setMcpTrackParent, setMcpTrackRegion, setMcpTrackSteps } from "./arrangement";
 
@@ -193,6 +193,8 @@ export const ARRANGEMENT_TOOLS: ToolDefinition[] = [
          */
         ctx?.progress?.report(0, "starting the render engine — a first render in this session also starts a browser, which is the slow part");
         const result = await renderAudio(flattened.pattern, {
+          // ⭐ Same block as the full render: an A/B where one side ignores the mastering is not an A/B.
+          masterSettings: masterSettingsForRender(String(args.arrangementId)),
           format: (args.format as "wav" | "mp3") ?? "wav",
           sampleRate: (args.sampleRate as number | undefined) ?? 8000,
           channels: (args.channels as 1 | 2 | undefined) ?? 1,
@@ -379,6 +381,12 @@ export const ARRANGEMENT_TOOLS: ToolDefinition[] = [
          * the field) without the pinned file gaining a line.
          */
         const renderOptions: Parameters<typeof renderAudio>[1] & { chunks?: number } = {
+          /**
+           * ⭐ **The arrangement's mastering block, so the file is mastered the way the project says.** Without this an
+           * agent could set a limiter ceiling with `set_arrangement_master` and render a file that ignored it — a tool
+           * reporting an effect it did not have.
+           */
+          masterSettings: masterSettingsForRender(String(args.arrangementId)),
           format: (args.format as "wav" | "mp3") ?? "wav",
           ...(args.sampleRate ? { sampleRate: args.sampleRate as number } : {}),
           ...(args.channels ? { channels: args.channels as 1 | 2 } : {}),

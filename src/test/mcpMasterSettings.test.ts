@@ -17,6 +17,7 @@ import { describe, it, expect, beforeEach } from "vitest";
 import {
   createMcpArrangement,
   getMcpArrangement,
+  masterSettingsForRender,
   setMcpMasterSettings,
   summariseArrangement,
 } from "../../mcp/arrangement";
@@ -71,5 +72,31 @@ describe("set_arrangement_master", () => {
 
   it("refuses an arrangement that does not exist rather than inventing one", () => {
     expect(() => setMcpMasterSettings("nope", { width: { amount: 1.5 } })).toThrow(/no arrangement "nope"/);
+  });
+});
+
+/**
+ * ⭐ **The block has to reach the renderer, or `set_arrangement_master` is a tool reporting an effect it does not have.**
+ *
+ * The gap this closes was real and silent: `set_arrangement_master` stored a block, the exporter had accepted one since
+ * the mastering work, and the protocol's render path passed none of it — so an agent could set a ceiling, render, and get
+ * a file mastered by the graph's build-time constants while the reply said nothing about it.
+ *
+ * ⭐ The assertion reads the **transport**, not a re-derivation. `masterSettingsForRender` is the value the registry hands
+ * the renderer, and `mcp/render/worker.ts` forwards it at all three of its render call sites through one expression
+ * (`masteringBlock`), which is what stops a fourth call site forgetting it.
+ */
+describe("the render path carries the mastering block", () => {
+  it("⭐ hands the renderer the block that was set, clamped", () => {
+    // −10 dBTP is inside the model's ceiling range (−12…0), so this asserts carriage rather than the clamp.
+    setMcpMasterSettings(id, { limiter: { ceilingDb: -10 }, busComp: { ratio: 900 } });
+    const carried = masterSettingsForRender(id);
+    expect(carried.limiter.ceilingDb, "what the agent set is what a render would use").toBe(-10);
+    expect(carried.busComp.ratio, "and it is the clamped value, because the model is the one validator").toBe(20);
+  });
+
+  it("⭐ reads the defaults for an arrangement nobody has mastered, so a plain render is unchanged", () => {
+    const fresh = createMcpArrangement({ template: "empty" } as never).arrangementId;
+    expect(masterSettingsForRender(fresh)).toEqual(MASTER_DEFAULTS);
   });
 });

@@ -171,7 +171,15 @@ const FILE_CAPS: Record<string, number> = {
    *
    * **This number may only go down from here.**
    */
-  "mcp/render/worker.ts": 1661,
+  /**
+   * ⭐ **1661 → 1667 on 2026-10-14, by the owner's decision, for the mastering block.** Item ④'s MCP half: the render
+   * path had to carry `render_arrangement_master`'s block to `renderPatternOffline`, which is one field, two
+   * destructuring defaults and three forwarding sites. Everything compressible was compressed first — the comments are
+   * inline, and the two payload literals pass the option directly rather than through a second helper.
+   *
+   * **This number may only go down from here.**
+   */
+  "mcp/render/worker.ts": 1667,
   "src/views/ChordProgressionsView.tsx": 1559,
 };
 

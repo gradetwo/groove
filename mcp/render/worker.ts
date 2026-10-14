@@ -65,6 +65,8 @@ export interface RenderOptions {
    * −14 except by hand-computing a gain and editing the pattern. This is the mechanism a loudness write tool needs; the tool is next.
    */
   loudnessTrimDb?: number;
+  /** ⭐ The arrangement's mastering block (opaque: the model validates it), forwarded so a render is mastered as set. */
+  masterSettings?: unknown;
   /**
    * A slug for the file name, from the caller's own song title.
    *
@@ -796,7 +798,7 @@ function renderAudioInPage(
       bitrateKbps,
       trackPeaks,
       sampleRate,
-      channels: channelCount,
+      channels: channelCount, masterSettings = {},
       loudnessTrimDb,
       manifestText: manifest,
       sampleRoot: mirrorRoot,
@@ -907,6 +909,8 @@ function renderAudioInPage(
           try {
             const soloBuffer = await wav.renderPatternOffline(solo as never, {
               bars: barsArg,
+              // ⭐ The block too: this pass reports a peak, and one taken without the project's mastering is not the mix's.
+              ...(masterSettings as Record<string, unknown>),
               ...(audioCatalogue.length ? { audioLaneCatalogue: audioCatalogue } : {}),
             });
             const soloChannels: Float32Array[] = [];
@@ -966,6 +970,7 @@ function renderAudioInPage(
       bitrateKbps: options.bitrateKbps,
       trackPeaks: options.trackPeaks === true,
       sampleRate: options.sampleRate,
+      masterSettings: options.masterSettings,
       channels: options.channels,
       loudnessTrimDb: options.loudnessTrimDb,
       manifestText: catalogueRead.text,
@@ -1198,7 +1203,7 @@ function renderStemInPage(
 ) {
   return withRenderTimeout(
     page.evaluate(
-      async ({ pattern: patternArg, stemTrackIdx, bars, sampleRate: rate, channels: channelCount, manifestText: manifest, sampleRoot: mirrorRoot, catalogueProblem }) => {
+      async ({ pattern: patternArg, stemTrackIdx, bars, sampleRate: rate, channels: channelCount, masterSettings = {}, manifestText: manifest, sampleRoot: mirrorRoot, catalogueProblem }) => {
         const specifier = (path: string) => path;
         const [wav, loudness, catalogue] = await Promise.all([
           import(/* @vite-ignore */ specifier("/src/audio/WavExporter.ts")),
@@ -1248,6 +1253,7 @@ function renderStemInPage(
         stemTrackIdx: index,
         bars: options.bars,
         sampleRate: options.sampleRate,
+        masterSettings: options.masterSettings,
         channels: options.channels,
         manifestText: catalogueRead.text,
         sampleRoot,

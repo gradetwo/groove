@@ -376,10 +376,11 @@ function summariseTrack(track: TrackV2, arrangement: ArrangementV2): Arrangement
  * The mastering block for an arrangement, defaulted. Read through this rather than the map, so a caller never has to
  * decide what an absent block means — the same reason `masterSettingsFromProject` exists on the browser side.
  *
- * Not exported: it is a reader, and this module's export surface is the operations a tool calls. The summary reports the
- * block, which is how a caller reads it back.
+ * Exported for the **render** tools, which have to pass it to the exporter: a summary tells a caller what the block is,
+ * but a render that ignored it would be a tool reporting an effect it did not have. The name says where it is for, so the
+ * coverage gate's question ("which tool calls this?") has an answer in the identifier itself.
  */
-function masterSettingsFor(arrangementId: string): MasterSettings {
+export function masterSettingsForRender(arrangementId: string): MasterSettings {
   return masterSettingsByArrangement.get(arrangementId) ?? MASTER_DEFAULTS;
 }
 
@@ -392,7 +393,7 @@ export function setMcpMasterSettings(arrangementId: string, patch: unknown): Arr
   const current = getMcpArrangement(arrangementId);
   if (!current) throw new Error(`no arrangement "${arrangementId}" — create one first`);
   const merged = normaliseMasterSettings({
-    ...masterSettingsFor(arrangementId),
+    ...masterSettingsForRender(arrangementId),
     ...(patch as Partial<MasterSettings> | undefined),
   });
   masterSettingsByArrangement.set(arrangementId, merged);
@@ -492,7 +493,7 @@ export function summariseArrangement(arrangementId: string, arrangement: Arrange
     steps: stepCountFor(allNotes, arrangement.bars),
     // ⭐ Reported always, not only when it differs from the defaults: an agent that cannot see the current block
     // cannot tell whether its own change took, and "absent" would be a second way to say "the defaults".
-    master: masterSettingsFor(arrangementId),
+    master: masterSettingsForRender(arrangementId),
     trackCount: arrangement.tracks.length,
     tracks: arrangement.tracks.map((track) => summariseTrack(track, arrangement)),
     templates: TEMPLATES.map((template) => template.id),

@@ -453,6 +453,12 @@ export async function renderPatternHeadless(
     ...(options.sampleRate ? { sampleRate: options.sampleRate } : {}),
     ...(options.channels ? { channels: options.channels } : {}),
     ...(Number.isFinite(options.loudnessTrimDb) ? { loudnessTrimDb: options.loudnessTrimDb } : {}),
+    masterSettings: options.masterSettings,
+    /**
+     * ⭐ **Forwarded, not re-implemented** — the same argument `stemTrackIdx` above makes. The block is opaque here: the
+     * model validates it, and a host that inspected it would be a second implementation of the clamp.
+     */
+    ...(options.masterSettings === undefined ? {} : { masterSettings: options.masterSettings }),
     audioLaneCatalogue: audioCatalogue,
     onAudioLanes: (report: OfflineAudioLaneReport) => {
       audioLanes = report;
