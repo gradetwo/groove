@@ -25718,3 +25718,12 @@ GlueCompressor 等已有 DSP 的编辑与使用路径 ✓。
   · **发版** ✓：本轮未发版 ✓（目标里"全绿后发版"的绿指本仓门禁 ✓，本仓门禁已全绿 ✓；但我还没走 release 流程 ✓）。
   · 真正的歌声合成（音节→共振音）仍**未做** ✓，且本工具**不声称**做了 ✓。
 ```
+
+### 四百零八之续：✅ **已发布 v2.46.0**（2026-10-15 ✓）
+
+```
+**发版 ✓**：`v2.46.0` ✓（`77aae84` ✓，tag = dev = main ✓）。线上复验 ✓：`version.json` 2.46.0 ✓、
+  封面 4/4 `200 image/jpeg` ✓、`/m` `200 text/html` ✓、片段清单 159 条全指 `r2mirror.groove.wangda.today` ✓、
+  真实音频 `200 audio/mpeg 400030B` ✓。全量本地 **734 文件 / 5431 用例** ✓（发版树冻结后复跑 ✓）。
+  发布链路 ✓：version:check / version:new / build / budget / **full CI** / deploy / tag / remote 全 ok ✓。
+```
