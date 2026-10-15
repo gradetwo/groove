@@ -1,23 +1,23 @@
 {
-  "version": "2.45.0",
-  "releaseDate": "2026-10-14",
+  "version": "2.46.0",
+  "releaseDate": "2026-10-15",
   "changelogCount": 10,
   "latest": {
-    "version": "2.45.0",
-    "date": "2026-10-14",
+    "version": "2.46.0",
+    "date": "2026-10-15",
     "category": "feature",
     "title": {
-      "zh": "EQ 各频段的增益/频率/Q 也能画包络了",
-      "en": "An EQ band's gain, frequency and Q can now be drawn as envelopes"
+      "zh": "人声轨能发声了：五个合成人声预置已接到轨道",
+      "en": "A vocal lane can be voiced: the five factory vowel patches are wired to tracks"
     },
     "highlights": [
       {
-        "zh": "自动化补齐 insert 链：低/中/高各频段的 gainDb、hz、q 共九项都能画包络，量程与面板滑杆同源（±18 dB、20–18000 Hz、Q 0.2–12）。",
-        "en": "Automation now covers the insert chain: gainDb, hz and q for each of the three EQ bands — nine fields — on the same ranges the panel's sliders use (±18 dB, 20–18000 Hz, Q 0.2–12)."
+        "zh": "synthesize_vocal 不再是占位：把某条轨道绑到 synth 的五个 formant 人声预置之一，可按预置 id 或元音选，未知声音/轨道会列全后拒绝。",
+        "en": "synthesize_vocal is no longer a stub: it binds a lane to one of the synth's five formant vocal patches, chosen by id or by vowel, refusing an unknown voice or lane with the full list."
       },
       {
-        "zh": "曲线画在已旁通的频段上会自动打开该频段（否则听不到，会让人以为功能坏了）；调度直接写 AudioParam，不会每步重建路由。",
-        "en": "A curve drawn on a bypassed band switches that band on — otherwise it would be inaudible and read as broken. The value is scheduled straight at the AudioParam, so routing is not rebuilt on every step."
+        "zh": "它如实自报做了哪一半：轨道的声音绑好了，但不做歌声合成（share code 携带声音而非词），歌词仍由 set_arrangement_vocal_melody 绑定。",
+        "en": "It says which half it did: the lane sounds through that voice, but it does not synthesise singing — a share code carries a voice, not words — and the lyric is still bound by set_arrangement_vocal_melody."
       }
     ],
     "truncated": false
