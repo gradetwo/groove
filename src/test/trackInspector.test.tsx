@@ -1,5 +1,7 @@
 import React from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { render, screen, fireEvent } from "@testing-library/react";
 import { LanguageProvider } from "../i18n/LanguageContext";
 import {
@@ -677,5 +679,27 @@ describe("TrackInspector · the timbre picker does not hide the list", () => {
     // And the replaced value is gone, which is correct — it is no longer this track's timbre.
     expect(screen.queryByTestId("track-inspector-instrument-option-punchy_kick")).toBeNull();
     expect(screen.queryByTestId("track-inspector-instrument-unlisted")).toBeNull();
+  });
+});
+
+/**
+ * ⭐ **And the choice has to reach the model, which it did not.**
+ *
+ * `TrackInspector` draws an `InstrumentPicker`, so a person can open the console's chain panel, choose a sound, and expect
+ * the track to change. In the real app the callback was **empty** — with a comment explaining that the console's own picker
+ * lives on the strip — so the choice was discarded with nothing on screen to say so. The store action
+ * (`SET_TRACK_INSTRUMENT`) existed and was handled all along.
+ *
+ * The component test above passes either way, because it supplies its own `vi.fn()`: a callback that a test provides can
+ * never be the one that is missing. So this pins the **call site**, which is where the defect was.
+ */
+describe("the console wires the inspector's timbre picker to the store", () => {
+  it("⭐ dispatches SET_TRACK_INSTRUMENT with the inspected track, rather than dropping the choice", () => {
+    const panel = readFileSync(resolve(__dirname, "../components/console/ConsolePanel.tsx"), "utf8");
+    expect(panel, "the picker's choice is committed").toMatch(/onInstrumentChange=\{\(instrument\) =>/);
+    expect(panel, "to the store action that writes the track's sound").toContain('type: "SET_TRACK_INSTRUMENT"');
+    expect(panel, "for the track the panel is open on").toContain("trackIdx: inspectedIdx");
+    // ⚠️ And the empty callback does not come back: it is the shape of the defect.
+    expect(panel, "no silent no-op").not.toMatch(/onInstrumentChange=\{\(\) => \{\s*\/\*/);
   });
 });

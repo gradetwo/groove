@@ -608,9 +608,17 @@ export const ConsolePanel: React.FC<ConsolePanelProps> = ({
           onBypassInsert={() => handleToggleBypass(inspectedIdx!)}
           getGainReductionDb={() => engine.getTrackCompressorReductionDb(inspectedIdx!)}
           isPlaying={isPlaying}
-          onInstrumentChange={() => {
-            /* The console's timbre picker lives on the strip; this panel is opened for the chain. */
-          }}
+          /**
+           * ⭐ **The timbre picker's choice now reaches the model, where before it was discarded.**
+           *
+           * This callback used to be empty, on the reasoning that "the console's timbre picker lives on the strip; this
+           * panel is opened for the chain". But `TrackInspector` draws an `InstrumentPicker` of its own, so a person could
+           * open the chain, choose a sound, and have nothing happen — with no explanation on screen. The store action has
+           * existed all along and is handled (`SET_TRACK_INSTRUMENT`), so the missing piece was this line.
+           */
+          onInstrumentChange={(instrument) =>
+            inspectedIdx !== undefined && commit({ type: "SET_TRACK_INSTRUMENT", trackIdx: inspectedIdx, instrument })
+          }
           volume={inspected.volume ?? 0.8}
           pan={inspected.pan ?? 0}
           sendA={inspected.sendA ?? 0}
