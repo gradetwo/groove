@@ -52,6 +52,7 @@ import {
   setArrangementBars,
   setArrangementTempo,
   setArrangementTimeSignature,
+  setArrangementTempoMap,
   createArrangement,
   setCollapsed,
   setTrackFlag,
@@ -368,6 +369,36 @@ export function setArrangementTimeSignatureCommand(before: string, after: string
     return undefined;
   }
   return setterCommand("timeSignature", setArrangementTimeSignature, before, after);
+}
+
+/** One point of a tempo map, in the shape the model stores. */
+type TempoPoint = { atBar: number; bpm: number; curve?: "jump" | "linear" };
+
+/**
+ * ⭐ **The tempo map, which no interface could write** (Web-reachability ledger: `setArrangementTempoMap`).
+ *
+ * The model, the projection into the song input and the renderer have all carried `tempoTrack` — an arrangement with a
+ * nine-movement tempo plan had to be split into nine arrangements and stitched outside — while the toolbar could set one
+ * BPM and nothing else. This is the model half of closing that.
+ *
+ * ⚠️ **`setArrangementTempoMap` validates and throws, where `setArrangementTempo` and `setArrangementBars` clamp.** The
+ * model says why: a point silently moved or dropped is a tempo the caller believes is in the file and is not, and every
+ * duration computed from it is then wrong in a way that looks like the caller's own arithmetic. That collides with the
+ * undo stack — `undo`/`redo` must be **total functions over any arrangement** — so both ends are validated here, by
+ * applying them to a throwaway arrangement, and `undefined` is returned for a pair the model would refuse. Validating the
+ * *undo* end matters as much as the redo end: a command whose `before` throws would break undo just as badly.
+ */
+export function setArrangementTempoMapCommand(
+  before: readonly TempoPoint[],
+  after: readonly TempoPoint[]
+): ArrangementCommand | undefined {
+  try {
+    setArrangementTempoMap(PROBE_ARRANGEMENT, before);
+    setArrangementTempoMap(PROBE_ARRANGEMENT, after);
+  } catch {
+    return undefined;
+  }
+  return setterCommand("tempoMap", setArrangementTempoMap, before, after);
 }
 
 export function setArrangementBarsCommand(before: number, after: number): ArrangementCommand {

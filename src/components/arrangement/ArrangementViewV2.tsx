@@ -85,6 +85,7 @@ import { ArrangementLaneV2 } from "./ArrangementLaneV2";
 import { AutomationLaneV2, AUTOMATION_LANE_HEIGHT } from "./AutomationLaneV2";
 import type { AutomationParameter } from "../../data/automation";
 import { TrackHeaderV2 } from "./TrackHeaderV2";
+import { TempoMapEditor } from "./TempoMapEditor";
 import { LoopBraceV2 } from "./LoopBraceV2";
 import { loopRangeAt, type LoopRange } from "../../data/arrangementLoop";
 import { compileArrangementToPattern } from "../../data/arrangementCompile";
@@ -117,6 +118,7 @@ import { useGs1Setting } from "../../features/sequencer/useGs1Setting";
 import { DEFAULT_SYNTH_PRESETS } from "../../audio/PolySynth";
 import {
   renameTrackCommand,
+  setArrangementTempoMapCommand,
   setArrangementTimeSignatureCommand,
   setTrackGs1PatchCommand,
   setTrackInstrumentCommand,
@@ -384,6 +386,19 @@ export function ArrangementViewV2({ currentSong, songId, capture, bar = 0, playe
    * the person's choice. The fallback is kept rather than dropped: with nothing selected, a list anchored on nothing would
    * be a control that cannot act, and the first synth lane is a defensible default that the label names out loud.
    */
+  /**
+   * ⭐ **The tempo map's commit, handed to the editor so the control itself stays pure.** It returns nothing when the model
+   * refuses the pair, which is why the editor keeps a draft: a rejected value must not be left looking accepted.
+   */
+  const onTempoMapChange = useCallback(
+    (before: readonly { atBar: number; bpm: number; curve?: "jump" | "linear" }[], after: readonly { atBar: number; bpm: number; curve?: "jump" | "linear" }[]) => {
+      const command = setArrangementTempoMapCommand(before, after);
+      if (command !== undefined) commit(command);
+      return command !== undefined;
+    },
+    [commit]
+  );
+
   const userPresetTrack = useMemo(() => {
     const chosen = selectedTrackId === undefined ? undefined : arrangement.tracks.find((row) => row.id === selectedTrackId);
     if (chosen?.kind === "synth") return chosen;
@@ -1697,6 +1712,20 @@ export function ArrangementViewV2({ currentSong, songId, capture, bar = 0, playe
             ))}
           </select>
         </label>
+
+        {/**
+         * ⭐ **The tempo map, which no interface could write** (Web-reachability ledger: `setArrangementTempoMap`).
+         *
+         * The model, the projection into the song input and the renderer have all carried `tempoTrack` — Muse composed a
+         * nine-movement piece that had to be split into nine arrangements and stitched outside, because an arrangement could
+         * state only one tempo. The single BPM input above stays: it is what an arrangement *without* a map means, and a map
+         * is the statement that one number is not enough.
+         *
+         * ⚠️ **A foldable list rather than a marker lane on the ruler.** A lane is the better surface eventually, but it is a
+         * large piece of interaction (drag a marker, snap it, delete it) and what was missing is *stating* a map at all.
+         * This states it, testably, without pretending the drag editing exists.
+         */}
+        {onTempoMapChange && <TempoMapEditor points={arrangement.tempoTrack ?? []} fallbackBpm={arrangement.bpm ?? 120} onCommit={onTempoMapChange} />}
 
         {/**
          * ⭐ **The snap value is visible text, and the toggle is separate from it** (§8 item 6, §3). Live shows the

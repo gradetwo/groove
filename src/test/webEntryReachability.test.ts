@@ -112,11 +112,6 @@ const UI_LEDGER: Record<string, Ruling> = {
     reason:
       "Census G5. There is no create-group / join-group / leave-group control anywhere in the interface; `parentId` is only *read* to draw indentation and hide children. The single hit in `src/components/arrangement/TrackListV2.tsx:4` is a comment — stripped before scanning, which is exactly the case `fxParamReachability` was built to catch. The MCP description says \"Folding is display only\" and the owner has not yet ruled whether the wanted feature is that folder or a summing bus, so this cannot be filed as agent-only.",
   },
-  setArrangementTempoMap: {
-    status: "pending-owner-ruling",
-    reason:
-      "Census G6a. The arrangement has one fixed BPM input and no tempo track / tempo-marker surface, while the model, the renderer and the MCP tool `set_arrangement_tempo_map` all support a map — the field's own comment in `src/types/arrangementV2.ts:194` records the half-built shape. Nothing in `src/components`, `src/views` or `src/features` references the function today.",
-  },
   setTrackSteps: {
     status: "excluded-by-policy",
     reason:
@@ -374,11 +369,12 @@ describe("G10 · every arrangement operation the model can do, the Web can reach
     // first run. If one of them is wired up this criterion goes red until the name is removed — which is the
     // other half of "the guard can be green afterwards".
     //
-    // ⭐ **Two have been wired up and removed**: `renameTrack` (a track can be renamed from its header now) and
-    // `setArrangementTimeSignature` (the toolbar has a signature control). A name leaves this list only with a commit
-    // behind it — the list is the record of what the census predicted, not a set difference that quietly catches up.
+    // ⭐ **Three have been wired up and removed**: `renameTrack` (a track can be renamed from its header now),
+    // `setArrangementTimeSignature` (the toolbar has a signature control) and `setArrangementTempoMap` (it has a tempo-map
+    // editor). A name leaves this list only with a commit behind it — the list is the record of what the census predicted,
+    // not a set difference that quietly catches up.
     const { unreachable } = scanWebEntries();
-    const censusGaps = ["setTrackParent", "setArrangementTempoMap"];
+    const censusGaps = ["setTrackParent"];
     for (const name of censusGaps) {
       expect(unreachable, `${name} (census G4/G5/G6) is now reachable — delete its ledger entry`).toContain(name);
     }

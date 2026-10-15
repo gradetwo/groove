@@ -484,6 +484,13 @@ export const studioMessages = {
   instrument_categories: { en: "Instrument categories", zh: "音色分类" },
   instrument_category_all: { en: "All", zh: "全部" },
   arrangement_time_signature: { en: "Time", zh: "拍号" },
+  arrangement_tempo_map: { en: "Tempo map", zh: "速度图" },
+  arrangement_tempo_map_bar: { en: "bar", zh: "小节" },
+  arrangement_tempo_map_add: { en: "Add a tempo change", zh: "加一个变速点" },
+  arrangement_tempo_map_remove: { en: "Remove tempo point", zh: "删除变速点" },
+  arrangement_tempo_map_empty: { en: "One tempo for the whole arrangement — add a change to vary it.", zh: "整曲一个速度 —— 加一个变速点即可变化。" },
+  arrangement_tempo_map_hint: { en: "Bar 0 is the start; points are sorted by bar, and the last one written for a bar wins.", zh: "第 0 小节是开头；按小节排序，同一小节以最后写入的为准。" },
+
   track_rename_label: { en: "Track name", zh: "轨道名" },
   track_rename_hint: { en: "Click to rename this track", zh: "点击重命名这条轨道" },
   user_preset_label: { en: "My presets", zh: "我的预置" },
