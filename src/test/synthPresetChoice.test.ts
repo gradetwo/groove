@@ -83,3 +83,29 @@ describe("the preset chooser in the arrangement", () => {
   });
 });
 
+
+/**
+ * ⭐ **And the factory library reaches a lane too, on its own field** (this round). The 120 presets could be chosen by an
+ * agent and by nothing else; this pins the Web half, and pins *which field* it writes.
+ *
+ * ⚠️ The distinction is the whole point: the dropdown above sets `track.instrument` (this repository's 19 handwritten,
+ * genre-tuned patches), and a factory preset sets `track.gs1Patch` — a different field read by a different resolver. A
+ * second control that quietly wrote `instrument` would appear to work and change the wrong thing.
+ */
+describe("the factory-preset chooser in the arrangement", () => {
+  it("⭐ the track list draws it for synth tracks, grouped, with its own id", () => {
+    const list = readFileSync(resolve(__dirname, "../components/arrangement/TrackListV2.tsx"), "utf8");
+    expect(list, "only a synth track gets it").toMatch(/track\.kind === "synth" && onChangeSynthPreset/);
+    expect(list, "with its own id, distinct from the instrument one").toContain("track-synth-preset-${track.id}");
+    // Grouped by the synth's own categories rather than one flat list of 120.
+    expect(list, "grouped by category").toContain("<optgroup");
+    expect(list, "grouped by the preset's own cat").toMatch(/preset\.cat\)/);
+  });
+
+  it("⭐ the view commits the patch command with the preset's share code", () => {
+    const view = readFileSync(resolve(__dirname, "../components/arrangement/ArrangementViewV2.tsx"), "utf8");
+    expect(view, "the library comes from the generated table").toContain("synthPresets={SYNTH_PRESETS}");
+    expect(view, "the field written is gs1Patch, not instrument").toContain("setTrackGs1PatchCommand(trackId");
+    expect(view, "and it writes the code, which is what the model holds").toContain("preset.shareCode");
+  });
+});

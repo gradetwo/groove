@@ -33,6 +33,13 @@ const EXPOSED: Record<string, string> = {
   setTrackSample: "set_arrangement_track_asset",
   // ⭐ The synth half of choosing a sound: a preset by name, which is what a synth track already sounds through.
   setTrackInstrument: "set_arrangement_track_preset",
+  /**
+   * ⭐ **The lane's *own* share code, which is a third state.** Not the instrument name above (this repository's handwritten
+   * patches, which the resolver falls back to) and not a preset id either: `gs1Patch` is a `gs1.1.…` code naming a sound
+   * directly. `apply_gs1_patch` is the tool that takes an arbitrary code, so it is the one mapped here; since this round
+   * `load_synth_preset` is the friendlier way to reach the same field with one of the synth's 120 factory presets.
+   */
+  setTrackGs1Patch: "apply_gs1_patch",
   setTrackSteps: "set_arrangement_track_steps",
   addTrackNote: "add_arrangement_note",
   addTrackNotes: "add_arrangement_notes",

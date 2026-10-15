@@ -61,6 +61,7 @@ import {
   setTrackSample,
   toggleStep,
   setTrackInstrument,
+  setTrackGs1Patch,
 } from "./arrangementEdits";
 import type { AutomationLane } from "./automation";
 import type { PlannedTake } from "./takePlanning";
@@ -309,6 +310,15 @@ export function setTrackSampleCommand(trackId: string, before: string, after: st
  */
 export function setTrackInstrumentCommand(trackId: string, before: string, after: string): ArrangementCommand {
   return setterCommand("instrument", (arrangement, next: string) => setTrackInstrument(arrangement, trackId, next), before, after);
+}
+
+/**
+ * ⭐ **Choosing one of the synth's factory presets, as an undoable step.** Same shape as `setTrackInstrumentCommand`: the
+ * view commits a before/after pair, so undo and redo work without the component knowing how a patch is stored. The pair is
+ * the **share code**, not the preset id, because the code is what the model holds and what a lane sounds through.
+ */
+export function setTrackGs1PatchCommand(trackId: string, before: string, after: string): ArrangementCommand {
+  return setterCommand("gs1Patch", (arrangement, next: string) => setTrackGs1Patch(arrangement, trackId, next), before, after);
 }
 
 export function setArrangementTempoCommand(before: number, after: number): ArrangementCommand {

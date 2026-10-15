@@ -715,6 +715,34 @@ export function setTrackInstrument(arrangement: ArrangementV2, trackId: string, 
   };
 }
 
+/**
+ * ⭐ **A lane's own synth patch, as a share code — the field the Web had no way to write.**
+ *
+ * `TrackV2.gs1Patch` has existed since v2.x and the MCP has written it through `apply_gs1_patch` and, since this round,
+ * `load_synth_preset`; the Web had **no control at all**, so a creator could only reach the 120 factory presets from an
+ * agent. This is the model half of closing that.
+ *
+ * ⚠️ **Only a `synth` track is touched, for the same reason `setTrackInstrument` only touches one**: a drumkit's sound is
+ * its role and a sampler's is its `sample`, so writing a patch code onto either would be a control that looks like it
+ * works and changes nothing audible.
+ *
+ * An empty code **removes** the field rather than storing `""`: absent is the state that means "ask the instrument table",
+ * which is what `resolveGs1Lane` reads, so clearing has to reach that state and not a third one.
+ */
+export function setTrackGs1Patch(arrangement: ArrangementV2, trackId: string, shareCode: string): ArrangementV2 {
+  const wanted = shareCode.trim();
+  return {
+    ...arrangement,
+    tracks: arrangement.tracks.map((track) => {
+      if (track.id !== trackId || track.kind !== "synth") return track;
+      const next = { ...track };
+      if (wanted === "") delete next.gs1Patch;
+      else next.gs1Patch = wanted;
+      return next;
+    }),
+  };
+}
+
 export function setTrackSample(arrangement: ArrangementV2, trackId: string, assetId: string): ArrangementV2 {
   return {
     ...arrangement,

@@ -34,6 +34,15 @@ export interface TrackListV2Props {
   presets?: readonly string[];
   onChangePreset?: (trackId: string, preset: string) => void;
   /**
+   * ⭐ **The synth project's own factory library, offered as `gs1Patch`** — and deliberately a *second* control rather
+   * than more rows in the list above, because the two write **different fields**: `presets` sets `track.instrument` (the
+   * handwritten, genre-tuned patches the engine's resolver reads), while a factory preset sets `track.gs1Patch`, the
+   * lane's own share code. Merging them into one `<select>` would make two model fields share one value, so choosing a
+   * factory preset would have to clear the other.
+   */
+  synthPresets?: readonly { id: string; name: string; cat: string }[];
+  onChangeSynthPreset?: (trackId: string, presetId: string) => void;
+  /**
    * Turn one of a track's own steps on or off. Optional so the list can be rendered as a report of the arrangement, without an editing surface.
    */
   onToggleStep?: (trackId: string, index: number) => void;
@@ -101,7 +110,7 @@ function depthOf(track: TrackV2, all: readonly TrackV2[], seen = new Set<string>
 /** The kinds the add menu offers — one table, shared with the new-project panel and the kind chooser. */
 const ADDABLE = TRACK_KIND_ORDER;
 
-export function TrackListV2({ arrangement, onAddTrack, onRemoveTrack, onToggle, onToggleCollapse, onChangeKind, instruments = [], onChangeInstrument, onAudition, presets, onChangePreset, onToggleStep, bar = 0, onChangeGain, onChangePan }: TrackListV2Props) {
+export function TrackListV2({ arrangement, onAddTrack, onRemoveTrack, onToggle, onToggleCollapse, onChangeKind, instruments = [], onChangeInstrument, onAudition, presets, onChangePreset, synthPresets, onChangeSynthPreset, onToggleStep, bar = 0, onChangeGain, onChangePan }: TrackListV2Props) {
   const { t } = useLanguage();
   // Which row's library panel is open. One at a time: two panels open would make the list jump as each one changes its height.
   const [openLibraryFor, setOpenLibraryFor] = useState<string | undefined>(undefined);
@@ -170,6 +179,36 @@ export function TrackListV2({ arrangement, onAddTrack, onRemoveTrack, onToggle, 
                     <option key={preset} value={preset} label={preset}>
                       {preset}
                     </option>
+                  ))}
+                </select>
+              )}
+
+              {track.kind === "synth" && onChangeSynthPreset && (synthPresets?.length ?? 0) > 0 && (
+                /**
+                 * ⭐ **The 120 factory presets, grouped by the synth's own categories.** A `<select>` with `<optgroup>`
+                 * rather than a bespoke popover on purpose: 120 rows is exactly the size where a native control still
+                 * wins — it is searchable by first keystroke in every browser, keyboard-reachable for free, and needs no
+                 * state of its own. `value` reads `""` when the lane's code is not one of ours (a share code pasted from
+                 * the synth, say), so the control shows "默认" instead of silently claiming a preset.
+                 */
+                <select
+                  data-testid={`track-synth-preset-${track.id}`}
+                  aria-label={`${track.name} factory preset`}
+                  value={""}
+                  onChange={(event) => event.target.value !== "" && onChangeSynthPreset(track.id, event.target.value)}
+                  className="h-7 shrink-0 rounded border border-[rgb(var(--d-line))] bg-transparent text-center text-[10px] text-text"
+                >
+                  <option value="">factory…</option>
+                  {[...new Set(synthPresets!.map((preset) => preset.cat))].map((cat) => (
+                    <optgroup key={cat} label={cat}>
+                      {synthPresets!
+                        .filter((preset) => preset.cat === cat)
+                        .map((preset) => (
+                          <option key={preset.id} value={preset.id} label={preset.name}>
+                            {preset.name}
+                          </option>
+                        ))}
+                    </optgroup>
                   ))}
                 </select>
               )}

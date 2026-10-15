@@ -115,7 +115,8 @@ import { generateEuclidean } from "../../audio/Euclidean";
 import { useDensityPreference } from "../../hooks/useDensityPreference";
 import { useGs1Setting } from "../../features/sequencer/useGs1Setting";
 import { DEFAULT_SYNTH_PRESETS } from "../../audio/PolySynth";
-import { setTrackInstrumentCommand } from "../../data/arrangementHistory";
+import { setTrackGs1PatchCommand, setTrackInstrumentCommand } from "../../data/arrangementHistory";
+import { SYNTH_PRESETS } from "../../data/synthPresets.generated";
 
 /** ⭐ The names a synth track may choose from — the keys of the engine's own preset table, in one place. */
 const SYNTH_PRESET_KEYS = Object.keys(DEFAULT_SYNTH_PRESETS);
@@ -2337,6 +2338,17 @@ export function ArrangementViewV2({ currentSong, songId, capture, bar = 0, playe
         onAudition={(assetId) => void player?.audition?.({ assetId, midi: 60 })}
         presets={SYNTH_PRESET_KEYS}
         onChangePreset={(trackId, preset) => commit(setTrackInstrumentCommand(trackId, trackFor(trackId)?.instrument ?? "", preset))}
+        /**
+         * ⭐ The synth project's own 120 factory presets, on the lane's **own** field. `SYNTH_PRESET_KEYS` above are this
+         * repository's 19 handwritten, genre-tuned patches (`track.instrument`); these are `track.gs1Patch`, which is what
+         * the Web had no control for at all — the 120 were reachable from an agent and from nothing else.
+         */
+        synthPresets={SYNTH_PRESETS}
+        onChangeSynthPreset={(trackId, presetId) => {
+          const preset = SYNTH_PRESETS.find((row) => row.id === presetId);
+          if (preset === undefined) return;
+          commit(setTrackGs1PatchCommand(trackId, trackFor(trackId)?.gs1Patch ?? "", preset.shareCode));
+        }}
         onToggleStep={(trackId, index) => commit(toggleStepCommand(trackId, index))}
         bar={stripBar}
         onChangeGain={(trackId, gainDb) => commit(setTrackGainCommand(trackId, trackFor(trackId)?.gainDb ?? 0, gainDb))}
