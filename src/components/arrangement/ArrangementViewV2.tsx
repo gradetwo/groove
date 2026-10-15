@@ -115,8 +115,10 @@ import { generateEuclidean } from "../../audio/Euclidean";
 import { useDensityPreference } from "../../hooks/useDensityPreference";
 import { useGs1Setting } from "../../features/sequencer/useGs1Setting";
 import { DEFAULT_SYNTH_PRESETS } from "../../audio/PolySynth";
-import { setTrackGs1PatchCommand, setTrackInstrumentCommand } from "../../data/arrangementHistory";
+import { setTrackGs1PatchCommand, setTrackInstrumentCommand, setUserPresetsCommand } from "../../data/arrangementHistory";
 import { SYNTH_PRESETS } from "../../data/synthPresets.generated";
+import { UserPresetList, presetSourceOf } from "./UserPresetList";
+import { deleteUserPreset, exportUserPreset, renameUserPreset, saveUserPreset } from "../../data/userPresets";
 
 /** ⭐ The names a synth track may choose from — the keys of the engine's own preset table, in one place. */
 const SYNTH_PRESET_KEYS = Object.keys(DEFAULT_SYNTH_PRESETS);
@@ -361,6 +363,11 @@ export function ArrangementViewV2({ currentSong, songId, capture, bar = 0, playe
    */
   const { commit, undo: undoEdit, redo: redoEdit, canUndo, canRedo, undoAction, redoAction } = useArrangementHistory(arrangement, setArrangement);
   const [selectedTrackId, setSelectedTrackId] = useState<string | undefined>(undefined);
+  /**
+   * ⭐ The lane the project's preset list saves from and applies to. There is no per-track selection in this view yet, so
+   * this is the first synth lane — stated here rather than hidden, because "which lane am I saving?" has to be answerable.
+   */
+  const userPresetTrack = useMemo(() => arrangement.tracks.find((track) => track.kind === "synth"), [arrangement.tracks]);
   /**
    * Which tracks show their level curve. Per track and local to this surface, because "I am looking at this curve" is a
    * fact about the session on screen rather than about the song — the same reason the selection above is not in the model.
@@ -2354,6 +2361,60 @@ export function ArrangementViewV2({ currentSong, songId, capture, bar = 0, playe
         onChangeGain={(trackId, gainDb) => commit(setTrackGainCommand(trackId, trackFor(trackId)?.gainDb ?? 0, gainDb))}
         onChangePan={(trackId, pan) => commit(setTrackPanCommand(trackId, trackFor(trackId)?.pan ?? 0, pan))}
         />
+        {/**
+         * ⭐ **The project's own saved sounds, beside the sounds they were made from.**
+         *
+         * ⚠️ **Which lane it acts on is `userPresetTrack`: the first synth lane.** Saving is inherently per-lane — it
+         * captures one track's code and overrides — while the *list* belongs to the project. A per-lane chooser is the
+         * honest next step, and the label says which lane this is so the button is never ambiguous about what it captures.
+         */}
+        {userPresetTrack !== undefined && (
+          <div className="border-t border-[rgb(var(--d-line))] px-2 py-2">
+            <UserPresetList
+              presets={arrangement.userPresets ?? []}
+              /**
+               * ⭐ Matched by **share code**, because that is what "this lane is currently using this preset" means: two
+               * presets may share a base code and differ only in overrides, and the lane stores the code it was given.
+               */
+              selectedId={
+                (arrangement.userPresets ?? []).find((preset) => preset.shareCode === userPresetTrack.gs1Patch)?.id ?? ""
+              }
+              trackName={userPresetTrack.name}
+              currentCode={userPresetTrack.gs1Patch}
+              onSave={(name) => {
+                const result = saveUserPreset(arrangement.userPresets ?? [], {
+                  name,
+                  shareCode: userPresetTrack.gs1Patch ?? "",
+                  ...(userPresetTrack.gs1PatchOverrides === undefined
+                    ? {}
+                    : { overrides: userPresetTrack.gs1PatchOverrides }),
+                });
+                if ("problem" in result) return;
+                commit(setUserPresetsCommand(arrangement.userPresets ?? [], result.presets));
+              }}
+              onApply={(preset) =>
+                commit(
+                  setTrackGs1PatchCommand(
+                    userPresetTrack.id,
+                    userPresetTrack.gs1Patch ?? "",
+                    preset.shareCode
+                  )
+                )
+              }
+              onRename={(id, name) =>
+                commit(setUserPresetsCommand(arrangement.userPresets ?? [], [...renameUserPreset(arrangement.userPresets ?? [], id, name)]))
+              }
+              onDelete={(id) =>
+                commit(setUserPresetsCommand(arrangement.userPresets ?? [], [...deleteUserPreset(arrangement.userPresets ?? [], id)]))
+              }
+              onExport={(preset) => {
+                const out = exportUserPreset(preset);
+                void navigator.clipboard?.writeText(out.shareCode);
+              }}
+              idPrefix="arrangement-user-presets"
+            />
+          </div>
+        )}
       </details>
 
       {/**
