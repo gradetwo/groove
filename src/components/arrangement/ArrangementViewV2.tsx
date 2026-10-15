@@ -36,7 +36,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Redo2, Undo2 } from "lucide-react";
 import type { AutomationLane } from "../../data/automation";
 import type { ArrangementV2, TrackKindV2, TrackRegion } from "../../types/arrangementV2";
-import { createArrangementFromTemplate, quantizeArrangementNoteLengths, rampArrangementNoteVelocity, legatoNotesInRect, arpeggiateNotesInRect, stampChordInRect } from "../../data/arrangementEdits";
+import { createArrangementFromTemplate, quantizeArrangementNoteLengths, rampArrangementNoteVelocity, legatoNotesInRect, arpeggiateNotesInRect, stampChordInRect, humanizeArrangementNoteVelocity } from "../../data/arrangementEdits";
 import { setterCommand } from "../../data/arrangementHistory";
 /**
  * ⭐ **The genre is loaded when one is chosen, not imported with the surface.**
@@ -1342,6 +1342,33 @@ export function ArrangementViewV2({ currentSong, songId, capture, bar = 0, playe
           }}
         >
           Arpeggio
+        </button>
+
+        {/**
+          * ⭐ **Humanise — the one feature of the three that the live editor did not have.** Chord stamping and arpeggiation
+          * were already exposed (`stampChordInRect`, `arpeggiateNotesInRect`), and the arrangement's velocity *ramp* is a
+          * crescendo rather than a humanisation. This varies each marked note's velocity by a deterministic offset derived
+          * from its position and pitch, so the same bars humanise the same way every time — which is what makes it one
+          * reproducible undo step rather than a roll of the dice.
+          *
+          * With marks it touches exactly those notes; with none it humanises the whole lane, which is what a person means by
+          * "humanise this track". One press, one command, one undo.
+          */}
+        <button
+          type="button"
+          data-testid="arrangement-humanize-selection"
+          className="px-2 py-1 rounded text-xs text-text opacity-90 min-h-11 sm:min-h-0"
+          disabled={editableTrackId === undefined}
+          title={t("arrangement_humanize_hint")}
+          onClick={() => {
+            if (editableTrackId === undefined) return;
+            const after = humanizeArrangementNoteVelocity(arrangement, editableTrackId, {
+              ...(rollSelection.length === 0 ? {} : { only: rollSelection }),
+            });
+            commit(setterCommand("Humanise velocity", (_current, value) => value, arrangement, after));
+          }}
+        >
+          {t("arrangement_humanize")}
         </button>
 
         {/* Inspire Me: the same part, varied. Chance lives in the function's default source, not in this call. */}

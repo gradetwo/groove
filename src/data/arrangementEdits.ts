@@ -843,6 +843,56 @@ export function rampArrangementNoteVelocity(
 }
 
 /**
+ * ⭐ **Velocity humanisation on the arrangement's own model — the one named feature the live editor lacked.**
+ *
+ * `rollModel.ts` has carried `humanizeNotesVelocity` for the **step-grid** editor, and the arrangement has had no
+ * equivalent: `rampArrangementNoteVelocity` above interpolates a line, which is a crescendo rather than a humanisation.
+ * Measured before writing this: the live editor already exposes chord stamping (`stampChordInRect`) and arpeggiation
+ * (`arpeggiateNotesInRect`), so of the three features that were asked for, this is the missing one — and the
+ * arrangement's **per-note** velocity is a better fit for it than the grid's per-step value ever was.
+ *
+ * ⭐ **Deterministic, not random, and that is the whole design.** The grid version derives its offset from a hash of the
+ * note's position and pitch (`(stepIdx * 23 + midi * 19) % 100`) rather than from `Math.random`, so the same notes always
+ * humanise the same way. That is what makes it testable at all — a random version can only be asserted statistically — and
+ * it keeps a re-run of the same edit reproducible, which matters when the edit is one undo step in a saved project.
+ *
+ * `amount` is the maximum deviation in velocity steps, clamped to 1…127 afterwards: a humanisation that pushed a note to 0
+ * would silence it, which is not what "make this less mechanical" means.
+ */
+export function humanizeArrangementNoteVelocity(
+  arrangement: ArrangementV2,
+  trackId: string,
+  options: { amount?: number; only?: readonly { pitch: number; startBeats: number }[] } = {}
+): ArrangementV2 {
+  const notes = arrangement.notesByTrack?.[trackId];
+  /**
+   * ⚠️ **A lane with no notes is returned unchanged, not with an empty entry written for it.** Writing `[]` would leave an
+   * arrangement that compares differently from the one that went in while sounding identical — a spurious undo step, and a
+   * `notesByTrack` key that says a lane has notes where it has none. Caught by a criterion asserting the no-op cases return
+   * the *same* arrangement rather than an equal-sounding one.
+   */
+  if (notes === undefined || notes.length === 0) return arrangement;
+  const amount = Math.max(0, options.amount ?? 8);
+  if (amount === 0) return arrangement;
+  /**
+   * ⭐ **Marks are a set; a rectangle can hold notes nobody marked** — the same rule `stampChordInRect` and
+   * `arpeggiateNotesInRect` state. Without `only`, the whole lane is humanised, which is what a person means by
+   * "humanise this track".
+   */
+  const marked = options.only === undefined ? null : new Set(options.only.map((note) => `${note.pitch}@${note.startBeats}`));
+
+  const landed = notes.map((note) => {
+    if (marked !== null && !marked.has(`${note.pitch}@${note.startBeats}`)) return note;
+    // Beats are fractional here, so the seed rounds them to a grid of 1/96th of a beat — stable for a note that has not
+    // moved, and different between two notes that sit a hair apart.
+    const seed = (Math.round(note.startBeats * 96) * 23 + note.pitch * 19) % 100;
+    const offset = Math.round((seed / 50 - 1) * amount);
+    return { ...note, velocity: Math.max(1, Math.min(127, note.velocity + offset)) };
+  });
+  return { ...arrangement, notesByTrack: { ...arrangement.notesByTrack, [trackId]: landed } };
+}
+
+/**
  * ⭐ **Lengths onto the grid, and only lengths.** The older quantiser snaps a note's gate and never its start, which is what
  * both its name and its code say; a snap of zero or less means nothing to snap to, so the arrangement is returned as it is.
  */

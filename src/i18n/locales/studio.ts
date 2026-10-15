@@ -483,6 +483,8 @@ export const studioMessages = {
   instrument_search_clear: { en: "Clear search", zh: "清除搜索" },
   instrument_categories: { en: "Instrument categories", zh: "音色分类" },
   instrument_category_all: { en: "All", zh: "全部" },
+  arrangement_humanize: { en: "Humanise", zh: "人性化" },
+  arrangement_humanize_hint: { en: "Vary the velocity of the marked notes, slightly and repeatably — the same bars always humanise the same way. With nothing marked, the whole lane.", zh: "把标记音符的力度做轻微而可复现的变化 —— 同几小节每次结果相同。没有标记时作用于整条轨。" },
   arrangement_time_signature: { en: "Time", zh: "拍号" },
   track_group_label: { en: "Group", zh: "分组" },
   track_group_none: { en: "no group", zh: "不分组" },
