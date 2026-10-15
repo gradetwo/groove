@@ -904,7 +904,18 @@ export function duplicateNotesByDelta(
   };
 }
 
-/** ⭐ **The rectangle's notes removed, and nothing else touched.** */
+/**
+ * ⭐ **The rectangle's notes removed, and nothing else touched.**
+ *
+ * ⚠️ **This is deliberately not the operation behind the piano roll's "remove selection"** (Web-reachability ledger,
+ * `removeNotesWithinRect`). The two are adjacent and genuinely different: this one takes **rectangle geometry** and asks the
+ * model which notes fall inside it, while the panel holds the **exact set** of selected notes — a selection can be
+ * scattered, so it is not a rectangle, and re-deriving a known set from geometry would add a step and a place for the two
+ * to disagree. The panel's removal is a single `setterCommand("Remove selection", …)` in `ArrangementViewV2`, so one press
+ * is still one undo step, which is the property that mattered.
+ *
+ * What the two *should* share is this explanation, and nothing else.
+ */
 export function removeNotesWithinRect(arrangement: ArrangementV2, trackId: string, rect: NoteRect): ArrangementV2 {
   const notes = arrangement.notesByTrack?.[trackId];
   if (notes === undefined || notes.length === 0) return arrangement;
