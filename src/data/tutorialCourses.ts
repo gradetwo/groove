@@ -98,20 +98,6 @@ export const TUTORIAL_COURSES: TutorialCourseDef[] = [
         tipEn: "In-scale lanes and ROOT watermarks guide harmonic writing",
         targetTab: "studio",
       },
-      {
-        labelKey: "tut_piano_s3",
-        tipZh: "和弦印章支持三和弦、七和弦、九和弦与挂留和弦",
-        tipEn: "Multi-note chord ghost preview stamps full voicings",
-        targetTab: "studio",
-        anchor: { attribute: "data-testid", value: "piano-roll-progression-suite" },
-      },
-      {
-        labelKey: "tut_piano_s4",
-        tipZh: "升序 (Arp ▲) 与降序 (Arp ▼) 琶音器一键展开",
-        tipEn: "Arpeggiate selected chord notes chronologically across steps",
-        targetTab: "studio",
-        anchor: { attribute: "data-testid", value: "piano-roll-arp-up" },
-      },
     ],
   },
   {

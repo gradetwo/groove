@@ -4,7 +4,7 @@
  * Measured 2026-10-05 01:14 over `mcp/**` and `src/**` (data tables, fixtures and tests excluded): **384**
  * files, **5** at two thousand lines or more, **13** at fifteen hundred, **25** at a thousand, **29** at eight
  * hundred and **46** at six hundred. The largest are `src/audio/AudioEngine.ts` at 3259 lines,
- * `src/components/sequencer/PianoRollLane.tsx` at 3241, `src/audio/WavExporter.ts` at 2608,
+ * `src/audio/WavExporter.ts` at 2608,
  * `src/views/GalaxyView.tsx` at 2356 and `src/components/sequencer/Toolbar.tsx` at 2295.
  *
  * ⚠️ This pins today's sizes; it does not schedule the work of splitting them. Splitting a three thousand
@@ -197,7 +197,6 @@ const FILE_CAPS: Record<string, number> = {
    * went 21.8 ms → 0.66 ms including the rebuild (33×), and pointer-move hit tests went O(n) → O(1). The buckets are
    * untouched. **This number may only go down from here.**
    */
-  "src/components/sequencer/PianoRollLane.tsx": 3264,
   /**
    * ⭐ **2608 → 2613 on 2026-10-14, by the owner's decision, for the reverb/delay patch.** Threading the arrangement's
    * patch into the offline master required a field, an applier call and an import. Everything compressible was compressed

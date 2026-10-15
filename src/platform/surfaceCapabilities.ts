@@ -149,9 +149,13 @@ export const CAPABILITY_MODULES: Partial<Record<CapabilityId, readonly string[]>
   // ⭐ Corrected 2026-10-13, the same correction `arrangement` above already records, one owner later. This named
   // `src/components/sequencer/PianoRollLane`, which nothing had rendered since the editor moved into
   // `ArrangementViewV2` — the studio renders `PianoRollV2` (`ArrangementViewV2.tsx` imports it at :79 and renders
-  // it at :2119), and `PianoRollLane` has no importer outside its own test. The old path existed, so the
+  // it at :2119), and `PianoRollLane` had no importer outside its own test. The old path existed, so the
   // existence check passed while the declaration was false; `surfaceCapabilities.test.ts` now resolves the real
   // import graph and fails on exactly this, which is why the correction is no longer optional.
+  //
+  // ⭐ **`PianoRollLane.tsx` itself was deleted on 2026-10-15**, once the correction above had left it with no referent:
+  // 3,264 lines whose only importer was its own test. The name is kept in this comment because it is *why* this entry
+  // reads `PianoRollV2`, and a reader who finds that name nowhere else in the tree should still learn what it was.
   "piano-roll": ["src/components/arrangement/PianoRollV2"],
   "hardware-console": ["src/components/console"],
   // ⭐ Repointed 2026-10-13, the same correction as the two entries above, found by the same criterion. This

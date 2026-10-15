@@ -348,17 +348,15 @@
 /*
  * Tailwind's own palette names, by meaning: a green is a success, an indigo is a call to action, a
  * shade is decoration. They compile to Tailwind's colours, so without this a skinned page keeps them —
- * which is how a newsprint theme ended up with an indigo speaker key. 132 rules.
+ * which is how a newsprint theme ended up with an indigo speaker key. 128 rules.
  */
 [class~="hover:bg-indigo-500"],
 [class~="hover:bg-indigo-600"]:hover { background-color: rgb(var(--d-accent)); }
 [class~="hover:bg-indigo-500/25"]:hover { background-color: rgb(var(--d-accent) / 0.25); }
 [class~="hover:bg-indigo-600/30"]:hover { background-color: rgb(var(--d-accent) / 0.30); }
-[class~="hover:bg-red-500"],
 [class~="hover:bg-red-600"]:hover { background-color: rgb(var(--d-danger)); }
 [class~="hover:bg-red-400/10"],
 [class~="hover:bg-red-500/10"]:hover { background-color: rgb(var(--d-danger) / 0.10); }
-[class~="hover:bg-red-500/20"],
 [class~="hover:bg-rose-500/20"]:hover { background-color: rgb(var(--d-danger) / 0.20); }
 [class~="hover:bg-red-500/25"],
 [class~="hover:bg-rose-500/25"]:hover { background-color: rgb(var(--d-danger) / 0.25); }
@@ -379,8 +377,6 @@
 [class~="hover:border-red-400"],
 [class~="hover:border-red-500"],
 [class~="hover:border-rose-400"]:hover { border-color: rgb(var(--d-danger)); }
-[class~="hover:border-red-500/40"]:hover { border-color: rgb(var(--d-danger) / 0.40); }
-[class~="hover:border-red-500/50"],
 [class~="hover:border-rose-500/50"]:hover { border-color: rgb(var(--d-danger) / 0.50); }
 [class~="hover:border-emerald-500"],
 [class~="hover:border-teal-400"]:hover { border-color: rgb(var(--d-success)); }
@@ -439,9 +435,7 @@
 [class~="bg-cyan-500/50"],
 [class~="bg-purple-500/50"] { background-color: rgb(var(--d-accent) / 0.50); }
 [class~="bg-cyan-400/80"] { background-color: rgb(var(--d-accent) / 0.80); }
-[class~="bg-red-400"],
 [class~="bg-red-500"],
-[class~="bg-red-600"],
 [class~="bg-rose-400"],
 [class~="bg-rose-500"] { background-color: rgb(var(--d-danger)); }
 [class~="bg-red-500/10"],
@@ -515,7 +509,6 @@
 [class~="border-red-500/40"],
 [class~="border-red-600/40"],
 [class~="border-rose-500/40"] { border-color: rgb(var(--d-danger) / 0.40); }
-[class~="border-red-500/50"],
 [class~="border-rose-500/50"] { border-color: rgb(var(--d-danger) / 0.50); }
 [class~="border-emerald-300"],
 [class~="border-emerald-400"],
@@ -540,9 +533,7 @@
 [class~="border-yellow-500/40"] { border-color: rgb(var(--d-warning) / 0.40); }
 [class~="border-amber-400/50"],
 [class~="border-amber-500/50"] { border-color: rgb(var(--d-warning) / 0.50); }
-[class~="border-amber-300/70"],
 [class~="border-amber-400/70"] { border-color: rgb(var(--d-warning) / 0.70); }
-[class~="fill-red-500"] { fill: rgb(var(--d-danger)); }
 [class~="from-indigo-500"] { --tw-gradient-from: rgb(var(--d-accent)); }
 [class~="from-cyan-500/10"] { --tw-gradient-from: rgb(var(--d-accent) / 0.10); }
 [class~="from-blue-950/25"],
@@ -566,7 +557,6 @@
 [class~="from-amber-500/40"] { --tw-gradient-from: rgb(var(--d-warning) / 0.40); }
 [class~="ring-cyan-300"],
 [class~="ring-purple-300"] { --tw-ring-color: rgb(var(--d-accent)); }
-[class~="ring-red-400"],
 [class~="ring-rose-300"] { --tw-ring-color: rgb(var(--d-danger)); }
 [class~="ring-amber-300"],
 [class~="ring-amber-400"] { --tw-ring-color: rgb(var(--d-warning)); }
@@ -599,7 +589,6 @@
 [class~="text-indigo-400/90"] { color: rgb(var(--d-accent) / 0.90); }
 [class~="text-red-300"],
 [class~="text-red-400"],
-[class~="text-red-500"],
 [class~="text-rose-200"],
 [class~="text-rose-300"],
 [class~="text-rose-400"] { color: rgb(var(--d-danger)); }
@@ -620,7 +609,6 @@
 [class~="text-orange-400"],
 [class~="text-yellow-300"],
 [class~="text-yellow-400"] { color: rgb(var(--d-warning)); }
-[class~="text-amber-400/60"] { color: rgb(var(--d-warning) / 0.60); }
 [class~="text-amber-400/90"] { color: rgb(var(--d-warning) / 0.90); }
 [class~="to-indigo-500"],
 [class~="to-purple-600"] { --tw-gradient-to: rgb(var(--d-accent)); }
@@ -631,21 +619,19 @@
 [class~="to-indigo-500/40"] { --tw-gradient-to: rgb(var(--d-accent) / 0.40); }
 [class~="to-emerald-400"],
 [class~="to-teal-400"] { --tw-gradient-to: rgb(var(--d-success)); }
-[class~="to-amber-300"],
 [class~="to-amber-500"] { --tw-gradient-to: rgb(var(--d-warning)); }
 [class~="to-amber-500/10"] { --tw-gradient-to: rgb(var(--d-warning) / 0.10); }
 [class~="via-cyan-400"],
 [class~="via-purple-500"] { --tw-gradient-stops: var(--tw-gradient-from), rgb(var(--d-accent)), var(--tw-gradient-to, rgb(0 0 0 / 0)); }
 [class~="via-indigo-500/20"] { --tw-gradient-stops: var(--tw-gradient-from), rgb(var(--d-accent) / 0.20), var(--tw-gradient-to, rgb(0 0 0 / 0)); }
 [class~="via-rose-500"] { --tw-gradient-stops: var(--tw-gradient-from), rgb(var(--d-danger)), var(--tw-gradient-to, rgb(0 0 0 / 0)); }
-[class~="via-amber-400"] { --tw-gradient-stops: var(--tw-gradient-from), rgb(var(--d-warning)), var(--tw-gradient-to, rgb(0 0 0 / 0)); }
 [class~="via-amber-500/10"] { --tw-gradient-stops: var(--tw-gradient-from), rgb(var(--d-warning) / 0.10), var(--tw-gradient-to, rgb(0 0 0 / 0)); }
 
 
 /*
  * The literal map: the desktop's hardcoded hexes, by role.
  *
- * 596 rules, generated from the literals the source actually uses. Because each rule names a
+ * 536 rules, generated from the literals the source actually uses. Because each rule names a
  * **token**, the same rules serve all six skins — the skin decides what the token resolves to. The few
  * near-duplicate grounds and inks in the default theme therefore converge onto one value each, which is
  * what "the same palette on both surfaces" means in practice.
@@ -659,8 +645,6 @@
 [class~="to-[#0c0d12]"] { --tw-gradient-to: rgb(var(--d-bg)); }
 [class~="bg-[#0f1118]"] { background-color: rgb(var(--d-bg)); }
 [class~="bg-[#0f1118]/95"] { background-color: rgb(var(--d-bg) / 0.95); }
-[class~="from-[#0f1118]"] { --tw-gradient-from: rgb(var(--d-bg)); }
-[class~="to-[#0f1118]"] { --tw-gradient-to: rgb(var(--d-bg)); }
 [class~="bg-[#12131a]"] { background-color: rgb(var(--d-panel)); }
 [class~="via-[#12131a]"] { --tw-gradient-stops: var(--tw-gradient-from), rgb(var(--d-panel)), var(--tw-gradient-to, rgb(0 0 0 / 0)); }
 [class~="hover:bg-[#1a1c22]"]:hover { background-color: rgb(var(--d-panel)); }
@@ -674,8 +658,6 @@
 [class~="bg-[#111422]"] { background-color: rgb(var(--d-panel2)); }
 [class~="bg-[#161a2b]"] { background-color: rgb(var(--d-panel2)); }
 [class~="bg-[#17181c]"] { background-color: rgb(var(--d-panel2)); }
-[class~="bg-[#12151f]"] { background-color: rgb(var(--d-panel2)); }
-[class~="to-[#12151f]"] { --tw-gradient-to: rgb(var(--d-panel2)); }
 [class~="bg-[#15171d]"] { background-color: rgb(var(--d-panel2)); }
 [class~="bg-[#15171d]/60"] { background-color: rgb(var(--d-panel2) / 0.60); }
 [class~="hover:bg-[#252833]"]:hover { background-color: rgb(var(--d-surface)); }
@@ -821,7 +803,6 @@
 [class~="border-[#1c1f2b]"] { border-color: rgb(var(--d-surface)); }
 [class~="bg-[#1d2028]"] { background-color: rgb(var(--d-surface)); }
 [class~="bg-[#0d0f16]"] { background-color: rgb(var(--d-panel2)); }
-[class~="via-[#0d0f16]"] { --tw-gradient-stops: var(--tw-gradient-from), rgb(var(--d-panel2)), var(--tw-gradient-to, rgb(0 0 0 / 0)); }
 [class~="bg-[#1c1f26]"] { background-color: rgb(var(--d-surface)); }
 [class~="text-[#1c1f26]"] { color: rgb(var(--d-surface)); }
 [class~="border-[#2d313d]"] { border-color: rgb(var(--d-line-strong)); }
@@ -839,7 +820,6 @@
 [class~="from-[#12141c]"] { --tw-gradient-from: rgb(var(--d-panel)); }
 [class~="bg-[#0b0d13]"] { background-color: rgb(var(--d-panel2)); }
 [class~="bg-[#10121a]"] { background-color: rgb(var(--d-panel)); }
-[class~="via-[#10121a]"] { --tw-gradient-stops: var(--tw-gradient-from), rgb(var(--d-panel)), var(--tw-gradient-to, rgb(0 0 0 / 0)); }
 [class~="bg-[#0c0e14]"] { background-color: rgb(var(--d-panel2)); }
 [class~="bg-[#0a0c12]"] { background-color: rgb(var(--d-panel2)); }
 [class~="to-[#0a0c12]"] { --tw-gradient-to: rgb(var(--d-panel2)); }
@@ -877,10 +857,7 @@
 [class~="bg-[#22262e]"] { background-color: rgb(var(--d-surface)); }
 [class~="bg-[#0a0b10]"] { background-color: rgb(var(--d-bg)); }
 [class~="bg-[#0d0f17]"] { background-color: rgb(var(--d-panel2)); }
-[class~="via-[#0d0f17]"] { --tw-gradient-stops: var(--tw-gradient-from), rgb(var(--d-panel2)), var(--tw-gradient-to, rgb(0 0 0 / 0)); }
 [class~="bg-[#141724]"] { background-color: rgb(var(--d-surface)); }
-[class~="bg-[#141724]/95"] { background-color: rgb(var(--d-surface) / 0.95); }
-[class~="from-[#141724]"] { --tw-gradient-from: rgb(var(--d-surface)); }
 [class~="bg-[#0b0c13]"] { background-color: rgb(var(--d-panel2)); }
 [class~="bg-[#090a0f]"] { background-color: rgb(var(--d-bg)); }
 [class~="bg-[#111420]"] { background-color: rgb(var(--d-panel)); }
@@ -899,7 +876,6 @@
 [class~="bg-[#161a29]"] { background-color: rgb(var(--d-surface)); }
 [class~="via-[#161a29]"] { --tw-gradient-stops: var(--tw-gradient-from), rgb(var(--d-surface)), var(--tw-gradient-to, rgb(0 0 0 / 0)); }
 [class~="bg-[#1c2132]"] { background-color: rgb(var(--d-surface)); }
-[class~="border-[#1c2132]/80"] { border-color: rgb(var(--d-surface) / 0.80); }
 [class~="hover:bg-[#272e45]"]:hover { background-color: rgb(var(--d-surface)); }
 [class~="bg-[#141828]"] { background-color: rgb(var(--d-surface)); }
 [class~="hover:bg-[#15192a]"]:hover { background-color: rgb(var(--d-surface)); }
@@ -917,8 +893,6 @@
 [class~="hover:bg-[#20273f]"]:hover { background-color: rgb(var(--d-surface)); }
 [class~="hover:bg-[#141722]"]:hover { background-color: rgb(var(--d-surface)); }
 [class~="bg-[#141722]"] { background-color: rgb(var(--d-surface)); }
-[class~="from-[#141722]"] { --tw-gradient-from: rgb(var(--d-surface)); }
-[class~="to-[#141722]"] { --tw-gradient-to: rgb(var(--d-surface)); }
 [class~="hover:bg-[#1e2334]"]:hover { background-color: rgb(var(--d-surface)); }
 [class~="bg-[#0a0b12]"] { background-color: rgb(var(--d-panel2)); }
 [class~="via-[#121522]"] { --tw-gradient-stops: var(--tw-gradient-from), rgb(var(--d-surface)), var(--tw-gradient-to, rgb(0 0 0 / 0)); }
@@ -960,7 +934,6 @@
 [class~="bg-[#11131a]/80"] { background-color: rgb(var(--d-panel) / 0.80); }
 [class~="bg-[#11131a]/85"] { background-color: rgb(var(--d-panel) / 0.85); }
 [class~="bg-[#11131a]/90"] { background-color: rgb(var(--d-panel) / 0.90); }
-[class~="from-[#11131a]"] { --tw-gradient-from: rgb(var(--d-panel)); }
 [class~="bg-[#252a38]"] { background-color: rgb(var(--d-surface)); }
 [class~="bg-[#141720]"] { background-color: rgb(var(--d-surface)); }
 [class~="bg-[#2a2e3d]"] { background-color: rgb(var(--d-surface)); }
@@ -985,60 +958,6 @@
 [class~="via-[#1a1c23]"] { --tw-gradient-stops: var(--tw-gradient-from), rgb(var(--d-surface)), var(--tw-gradient-to, rgb(0 0 0 / 0)); }
 [class~="text-[#b9bdc9]"] { color: rgb(var(--d-ink-2)); }
 [class~="hover:from-[#353945]"]:hover { --tw-gradient-from: rgb(var(--d-surface)); }
-[class~="from-[#1b1f2b]"] { --tw-gradient-from: rgb(var(--d-surface)); }
-[class~="to-[#12151e]"] { --tw-gradient-to: rgb(var(--d-panel)); }
-[class~="text-[#cbd1de]"] { color: rgb(var(--d-ink)); }
-[class~="to-[#08090e]"] { --tw-gradient-to: rgb(var(--d-bg)); }
-[class~="border-[#242838]"] { border-color: rgb(var(--d-line)); }
-[class~="bg-[#121520]"] { background-color: rgb(var(--d-panel)); }
-[class~="from-[#121520]"] { --tw-gradient-from: rgb(var(--d-panel)); }
-[class~="to-[#0a0b11]"] { --tw-gradient-to: rgb(var(--d-bg)); }
-[class~="border-[#242938]"] { border-color: rgb(var(--d-line)); }
-[class~="border-[#2d3345]"] { border-color: rgb(var(--d-line-strong)); }
-[class~="bg-[#181c28]"] { background-color: rgb(var(--d-surface)); }
-[class~="from-[#181c28]"] { --tw-gradient-from: rgb(var(--d-surface)); }
-[class~="border-[#2e3447]"] { border-color: rgb(var(--d-line-strong)); }
-[class~="from-[#191d29]"] { --tw-gradient-from: rgb(var(--d-surface)); }
-[class~="from-[#1c2235]"] { --tw-gradient-from: rgb(var(--d-surface)); }
-[class~="bg-[#121624]"] { background-color: rgb(var(--d-surface)); }
-[class~="to-[#121624]"] { --tw-gradient-to: rgb(var(--d-surface)); }
-[class~="border-[#2b3142]"] { border-color: rgb(var(--d-line-strong)); }
-[class~="bg-[#141723]"] { background-color: rgb(var(--d-surface)); }
-[class~="bg-[#141723]/90"] { background-color: rgb(var(--d-surface) / 0.90); }
-[class~="bg-[#1a1e2b]"] { background-color: rgb(var(--d-surface)); }
-[class~="border-[#2c3246]"] { border-color: rgb(var(--d-line-strong)); }
-[class~="border-[#282d3e]"] { border-color: rgb(var(--d-line)); }
-[class~="bg-[#131622]/80"] { background-color: rgb(var(--d-surface) / 0.80); }
-[class~="bg-[#131622]/95"] { background-color: rgb(var(--d-surface) / 0.95); }
-[class~="border-[#262c3e]"] { border-color: rgb(var(--d-line)); }
-[class~="to-[#0c0e15]"] { --tw-gradient-to: rgb(var(--d-panel2)); }
-[class~="border-[#262b3b]"] { border-color: rgb(var(--d-line)); }
-[class~="via-[#1a1d28]"] { --tw-gradient-stops: var(--tw-gradient-from), rgb(var(--d-surface)), var(--tw-gradient-to, rgb(0 0 0 / 0)); }
-[class~="to-[#252a3a]"] { --tw-gradient-to: rgb(var(--d-surface)); }
-[class~="hover:to-[#31374a]"]:hover { --tw-gradient-to: rgb(var(--d-surface)); }
-[class~="from-[#cad0dd]"] { --tw-gradient-from: rgb(var(--d-track-fx)); }
-[class~="via-[#e2e6f0]"] { --tw-gradient-stops: var(--tw-gradient-from), rgb(var(--d-track-fx)), var(--tw-gradient-to, rgb(0 0 0 / 0)); }
-[class~="to-[#f4f6fa]"] { --tw-gradient-to: rgb(var(--d-track-fx)); }
-[class~="text-[#1a1d29]"] { color: rgb(var(--d-ink-3)); }
-[class~="border-[#9ca3b5]"] { border-color: rgb(var(--d-track-fx)); }
-[class~="border-[#b8bcc8]"] { border-color: rgb(var(--d-track-fx)); }
-[class~="text-[#8e95a8]"] { color: rgb(var(--d-ink-3)); }
-[class~="from-[#171a25]"] { --tw-gradient-from: rgb(var(--d-surface)); }
-[class~="hover:bg-[#13151f]"]:hover { background-color: rgb(var(--d-panel)); }
-[class~="bg-[#13151f]/90"] { background-color: rgb(var(--d-panel) / 0.90); }
-[class~="via-[#13151f]"] { --tw-gradient-stops: var(--tw-gradient-from), rgb(var(--d-panel)), var(--tw-gradient-to, rgb(0 0 0 / 0)); }
-[class~="bg-[#1c202e]"] { background-color: rgb(var(--d-surface)); }
-[class~="border-[#2e3549]"] { border-color: rgb(var(--d-line-strong)); }
-[class~="bg-[#0f121d]"] { background-color: rgb(var(--d-panel)); }
-[class~="bg-[#181c2e]"] { background-color: rgb(var(--d-surface)); }
-[class~="border-[#252b40]/80"] { border-color: rgb(var(--d-line) / 0.80); }
-[class~="border-[#141622]/80"] { border-color: rgb(var(--d-surface) / 0.80); }
-[class~="bg-[#181b28]"] { background-color: rgb(var(--d-surface)); }
-[class~="border-[#181b28]/80"] { border-color: rgb(var(--d-surface) / 0.80); }
-[class~="via-[#0b0c12]"] { --tw-gradient-stops: var(--tw-gradient-from), rgb(var(--d-panel2)), var(--tw-gradient-to, rgb(0 0 0 / 0)); }
-[class~="border-[#252a3b]"] { border-color: rgb(var(--d-line)); }
-[class~="bg-[#1a1e2a]"] { background-color: rgb(var(--d-surface)); }
-[class~="border-[#2c3244]"] { border-color: rgb(var(--d-line-strong)); }
 [class~="hover:bg-[#1a1c24]"]:hover { background-color: rgb(var(--d-surface)); }
 [class~="bg-[#1a1c24]"] { background-color: rgb(var(--d-surface)); }
 [class~="border-[#272935]"] { border-color: rgb(var(--d-line)); }
@@ -1069,6 +988,7 @@
 [class~="bg-[#0e1017]"] { background-color: rgb(var(--d-panel)); }
 [class~="bg-[#0e1017]/40"] { background-color: rgb(var(--d-panel) / 0.40); }
 [class~="bg-[#0e1017]/90"] { background-color: rgb(var(--d-panel) / 0.90); }
+[class~="bg-[#1a1e2a]"] { background-color: rgb(var(--d-surface)); }
 [class~="hover:bg-[#232838]"]:hover { background-color: rgb(var(--d-surface)); }
 [class~="bg-[#08090d]"] { background-color: rgb(var(--d-bg)); }
 [class~="bg-[#191e2b]"] { background-color: rgb(var(--d-surface)); }
@@ -1077,6 +997,7 @@
 [class~="bg-[#151824]/60"] { background-color: rgb(var(--d-surface) / 0.60); }
 [class~="hover:bg-[#2a1315]"]:hover { background-color: rgb(var(--d-panel)); }
 [class~="bg-[#11161d]"] { background-color: rgb(var(--d-panel)); }
+[class~="bg-[#121520]"] { background-color: rgb(var(--d-panel)); }
 [class~="bg-[#181d2a]"] { background-color: rgb(var(--d-surface)); }
 [class~="bg-[#e9e7e0]"] { background-color: rgb(var(--d-track-fx)); }
 [class~="bg-[#141014]"] { background-color: rgb(var(--d-panel)); }
@@ -1139,9 +1060,11 @@
 [class~="hover:bg-[#141926]"]:hover { background-color: rgb(var(--d-surface)); }
 [class~="bg-[#141926]"] { background-color: rgb(var(--d-surface)); }
 [class~="border-[#2b3345]"] { border-color: rgb(var(--d-line-strong)); }
+[class~="bg-[#121624]"] { background-color: rgb(var(--d-surface)); }
 [class~="border-[#202738]"] { border-color: rgb(var(--d-line)); }
 [class~="hover:bg-[#252d42]"]:hover { background-color: rgb(var(--d-surface)); }
 [class~="border-[#2a344d]"] { border-color: rgb(var(--d-line-strong)); }
+[class~="bg-[#181c28]"] { background-color: rgb(var(--d-surface)); }
 [class~="border-[#293042]"] { border-color: rgb(var(--d-line-strong)); }
 [class~="bg-[#d47fa6]"] { background-color: rgb(var(--d-cat-pop)); }
 [class~="border-[#d47fa6]"] { border-color: rgb(var(--d-cat-pop)); }
@@ -1230,11 +1153,14 @@
 [class~="bg-[#0b0c11]"] { background-color: rgb(var(--d-panel2)); }
 [class~="bg-[#0b0c11]/80"] { background-color: rgb(var(--d-panel2) / 0.80); }
 [class~="bg-[#07080b]"] { background-color: rgb(var(--d-bg)); }
+[class~="bg-[#181b28]"] { background-color: rgb(var(--d-surface)); }
 [class~="bg-[#07090e]"] { background-color: rgb(var(--d-bg)); }
 [class~="hover:bg-[#141924]"]:hover { background-color: rgb(var(--d-surface)); }
 [class~="from-[#090b12]"] { --tw-gradient-from: rgb(var(--d-panel2)); }
 [class~="bg-[#1c202d]"] { background-color: rgb(var(--d-surface)); }
 [class~="hover:bg-[#252b3d]"]:hover { background-color: rgb(var(--d-surface)); }
+[class~="hover:bg-[#13151f]"]:hover { background-color: rgb(var(--d-panel)); }
+[class~="bg-[#13151f]/90"] { background-color: rgb(var(--d-panel) / 0.90); }
 [class~="text-[#b4b7c2]"] { color: rgb(var(--d-ink-2)); }
 [class~="text-[#7e8494]"] { color: rgb(var(--d-ink-3)); }
 [class~="bg-[#181b26]"] { background-color: rgb(var(--d-surface)); }
@@ -1344,14 +1270,12 @@
 [class~="bg-purple-500/15"][class~="text-white"] { color: rgb(var(--d-on-accent)); }
 [class~="bg-purple-500/25"][class~="text-white"] { color: rgb(var(--d-on-accent)); }
 [class~="bg-purple-500/50"][class~="text-white"] { color: rgb(var(--d-on-accent)); }
-[class~="bg-red-400"][class~="text-white"] { color: rgb(var(--d-on-accent)); }
 [class~="bg-red-500"][class~="text-white"] { color: rgb(var(--d-on-accent)); }
 [class~="bg-red-500/10"][class~="text-white"] { color: rgb(var(--d-on-accent)); }
 [class~="bg-red-500/15"][class~="text-white"] { color: rgb(var(--d-on-accent)); }
 [class~="bg-red-500/20"][class~="text-white"] { color: rgb(var(--d-on-accent)); }
 [class~="bg-red-500/25"][class~="text-white"] { color: rgb(var(--d-on-accent)); }
 [class~="bg-red-500/70"][class~="text-white"] { color: rgb(var(--d-on-accent)); }
-[class~="bg-red-600"][class~="text-white"] { color: rgb(var(--d-on-accent)); }
 [class~="bg-red-600/15"][class~="text-white"] { color: rgb(var(--d-on-accent)); }
 [class~="bg-red-600/90"][class~="text-white"] { color: rgb(var(--d-on-accent)); }
 [class~="bg-rose-400"][class~="text-white"] { color: rgb(var(--d-on-accent)); }
@@ -1404,8 +1328,6 @@
 [class~="hover:bg-[#ff5566]"][class~="text-white"]:hover { color: rgb(var(--d-on-accent)); }
 [class~="to-[#38bdf8]/20"][class~="text-white"] { color: rgb(var(--d-on-accent)); }
 [class~="to-accent"][class~="text-white"] { color: rgb(var(--d-on-accent)); }
-[class~="to-accent/60"][class~="text-white"] { color: rgb(var(--d-on-accent)); }
-[class~="to-amber-300"][class~="text-white"] { color: rgb(var(--d-on-accent)); }
 [class~="to-amber-500"][class~="text-white"] { color: rgb(var(--d-on-accent)); }
 [class~="to-amber-500/10"][class~="text-white"] { color: rgb(var(--d-on-accent)); }
 [class~="to-emerald-400"][class~="text-white"] { color: rgb(var(--d-on-accent)); }
@@ -1418,8 +1340,6 @@
 [class~="to-purple-600"][class~="text-white"] { color: rgb(var(--d-on-accent)); }
 [class~="to-teal-400"][class~="text-white"] { color: rgb(var(--d-on-accent)); }
 [class~="via-[#f5b73d]"][class~="text-white"] { color: rgb(var(--d-on-accent)); }
-[class~="via-accent"][class~="text-white"] { color: rgb(var(--d-on-accent)); }
-[class~="via-amber-400"][class~="text-white"] { color: rgb(var(--d-on-accent)); }
 [class~="via-amber-500/10"][class~="text-white"] { color: rgb(var(--d-on-accent)); }
 [class~="via-cyan-400"][class~="text-white"] { color: rgb(var(--d-on-accent)); }
 [class~="via-indigo-500/20"][class~="text-white"] { color: rgb(var(--d-on-accent)); }
@@ -1513,14 +1433,12 @@
 [class~="bg-purple-500/15"][class~="text-zinc-950"] { color: rgb(var(--d-on-accent)); }
 [class~="bg-purple-500/25"][class~="text-zinc-950"] { color: rgb(var(--d-on-accent)); }
 [class~="bg-purple-500/50"][class~="text-zinc-950"] { color: rgb(var(--d-on-accent)); }
-[class~="bg-red-400"][class~="text-zinc-950"] { color: rgb(var(--d-on-accent)); }
 [class~="bg-red-500"][class~="text-zinc-950"] { color: rgb(var(--d-on-accent)); }
 [class~="bg-red-500/10"][class~="text-zinc-950"] { color: rgb(var(--d-on-accent)); }
 [class~="bg-red-500/15"][class~="text-zinc-950"] { color: rgb(var(--d-on-accent)); }
 [class~="bg-red-500/20"][class~="text-zinc-950"] { color: rgb(var(--d-on-accent)); }
 [class~="bg-red-500/25"][class~="text-zinc-950"] { color: rgb(var(--d-on-accent)); }
 [class~="bg-red-500/70"][class~="text-zinc-950"] { color: rgb(var(--d-on-accent)); }
-[class~="bg-red-600"][class~="text-zinc-950"] { color: rgb(var(--d-on-accent)); }
 [class~="bg-red-600/15"][class~="text-zinc-950"] { color: rgb(var(--d-on-accent)); }
 [class~="bg-red-600/90"][class~="text-zinc-950"] { color: rgb(var(--d-on-accent)); }
 [class~="bg-rose-400"][class~="text-zinc-950"] { color: rgb(var(--d-on-accent)); }
@@ -1579,8 +1497,6 @@
 [class~="to-[#ffd060]"][class~="text-zinc-950"] { color: rgb(var(--d-on-accent)); }
 [class~="to-[#ffe28a]"][class~="text-zinc-950"] { color: rgb(var(--d-on-accent)); }
 [class~="to-accent"][class~="text-zinc-950"] { color: rgb(var(--d-on-accent)); }
-[class~="to-accent/60"][class~="text-zinc-950"] { color: rgb(var(--d-on-accent)); }
-[class~="to-amber-300"][class~="text-zinc-950"] { color: rgb(var(--d-on-accent)); }
 [class~="to-amber-500"][class~="text-zinc-950"] { color: rgb(var(--d-on-accent)); }
 [class~="to-amber-500/10"][class~="text-zinc-950"] { color: rgb(var(--d-on-accent)); }
 [class~="to-emerald-400"][class~="text-zinc-950"] { color: rgb(var(--d-on-accent)); }
@@ -1593,8 +1509,6 @@
 [class~="to-purple-600"][class~="text-zinc-950"] { color: rgb(var(--d-on-accent)); }
 [class~="to-teal-400"][class~="text-zinc-950"] { color: rgb(var(--d-on-accent)); }
 [class~="via-[#f5b73d]"][class~="text-zinc-950"] { color: rgb(var(--d-on-accent)); }
-[class~="via-accent"][class~="text-zinc-950"] { color: rgb(var(--d-on-accent)); }
-[class~="via-amber-400"][class~="text-zinc-950"] { color: rgb(var(--d-on-accent)); }
 [class~="via-amber-500/10"][class~="text-zinc-950"] { color: rgb(var(--d-on-accent)); }
 [class~="via-cyan-400"][class~="text-zinc-950"] { color: rgb(var(--d-on-accent)); }
 [class~="via-indigo-500/20"][class~="text-zinc-950"] { color: rgb(var(--d-on-accent)); }

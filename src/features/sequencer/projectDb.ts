@@ -38,16 +38,17 @@ export const GROOVE_DB_NAME = "groove_projects_db";
  */
 export const GROOVE_DB_VERSION = 1;
 /**
- * ⭐ **The version `openProjectsDb` actually opens.** 2 adds the arrangement store and never changes the project store,
- * so a v1 database is upgraded in place with its records untouched.
- */
-export const GROOVE_DB_ARRANGEMENT_STORE_VERSION = 2;
-/**
- * ⭐ **The version `openProjectsDb` actually opens now: 3, which adds the preset store.**
+ * ⭐ **The version `openProjectsDb` opens: 3, which adds the preset store** (the device's own synth patches, not any
+ * project's — see `GROOVE_PRESET_STORE_NAME`).
  *
- * Same reasoning as the 1 → 2 step above, and the same trap it documents: IndexedDB only runs `onupgradeneeded` when the
- * version **increases**, so a store added without bumping this appears on a fresh install and never for anybody who has
- * already opened the app — which works for the person testing it.
+ * It was 2 when the arrangement store arrived, and the step to 3 is the same reasoning and the same trap: IndexedDB only
+ * runs `onupgradeneeded` when the version **increases**, so a store added without bumping this appears on a fresh install
+ * and never for anybody who has already opened the app — which works for the person testing it.
+ *
+ * ⚠️ **The `2` that used to live here as `GROOVE_DB_ARRANGEMENT_STORE_VERSION` is gone on purpose.** Bumping to 3 left it
+ * with no reader, and `check:dead-exports` said so. Keeping a version constant that nothing opens a database with would be
+ * a number a future reader could mistake for the live one — the same reason `GROOVE_DB_VERSION = 1` above is documented as
+ * "the version the project store appeared at" rather than left to look current.
  */
 export const GROOVE_DB_PRESET_STORE_VERSION = 3;
 export const GROOVE_STORE_NAME = "projects";
