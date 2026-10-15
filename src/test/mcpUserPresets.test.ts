@@ -1,66 +1,79 @@
 /**
- * ⭐ **A saved sound has to be findable, and it has to still be there.**
+ * ⭐ **A saved sound has to be findable, and it has to survive being sent to somebody else.**
  *
- * `save_gs1_preset` exists because a person could shape a sound in this app and lose it: the synth's 120 presets can be
- * applied and parameters written on top, and nothing kept the result. These presets live on the **arrangement**, which is
- * what makes them survive — a `.groove` file carries the sounds its lanes use, and the synth repository is never written to.
+ * Owner decision (2026-10-15): presets are **device-scoped, and exportable**. That is a correction of the first version,
+ * which kept them on the arrangement — so a sound somebody shaped belonged to whichever project happened to be open, and
+ * making it again in the next project was the only way to have it there. The library is now the device's, which is also
+ * what these tools need: `save_gs1_preset` has no project to write to.
  *
- * The failure this file is really about is **a save that appears to work and stores nothing usable**:
+ * The failures this file is about are the ones that read as success:
  *
- *   - a preset saved without the lane's code would apply the synth's default patch, which sounds like a bug in the synth;
- *   - a save that could not be undone would be a place where a person loses work with no way back;
- *   - **an export that silently drops the overrides.** A patch's character can live in the parameter overrides, and the
- *     format both apps speak is the base code — so the count of what did not travel has to be reported. That is the
- *     difference between "here is my sound" and "here is part of my sound".
+ *   - **a save that stores nothing** — the first version computed the new list and dropped it, reporting success while
+ *     writing nothing. The write is now explicit and its failure reported;
+ *   - **a read that cannot tell "you have none" from "your file is broken"** — a missing file is a first run and an empty
+ *     list; a malformed one is *reported*, because otherwise a corrupted library looks exactly like an empty one;
+ *   - **an export that silently drops the overrides.** A patch's character can live in its parameter overrides and a share
+ *     code cannot carry them, so the count of what did not travel is returned.
  */
-import { describe, it, expect, beforeEach } from "vitest";
-import { GS1_TOOLS } from "../../mcp/registryGs1";
-import { createMcpArrangement, getMcpArrangement, getMcpTrack, setMcpTrackGs1 } from "../../mcp/arrangement";
-import { synthPresetById } from "../data/synthPresets.generated";
+import { beforeEach, describe, expect, it } from "vitest";
+import { mkdtempSync, readFileSync, writeFileSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import path from "node:path";
+
+/**
+ * ⚠️ **The data directory is redirected before the registry is imported**, because the tools resolve the file path from
+ * `GROOVE_USER_DATA_DIR` at call time — a test that wrote to the real `~/.groove/` would replace somebody's library.
+ */
+const DATA_DIR = mkdtempSync(path.join(tmpdir(), "groove-presets-"));
+process.env.GROOVE_USER_DATA_DIR = DATA_DIR;
+
+const { GS1_TOOLS } = await import("../../mcp/registryGs1");
+const { createMcpArrangement, setMcpTrackGs1 } = await import("../../mcp/arrangement");
+const { synthPresetById } = await import("../data/synthPresets.generated");
+const { userPresetFilePath } = await import("../../mcp/lib/userPresetFile");
 
 const tool = (name: string) => GS1_TOOLS.find((entry) => entry.name === name)!;
 type Reply = { content?: Array<{ text?: string }>; isError?: boolean };
 const textOf = (reply: unknown) => ((reply as Reply).content?.[0]?.text ?? "");
 const run = (name: string, args: Record<string, unknown>) => tool(name).handler(args, undefined as never);
+const saved = () => JSON.parse(readFileSync(userPresetFilePath(), "utf8")) as Array<{ id: string; name: string; shareCode: string }>;
 
 let arrangementId: string;
 let trackId: string;
 beforeEach(() => {
+  // A fresh library per case, so one case's save cannot be another's starting point.
+  rmSync(userPresetFilePath(), { force: true });
   const created = createMcpArrangement({ template: "empty" } as never);
   arrangementId = created.arrangementId;
   trackId = created.tracks[0]!.id;
-  // Give the lane a real sound to copy, as the synth's own library provides.
   setMcpTrackGs1(arrangementId, trackId, synthPresetById("supersaw")!.shareCode, null);
 });
 
 describe("save_gs1_preset", () => {
-  it("⭐ stores the lane's own code, on the arrangement, where a project file carries it", () => {
+  it("⭐ writes the lane's own code to the device library, not to the project", () => {
     const reply = run("save_gs1_preset", { arrangementId, track: trackId, name: "我的超级锯齿", cat: "LEAD" }) as {
       saved: { id: string; shareCode: string; cat: string };
+      count: number;
     };
     expect(reply.saved.shareCode, "the lane's actual sound, not the synth's default").toBe(synthPresetById("supersaw")!.shareCode);
     expect(reply.saved.cat).toBe("LEAD");
-    // ⭐ On the arrangement: that is what makes it export with the project.
-    expect(getMcpArrangement(arrangementId)!.userPresets?.map((preset) => preset.id)).toEqual([reply.saved.id]);
+    // ⭐ The file is the proof, and it is where the browser cannot see it — stated in the module's own header.
+    expect(saved().map((preset) => preset.id)).toEqual([reply.saved.id]);
   });
 
-  it("⭐ is undoable like every other arrangement change, so a save cannot cost work with no way back", () => {
-    // The MCP's `edit` records the state being left behind, which is what undo returns to.
-    const before = getMcpArrangement(arrangementId)!.userPresets;
-    expect(before, "nothing saved yet").toBeUndefined();
-    run("save_gs1_preset", { arrangementId, track: trackId, name: "Kept" });
-    expect(getMcpArrangement(arrangementId)!.userPresets).toHaveLength(1);
-    // `apply_gs1_patch` exposes the history: one undo returns to the state before the save.
-    const undone = run("apply_gs1_patch", { arrangementId, trackId, undo: true }) as Reply;
-    // Either it undid the save, or the tool has no undo verb — both are checked rather than assumed.
-    if (!undone.isError) expect(getMcpArrangement(arrangementId)!.userPresets).toBeUndefined();
+  it("⭐ is visible from another project, which is the whole point of device scope", () => {
+    run("save_gs1_preset", { arrangementId, track: trackId, name: "Shared across projects" });
+    const other = createMcpArrangement({ template: "empty" } as never);
+    const listed = run("list_user_presets", { arrangementId: other.arrangementId }) as { count: number };
+    expect(listed.count, "a second project sees the same library").toBe(1);
+    // And the first project does too, so nothing depends on which arrangement is open.
+    expect((run("list_user_presets", { arrangementId }) as { count: number }).count).toBe(1);
   });
 
   it("⭐ refuses a blank name and an unknown lane, and saves nothing when it does", () => {
-    const before = getMcpArrangement(arrangementId)!.userPresets;
     expect(textOf(run("save_gs1_preset", { arrangementId, track: trackId, name: "   " }))).toMatch(/name/i);
     expect(textOf(run("save_gs1_preset", { arrangementId, track: "no-such-lane", name: "x" }))).toMatch(/no track/);
-    expect(getMcpArrangement(arrangementId)!.userPresets, "a refusal writes nothing").toBe(before);
+    expect(() => saved()).toThrow();
   });
 });
 
@@ -77,24 +90,24 @@ describe("list, rename and delete", () => {
   it("⭐ renames and deletes by name or by id, and refuses a preset it does not have", () => {
     run("save_gs1_preset", { arrangementId, track: trackId, name: "Old" });
     expect(textOf(run("rename_user_preset", { arrangementId, preset: "Old", name: "New" }))).toBe("");
-    expect(getMcpArrangement(arrangementId)!.userPresets![0]!.name).toBe("New");
-    // By id, which is how a caller that listed them addresses one.
-    const id = getMcpArrangement(arrangementId)!.userPresets![0]!.id;
+    expect(saved()[0]!.name).toBe("New");
+    const id = saved()[0]!.id;
     expect(textOf(run("delete_user_preset", { arrangementId, preset: id }))).toBe("");
-    expect(getMcpArrangement(arrangementId)!.userPresets, "an empty list is absent, not []").toBeUndefined();
-    // An unknown preset is refused rather than silently ignored.
+    expect(saved()).toEqual([]);
     expect(textOf(run("delete_user_preset", { arrangementId, preset: "ghost" }))).toMatch(/no user preset/);
+  });
+
+  it("⚠️ reports a malformed library instead of calling it empty", () => {
+    writeFileSync(userPresetFilePath(), "{ this is not json", "utf8");
+    // Without this the message would be a normal "you have no presets", and a corrupted file would be invisible.
+    expect(textOf(run("list_user_presets", { arrangementId }))).toMatch(/not valid JSON/);
   });
 });
 
 describe("export and import", () => {
   it("⭐ exports the code the synth accepts, and reports what a code cannot carry", () => {
     run("save_gs1_preset", { arrangementId, track: trackId, name: "Shareable" });
-    const out = run("export_gs1_preset", { arrangementId, preset: "Shareable" }) as {
-      shareCode: string;
-      overridesOmitted: number;
-      note?: string;
-    };
+    const out = run("export_gs1_preset", { arrangementId, preset: "Shareable" }) as { shareCode: string; overridesOmitted: number };
     expect(out.shareCode).toBe(synthPresetById("supersaw")!.shareCode);
     expect(out.overridesOmitted).toBe(0);
 
@@ -112,11 +125,10 @@ describe("export and import", () => {
       saved: { shareCode: string; name: string };
     };
     expect(imported.saved.shareCode).toBe(code);
-    // It then applies to a lane like any other preset's code.
-    expect(getMcpTrack(arrangementId, trackId)!.gs1Patch).toBe(synthPresetById("supersaw")!.shareCode);
-
+    expect(saved()).toHaveLength(1);
     expect(textOf(run("import_gs1_preset", { arrangementId, shareCode: "hello", name: "Broken" }))).toMatch(/gs1\.1\./);
-    // ⭐ Import and export are the same format, which is what makes "share a preset" mean one string in either app.
+    // ⭐ Import and export are the same format, which is what makes "share a preset" one string in either app — and the
+    // only way a preset crosses between the browser's store and this one.
     const exported = run("export_gs1_preset", { arrangementId, preset: "From a friend" }) as { shareCode: string };
     expect(exported.shareCode).toBe(code);
   });

@@ -12,7 +12,6 @@
 import type { NoteConvention } from "../data/pitchTruth";
 import type { AutomationLane } from "../data/automation";
 import type { SequencerTrack } from "./genre";
-import type { UserPreset } from "../data/userPresets";
 
 /**
  * The sounding kinds, plus `folder`, which groups without making a sound. A discriminated union rather than a pile of optional fields: "a track that is both a drum kit and a sampler" is a shape the fields would permit and the semantics do not have.
@@ -253,14 +252,4 @@ export interface ArrangementV2 {
   timeSignature?: string;
   /** Every clip slot that carried at least one track, so a projection can be checked for completeness. */
   sourceSlots: string[];
-  /**
-   * ⭐ **The creator's own saved synth patches, kept with the project.**
-   *
-   * Owner decision: user presets live **here** — so they travel with the arrangement and a `.groove` file exports the sounds
-   * its lanes use — and **never** in the synth repository, whose preset list is generated data that `check:synth-presets`
-   * verifies against the synth's own answer. The shape and its operations are in `data/userPresets.ts`.
-   *
-   * Absent means none, which is what an older file says: a reader must not have to invent an empty array to open one.
-   */
-  userPresets?: UserPreset[];
 }

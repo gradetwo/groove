@@ -60,10 +60,8 @@ import {
   transposeNotesInRange,
   varyArrangementNotes,
   setTrackInstrument,
-  setUserPresets,
 } from "../src/data/arrangementEdits";
 import type { TrackInsertPatch } from "../src/data/trackInsert";
-import type { UserPreset } from "../src/data/userPresets";
 import { MASTER_DEFAULTS, normaliseMasterSettings, type MasterSettings } from "../src/data/masterSettings";
 import { normaliseEffectsOverrides, type EffectsOverrides } from "../src/data/effectsOverrides";
 import type { AutomationParameter } from "../src/data/automation";
@@ -974,17 +972,6 @@ export function setMcpTrackGs1(
     });
     return { ...arrangement, tracks };
   });
-}
-
-/**
- * ⭐ **Writing the project's own presets, through `edit` so a save is undoable.**
- *
- * The pure list operations live in `src/data/userPresets.ts` (validating, ids, export/import); these are the two lines that
- * make their result persist, and they exist because the first version of the tools **computed a new list and dropped it** —
- * a save that reported success and stored nothing, which is exactly the failure the criteria are for.
- */
-export function setMcpUserPresets(arrangementId: string, presets: readonly UserPreset[]): ArrangementEditResult {
-  return edit(arrangementId, (arrangement) => setUserPresets(arrangement, presets));
 }
 
 export function transposeMcpNotes(

@@ -42,6 +42,14 @@ export const GROOVE_DB_VERSION = 1;
  * so a v1 database is upgraded in place with its records untouched.
  */
 export const GROOVE_DB_ARRANGEMENT_STORE_VERSION = 2;
+/**
+ * ⭐ **The version `openProjectsDb` actually opens now: 3, which adds the preset store.**
+ *
+ * Same reasoning as the 1 → 2 step above, and the same trap it documents: IndexedDB only runs `onupgradeneeded` when the
+ * version **increases**, so a store added without bumping this appears on a fresh install and never for anybody who has
+ * already opened the app — which works for the person testing it.
+ */
+export const GROOVE_DB_PRESET_STORE_VERSION = 3;
 export const GROOVE_STORE_NAME = "projects";
 /**
  * ⭐ **The v2 arrangements, in their own store — the decision this whole change turns on.**
@@ -57,6 +65,21 @@ export const GROOVE_STORE_NAME = "projects";
  * already works can be reached by this change.
  */
 export const GROOVE_ARRANGEMENT_STORE_NAME = "arrangements_v2";
+/**
+ * ⭐ **The device's own preset library, which is *not* part of any project.** (Owner decision, 2026-10-15.)
+ *
+ * It was briefly `ArrangementV2.userPresets`, so a preset travelled inside the `.groove` file that used it. That reads
+ * well until someone works across several projects: a sound they shaped belongs to *them*, not to the project that happened
+ * to be open when they made it, and a project-scoped library means making it again in the next project. Device-scoped also
+ * matches what the MCP's tools need — `save_gs1_preset` has no project in hand.
+ *
+ * Export is what carries a preset between people (a `gs1.1.…` share code, the format the synth itself accepts), so
+ * device-scoping loses nothing: it only stops a sound from being silently duplicated per project.
+ *
+ * A **separate store rather than a field on a project row**, for the same reason the arrangements have one: a preset list
+ * has no project to belong to, so there is no row to hang it on.
+ */
+export const GROOVE_PRESET_STORE_NAME = "user_presets_v1";
 export const ACTIVE_PROJECT_STORAGE_KEY = "groove_active_project_id";
 /**
  * ⭐ **The last arrangement project this build had open**, as `{id, name}` — a *pointer*, not a copy.
@@ -135,7 +158,7 @@ function isIndexedDbUnavailable(err: unknown): boolean {
  * needs the identical commit discipline; a second copy of this function is how the two would drift, and the drift
  * would be in the half that decides whether a save actually happened.
  */
-function runStoreTx<T>(
+export function runStoreTx<T>(
   db: IDBDatabase,
   storeName: string,
   mode: IDBTransactionMode,
@@ -278,8 +301,8 @@ function peekProjectsDb(): IDBDatabase | null {
  *
  * ⭐ **The version is decided by what is already there, so a v1 database is upgraded rather than refused.** A browser
  * that last opened this app before the arrangement store existed has `groove_projects_db` at version 1 and no such
- * store. Opening it at version 2 runs `onupgradeneeded`, which notices the project store already exists, leaves it
- * **and every record in it** alone, and creates only the arrangement store. `indexedDB.databases()` is how "what is
+ * store. Opening it at version 3 runs `onupgradeneeded`, which notices the stores that already exist, leaves them
+ * **and every record in them** alone, and creates only what is missing. `indexedDB.databases()` is how "what is
  * already there" is asked; where a browser does not implement it the answer is the arrangement version, which is what
  * a browser with no database at all must be given anyway.
  */
@@ -330,6 +353,11 @@ function openProjectsDbOnce(idb: IDBFactory): Promise<IDBDatabase> {
           arrangements.createIndex("updatedAt", "updatedAt", { unique: false });
           arrangements.createIndex("name", "name", { unique: false });
         }
+        if (!db.objectStoreNames.contains(GROOVE_PRESET_STORE_NAME)) {
+          // Keyed by the preset's own id; `savedAt` is indexed because "the most recent" is the only order a list needs.
+          const presets = db.createObjectStore(GROOVE_PRESET_STORE_NAME, { keyPath: "id" });
+          presets.createIndex("savedAt", "savedAt", { unique: false });
+        }
       };
 
       request.onblocked = () => {
@@ -361,17 +389,17 @@ function openProjectsDbOnce(idb: IDBFactory): Promise<IDBDatabase> {
     try {
       const databases = idb.databases?.bind(idb);
       if (!databases) {
-        open(GROOVE_DB_ARRANGEMENT_STORE_VERSION);
+        open(GROOVE_DB_PRESET_STORE_VERSION);
         return;
       }
       void databases()
         .then((entries) => {
           const existing = entries.find((entry) => entry.name === GROOVE_DB_NAME)?.version ?? 0;
-          open(Math.max(GROOVE_DB_ARRANGEMENT_STORE_VERSION, existing));
+          open(Math.max(GROOVE_DB_PRESET_STORE_VERSION, existing));
         })
         .catch(() => {
           // Asking what exists failed, which is not a reason to refuse to open a database.
-          open(GROOVE_DB_ARRANGEMENT_STORE_VERSION);
+          open(GROOVE_DB_PRESET_STORE_VERSION);
         });
     } catch (err) {
       reject(err);

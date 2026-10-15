@@ -18,7 +18,8 @@ import {
 import { resolveGs1Lane } from "../src/audio/gs1/gs1Tracks";
 import { DEFAULT_NOTE_CONVENTION, NoteConvention, describePitch } from "../src/data/pitchTruth";
 import { DEFAULT_PARAMS, MAX_ROUTES } from "../vendor/gs1/src/audio/params";
-import { getMcpArrangement, getMcpTrack, setMcpTrackGs1, setMcpUserPresets } from "./arrangement";
+import { getMcpArrangement, getMcpTrack, setMcpTrackGs1 } from "./arrangement";
+import { readUserPresets, writeUserPresets } from "./lib/userPresetFile";
 import { laneInstrumentForTrack, laneRoleForTrack } from "../src/data/arrangementCompile";
 import { auditionInstrumentNote } from "./render/worker";
 import { ToolDefinition, describeGs1Sound, failure } from "./toolKit";
@@ -485,7 +486,7 @@ export const GS1_TOOLS: ToolDefinition[] = [
     name: "save_gs1_preset",
     title: "Save a lane's GS-1 sound as one of your own presets",
     description:
-      "Save the GS-1 sound a lane is currently using as a named user preset, kept with the project (a .groove file carries it) and never sent to the synth repository. The share code and the lane's parameter overrides are both stored. Refuses a blank name, and a code that could not be a share code.",
+      "Save the GS-1 sound a lane is currently using as a named user preset. Kept on this device rather than in the project, so it is available from every project here; never sent to the synth repository. Export it as a share code to move it to another device or person. The share code and the lane's parameter overrides are both stored. Refuses a blank name, and a code that could not be a share code.",
     readOnly: false,
     inputSchema: {
       arrangementId: z.string(),
@@ -501,17 +502,25 @@ export const GS1_TOOLS: ToolDefinition[] = [
       const target = arrangement.tracks.find((row) => row.id === key) ?? arrangement.tracks.find((row) => row.name === key);
       if (!target) return failure(`no track "${key}" in "${arrangementId}" — get_arrangement lists them`);
 
-      const result = saveUserPreset(arrangement.userPresets ?? [], {
+      /**
+       * ⭐ **The project is named only to find the lane, not to store the preset.** The library is device-scoped, so the
+       * same sound is available from every project (owner decision 2026-10-15) and nothing here depends on which
+       * arrangement happens to be open.
+       */
+      const current = readUserPresets();
+      if (current.problem) return failure(current.problem);
+      const result = saveUserPreset(current.presets, {
         name: String(args.name),
         shareCode: target.gs1Patch ?? "",
         ...(target.gs1PatchOverrides === undefined ? {} : { overrides: target.gs1PatchOverrides }),
         ...(args.cat === undefined ? {} : { cat: String(args.cat) }),
       });
       if ("problem" in result) return failure(result.problem);
-      // ⭐ Persist through `edit`: the first version computed the new list and dropped it, so a save reported success and
-      // stored nothing. `edit` is also what records the state being left behind, which is what undo returns to.
-      const written = setMcpUserPresets(arrangementId, result.presets);
-      return { arrangementId, saved: result.saved, count: result.presets.length, summary: written.summary };
+      // ⭐ The write is what makes a save real, and its failure is reported: the first version computed the new list and
+      // dropped it, which is a save that reports success and stores nothing.
+      const written = writeUserPresets(result.presets);
+      if (written.problem) return failure(written.problem);
+      return { saved: result.saved, count: result.presets.length, store: "device" };
     },
   },
   {
@@ -519,14 +528,12 @@ export const GS1_TOOLS: ToolDefinition[] = [
     name: "list_user_presets",
     title: "List the project's own saved presets",
     description:
-      "Every user preset saved in this arrangement: id, name, category and when it was saved. Apply one by passing its share code to apply_gs1_patch, or export it to send to somebody.",
+      "Every user preset saved on this device: id, name, category and when it was saved. Apply one by passing its share code to apply_gs1_patch, or export it to send to somebody.",
     readOnly: true,
-    inputSchema: { arrangementId: z.string() },
-    handler: (args) => {
-      const arrangementId = String(args.arrangementId);
-      const arrangement = getMcpArrangement(arrangementId);
-      if (!arrangement) return failure(`no arrangement "${arrangementId}" — create one first`);
-      const presets = arrangement.userPresets ?? [];
+    inputSchema: {},
+    handler: () => {
+      const { presets, problem } = readUserPresets();
+      if (problem) return failure(problem);
       return {
         count: presets.length,
         presets: presets.map((preset) => ({
@@ -548,19 +555,18 @@ export const GS1_TOOLS: ToolDefinition[] = [
       "Rename a user preset, found by its id or by its current name. Keeps its sound. An unknown preset, or a blank new name, is refused.",
     readOnly: false,
     inputSchema: {
-      arrangementId: z.string(),
       preset: z.string().min(1).describe("the preset's id, or its current name"),
       name: z.string().min(1).max(60).describe("the new name"),
     },
     handler: (args) => {
-      const arrangementId = String(args.arrangementId);
-      const arrangement = getMcpArrangement(arrangementId);
-      if (!arrangement) return failure(`no arrangement "${arrangementId}" — create one first`);
-      const found = findUserPreset(arrangement.userPresets ?? [], String(args.preset));
+      const { presets, problem } = readUserPresets();
+      if (problem) return failure(problem);
+      const found = findUserPreset(presets, String(args.preset));
       if (!found) return failure(`no user preset "${String(args.preset)}" — list_user_presets has them`);
-      const renamed = renameUserPreset(arrangement.userPresets ?? [], found.id, String(args.name));
-      setMcpUserPresets(arrangementId, renamed);
-      return { arrangementId, preset: found.id, name: String(args.name).trim(), count: renamed.length };
+      const renamed = renameUserPreset(presets, found.id, String(args.name));
+      const written = writeUserPresets(renamed);
+      if (written.problem) return failure(written.problem);
+      return { preset: found.id, name: String(args.name).trim(), count: renamed.length };
     },
   },
   {
@@ -569,18 +575,17 @@ export const GS1_TOOLS: ToolDefinition[] = [
     description: "Delete a user preset, found by its id or by its name. An unknown preset is refused rather than ignored.",
     readOnly: false,
     inputSchema: {
-      arrangementId: z.string(),
       preset: z.string().min(1).describe("the preset's id, or its name"),
     },
     handler: (args) => {
-      const arrangementId = String(args.arrangementId);
-      const arrangement = getMcpArrangement(arrangementId);
-      if (!arrangement) return failure(`no arrangement "${arrangementId}" — create one first`);
-      const found = findUserPreset(arrangement.userPresets ?? [], String(args.preset));
+      const { presets, problem } = readUserPresets();
+      if (problem) return failure(problem);
+      const found = findUserPreset(presets, String(args.preset));
       if (!found) return failure(`no user preset "${String(args.preset)}" — list_user_presets has them`);
-      const left = deleteUserPreset(arrangement.userPresets ?? [], found.id);
-      setMcpUserPresets(arrangementId, left);
-      return { arrangementId, deleted: found.id, count: left.length, summary: found.name };
+      const left = deleteUserPreset(presets, found.id);
+      const written = writeUserPresets(left);
+      if (written.problem) return failure(written.problem);
+      return { deleted: found.id, name: found.name, count: left.length };
     },
   },
   {
@@ -602,14 +607,12 @@ export const GS1_TOOLS: ToolDefinition[] = [
       preset: z.string().min(1).describe("the preset's id, or its name"),
     },
     handler: (args) => {
-      const arrangementId = String(args.arrangementId);
-      const arrangement = getMcpArrangement(arrangementId);
-      if (!arrangement) return failure(`no arrangement "${arrangementId}" — create one first`);
-      const found = findUserPreset(arrangement.userPresets ?? [], String(args.preset));
+      const { presets, problem } = readUserPresets();
+      if (problem) return failure(problem);
+      const found = findUserPreset(presets, String(args.preset));
       if (!found) return failure(`no user preset "${String(args.preset)}" — list_user_presets has them`);
       const out = exportUserPreset(found);
       return {
-        arrangementId,
         preset: found.id,
         name: found.name,
         shareCode: out.shareCode,
@@ -627,23 +630,22 @@ export const GS1_TOOLS: ToolDefinition[] = [
       "Import a gs1.1.… share code as a named user preset in this project. The code is stored as given; a string that could not be a share code is refused rather than saved.",
     readOnly: false,
     inputSchema: {
-      arrangementId: z.string(),
       shareCode: z.string().min(1).describe('a GS-1 share code ("gs1.1.…")'),
       name: z.string().min(1).max(60).describe("what to call the imported preset"),
       cat: z.string().max(16).optional(),
     },
     handler: (args) => {
-      const arrangementId = String(args.arrangementId);
-      const arrangement = getMcpArrangement(arrangementId);
-      if (!arrangement) return failure(`no arrangement "${arrangementId}" — create one first`);
-      const result = importUserPreset(arrangement.userPresets ?? [], {
+      const { presets, problem } = readUserPresets();
+      if (problem) return failure(problem);
+      const result = importUserPreset(presets, {
         shareCode: String(args.shareCode),
         name: String(args.name),
         ...(args.cat === undefined ? {} : { cat: String(args.cat) }),
       });
       if ("problem" in result) return failure(result.problem);
-      setMcpUserPresets(arrangementId, result.presets);
-      return { arrangementId, saved: result.saved, count: result.presets.length };
+      const written = writeUserPresets(result.presets);
+      if (written.problem) return failure(written.problem);
+      return { saved: result.saved, count: result.presets.length, store: "device" };
     },
   },
 ];

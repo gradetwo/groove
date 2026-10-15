@@ -63,7 +63,6 @@ import {
   toggleStep,
   setTrackInstrument,
   setTrackGs1Patch,
-  setUserPresets,
 } from "./arrangementEdits";
 import type { AutomationLane } from "./automation";
 import type { PlannedTake } from "./takePlanning";
@@ -325,15 +324,6 @@ export function setTrackGs1PatchCommand(trackId: string, before: string, after: 
 
 export function setArrangementTempoCommand(before: number, after: number): ArrangementCommand {
   return setterCommand("tempo", setArrangementTempo, before, after);
-}
-
-/**
- * ⭐ **The project's saved presets, as one undoable step.** `setterCommand` for the whole list rather than a per-preset
- * pair, because every operation `data/userPresets.ts` offers — save, rename, delete, import — produces a new list: so the
- * command stores the list before and the list after, and undo works without the caller knowing which operation it was.
- */
-export function setUserPresetsCommand(before: readonly UserPreset[], after: readonly UserPreset[]): ArrangementCommand {
-  return setterCommand("userPresets", (arrangement, next: readonly UserPreset[]) => setUserPresets(arrangement, next), before, after);
 }
 
 export function setArrangementBarsCommand(before: number, after: number): ArrangementCommand {

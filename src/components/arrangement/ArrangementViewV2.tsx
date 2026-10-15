@@ -115,10 +115,12 @@ import { generateEuclidean } from "../../audio/Euclidean";
 import { useDensityPreference } from "../../hooks/useDensityPreference";
 import { useGs1Setting } from "../../features/sequencer/useGs1Setting";
 import { DEFAULT_SYNTH_PRESETS } from "../../audio/PolySynth";
-import { setTrackGs1PatchCommand, setTrackInstrumentCommand, setUserPresetsCommand } from "../../data/arrangementHistory";
+import { setTrackGs1PatchCommand, setTrackInstrumentCommand } from "../../data/arrangementHistory";
 import { SYNTH_PRESETS } from "../../data/synthPresets.generated";
 import { UserPresetList } from "./UserPresetList";
 import { deleteUserPreset, exportUserPreset, renameUserPreset, saveUserPreset } from "../../data/userPresets";
+import type { UserPreset } from "../../data/userPresets";
+import { loadUserPresets, updateUserPresets } from "../../features/arrangement/userPresetStore";
 
 /** ⭐ The names a synth track may choose from — the keys of the engine's own preset table, in one place. */
 const SYNTH_PRESET_KEYS = Object.keys(DEFAULT_SYNTH_PRESETS);
@@ -368,6 +370,24 @@ export function ArrangementViewV2({ currentSong, songId, capture, bar = 0, playe
    * this is the first synth lane — stated here rather than hidden, because "which lane am I saving?" has to be answerable.
    */
   const userPresetTrack = useMemo(() => arrangement.tracks.find((track) => track.kind === "synth"), [arrangement.tracks]);
+  /**
+   * ⭐ **The device's preset library, loaded once and refreshed after each edit.** It is not part of the arrangement, so it
+   * has its own state: writing it must not mark the project dirty or enter the undo stack, and a preset made in one project
+   * is there in the next.
+   */
+  const [devicePresets, setDevicePresets] = useState<UserPreset[]>([]);
+  useEffect(() => {
+    let live = true;
+    void loadUserPresets()
+      .then((rows) => {
+        if (live) setDevicePresets(rows);
+      })
+      // A storage failure leaves the list empty rather than breaking the view; the console reports storage health elsewhere.
+      .catch(() => undefined);
+    return () => {
+      live = false;
+    };
+  }, []);
   /**
    * Which tracks show their level curve. Per track and local to this surface, because "I am looking at this curve" is a
    * fact about the session on screen rather than about the song — the same reason the selection above is not in the model.
@@ -2371,42 +2391,42 @@ export function ArrangementViewV2({ currentSong, songId, capture, bar = 0, playe
         {userPresetTrack !== undefined && (
           <div className="border-t border-[rgb(var(--d-line))] px-2 py-2">
             <UserPresetList
-              presets={arrangement.userPresets ?? []}
+              /**
+               * ⭐ **The device's library, not the arrangement's.** A sound somebody shaped belongs to *them* rather than to
+               * whichever project was open (owner decision 2026-10-15), so every project offers the same list and none of
+               * these edits are project history — the `commit`/undo path is therefore deliberately not used here, because
+               * undoing a preset save should not be an arrangement edit.
+               */
+              presets={devicePresets}
               /**
                * ⭐ Matched by **share code**, because that is what "this lane is currently using this preset" means: two
                * presets may share a base code and differ only in overrides, and the lane stores the code it was given.
                */
-              selectedId={
-                (arrangement.userPresets ?? []).find((preset) => preset.shareCode === userPresetTrack.gs1Patch)?.id ?? ""
-              }
+              selectedId={devicePresets.find((preset) => preset.shareCode === userPresetTrack.gs1Patch)?.id ?? ""}
               trackName={userPresetTrack.name}
               currentCode={userPresetTrack.gs1Patch}
               onSave={(name) => {
-                const result = saveUserPreset(arrangement.userPresets ?? [], {
-                  name,
-                  shareCode: userPresetTrack.gs1Patch ?? "",
-                  ...(userPresetTrack.gs1PatchOverrides === undefined
-                    ? {}
-                    : { overrides: userPresetTrack.gs1PatchOverrides }),
-                });
-                if ("problem" in result) return;
-                commit(setUserPresetsCommand(arrangement.userPresets ?? [], result.presets));
+                void updateUserPresets((current) =>
+                  saveUserPreset(current, {
+                    name,
+                    shareCode: userPresetTrack.gs1Patch ?? "",
+                    ...(userPresetTrack.gs1PatchOverrides === undefined
+                      ? {}
+                      : { overrides: userPresetTrack.gs1PatchOverrides }),
+                  })
+                ).then((result) => setDevicePresets(result.presets));
               }}
               onApply={(preset) =>
                 commit(
-                  setTrackGs1PatchCommand(
-                    userPresetTrack.id,
-                    userPresetTrack.gs1Patch ?? "",
-                    preset.shareCode
-                  )
+                  setTrackGs1PatchCommand(userPresetTrack.id, userPresetTrack.gs1Patch ?? "", preset.shareCode)
                 )
               }
-              onRename={(id, name) =>
-                commit(setUserPresetsCommand(arrangement.userPresets ?? [], [...renameUserPreset(arrangement.userPresets ?? [], id, name)]))
-              }
-              onDelete={(id) =>
-                commit(setUserPresetsCommand(arrangement.userPresets ?? [], [...deleteUserPreset(arrangement.userPresets ?? [], id)]))
-              }
+              onRename={(id, name) => {
+                void updateUserPresets((current) => ({ presets: renameUserPreset(current, id, name) })).then((result) => setDevicePresets(result.presets));
+              }}
+              onDelete={(id) => {
+                void updateUserPresets((current) => ({ presets: deleteUserPreset(current, id) })).then((result) => setDevicePresets(result.presets));
+              }}
               onExport={(preset) => {
                 const out = exportUserPreset(preset);
                 void navigator.clipboard?.writeText(out.shareCode);
