@@ -1,23 +1,23 @@
 {
-  "version": "2.47.0",
+  "version": "2.48.0",
   "releaseDate": "2026-10-15",
   "changelogCount": 10,
   "latest": {
-    "version": "2.47.0",
+    "version": "2.48.0",
     "date": "2026-10-15",
-    "category": "feature",
+    "category": "fix",
     "title": {
-      "zh": "synth 全部 120 个预置可选，也能存下自己的音色",
-      "en": "All 120 synth presets are choosable, and you can keep your own sounds"
+      "zh": "自己的音色改成存在设备上，所有项目都能用",
+      "en": "Your saved sounds now live on the device, available to every project"
     },
     "highlights": [
       {
-        "zh": "synth 的 120 个出厂预置全部可选（按它自己的 7 个分类分组）：人声、猫叫 catlead、blade runner、DX 电钢等，不再只有 5 个。",
-        "en": "All 120 synth factory presets are choosable, grouped by the synth's own seven categories: the vocal choirs, catlead, bladerunner, dxepiano and the rest — no longer only five."
+        "zh": "自建预置不再绑在单个项目上：存一次，这台设备上的每个项目都能看到；导出为 gs1.1.… 分享码即可带到别的设备或给别人。",
+        "en": "Saved presets are no longer tied to one project: save once and every project on this device sees it; export it as a gs1.1.… share code to move it to another device or person."
       },
       {
-        "zh": "能把自己的音色存成预置（随项目走，不写入 synth 仓库），可套用/重命名/删除，并复制成 gs1.1.… 分享码发给别人。",
-        "en": "You can save a lane's sound as your own preset (kept with the project, never written to the synth repository), apply, rename or delete it, and copy it as a gs1.1.… share code to send to somebody."
+        "zh": "浏览器存在 IndexedDB（库版本升到 3，老库原地升级、记录不动）；MCP 存在 ~/.groove/user-presets.json，采用「先写临时文件再改名」避免崩溃时写坏整库。",
+        "en": "The browser keeps them in IndexedDB (library version 3, older databases upgraded in place with their records untouched); the MCP keeps them in ~/.groove/user-presets.json, written via a temp file and rename so a crash cannot corrupt the whole library."
       }
     ],
     "truncated": false
