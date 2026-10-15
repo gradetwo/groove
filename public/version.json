@@ -1,25 +1,29 @@
 {
-  "version": "2.48.0",
+  "version": "2.48.1",
   "releaseDate": "2026-10-15",
   "changelogCount": 10,
   "latest": {
-    "version": "2.48.0",
+    "version": "2.48.1",
     "date": "2026-10-15",
-    "category": "fix",
+    "category": "feature",
     "title": {
-      "zh": "自己的音色改成存在设备上，所有项目都能用",
-      "en": "Your saved sounds now live on the device, available to every project"
+      "zh": "编排：改名、编组、拍号、速度图，音色可试听",
+      "en": "Arrangement: rename, group, time signature, tempo map — and auditioning a sound"
     },
     "highlights": [
       {
-        "zh": "自建预置不再绑在单个项目上：存一次，这台设备上的每个项目都能看到；导出为 gs1.1.… 分享码即可带到别的设备或给别人。",
-        "en": "Saved presets are no longer tied to one project: save once and every project on this device sees it; export it as a gs1.1.… share code to move it to another device or person."
+        "zh": "轨道头点一下选中、再点一下改名，可放进分组文件夹；拍号可下拉，速度变化能按小节写。",
+        "en": "A track header selects on the first press and renames on the second, and can go into a group folder; the time signature is a selector and tempo changes are written per bar."
       },
       {
-        "zh": "浏览器存在 IndexedDB（库版本升到 3，老库原地升级、记录不动）；MCP 存在 ~/.groove/user-presets.json，采用「先写临时文件再改名」避免崩溃时写坏整库。",
-        "en": "The browser keeps them in IndexedDB (library version 3, older databases upgraded in place with their records untouched); the MCP keeps them in ~/.groove/user-presets.json, written via a temp file and rename so a crash cannot corrupt the whole library."
+        "zh": "新增「人性化」：选中音符的力度按位置与音高确定性地抖开（同一段永远同一个结果），渐强不再是一条直线。",
+        "en": "A new Humanise button spreads the selected notes' velocity from a hash of position and pitch — deterministic, so the same passage always comes out the same — so a crescendo stops being a straight line."
+      },
+      {
+        "zh": "自建预置可▷试听，走自己的发声槽，听一遍不会把声音写到任何轨道；放不出来会说原因。",
+        "en": "Your own presets audition with ▷ on their own voice slot, so a listen never writes that sound onto a track — and when it cannot sound, it says why."
       }
     ],
-    "truncated": false
+    "truncated": true
   }
 }
