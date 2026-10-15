@@ -11,6 +11,8 @@
  * component asks for the right change, which is the half a component owns.
  */
 import React from "react";
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { describe, it, expect, vi } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 import { LanguageProvider } from "../i18n/LanguageContext";
@@ -120,5 +122,28 @@ describe("UserPresetList · audition", () => {
     renderList(<UserPresetList {...props({ presets: [mine], onAudition: vi.fn(), problem: "not a share code: it must start with \"gs1.1.\"" })} />);
     const shown = screen.getByTestId("user-presets-problem");
     expect(shown.textContent).toMatch(/gs1\.1\./);
+  });
+});
+
+/**
+ * ⭐ **And the yard is actually reachable, which is the half a component test cannot see.**
+ *
+ * The button's criterion above passes with any handler, including one a test supplies — so it can never notice that the
+ * *application* forgot to wire one. That is exactly the shape of the defect this project has already shipped once (the
+ * console's timbre picker passed a no-op), so the call site is pinned here: the view builds the yard from the engine's own
+ * context and hands the callback down.
+ */
+describe("the arrangement wires the preview yard", () => {
+  it("⭐ builds it from the engine's context and master destination, and disposes it", () => {
+    const view = readFileSync(resolve(__dirname, "../components/arrangement/ArrangementViewV2.tsx"), "utf8");
+    expect(view, "the yard comes from the engine's own context, so the preview is audible").toContain(
+      "engineRef?.current?.audioContext"
+    );
+    expect(view, "and its master destination, not a lane's").toContain("engineRef?.current?.musicDestination");
+    expect(view, "a worklet voice left running is a leak the next preview pays for").toMatch(/yard\.dispose\(\)/);
+    expect(view, "no genre re-voicing: a factory preset is a sound, and bladerunner should sound like bladerunner").toContain(
+      "genreId: null"
+    );
+    expect(view, "and the callback reaches the list").toContain("onAudition={onAuditionPreset}");
   });
 });
