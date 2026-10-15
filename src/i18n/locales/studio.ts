@@ -507,6 +507,8 @@ export const studioMessages = {
   user_preset_rename_prompt: { en: "New name", zh: "新名字" },
   user_preset_confirm: { en: "OK", zh: "确定" },
   user_preset_export: { en: "Copy as a share code", zh: "复制为分享码" },
+  user_preset_audition: { en: "Play a note to hear it", zh: "弹一个音听听" },
+  user_preset_audition_failed: { en: "The preview could not sound", zh: "试听发不出声" },
   user_preset_delete: { en: "Delete", zh: "删除" },
   user_preset_has_code: { en: "this lane has its own sound", zh: "这条轨道有自己的声音" },
   user_preset_no_code: { en: "this lane uses the table's sound", zh: "这条轨道用表里的声音" },

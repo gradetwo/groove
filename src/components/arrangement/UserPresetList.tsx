@@ -25,6 +25,14 @@ export interface UserPresetListProps {
   onDelete: (id: string) => void;
   /** Hand the preset's share code back to the caller, which decides how to offer it for copying. */
   onExport: (preset: UserPreset) => void;
+  /**
+   * ⭐ **Audition the preset, which is the whole reason a list of 120 sounds is usable.** Optional, so a host with no audio
+   * (or a criterion) draws no button rather than one that does nothing. The caller owns the yard and the "loading" state,
+   * because it owns the engine.
+   */
+  onAudition?: (preset: UserPreset) => void;
+  /** Why the last audition could not sound, shown rather than swallowed. */
+  problem?: string;
   /** The lane a save would copy, so the button can say what it is about to capture. */
   trackName: string;
   /** The code the lane carries now, or `undefined` — what "save" would store. */
@@ -40,9 +48,11 @@ export const UserPresetList: React.FC<UserPresetListProps> = ({
   onRename,
   onDelete,
   onExport,
+  onAudition,
   trackName,
   currentCode,
   idPrefix = "user-presets",
+  problem,
 }) => {
   const { t } = useLanguage();
   const [name, setName] = useState("");
@@ -88,6 +98,12 @@ export const UserPresetList: React.FC<UserPresetListProps> = ({
           {t("user_preset_save")}
         </button>
       </div>
+
+      {problem && (
+        <p className="text-[10px] text-red-400" data-testid={`${idPrefix}-problem`}>
+          {problem}
+        </p>
+      )}
 
       {presets.length === 0 ? (
         <p className="text-[10px] text-text-dim" data-testid={`${idPrefix}-empty`}>
@@ -150,6 +166,17 @@ export const UserPresetList: React.FC<UserPresetListProps> = ({
                   >
                     ✎
                   </button>
+                  {onAudition && (
+                    <button
+                      type="button"
+                      onClick={() => onAudition(preset)}
+                      data-testid={`${idPrefix}-audition-${preset.id}`}
+                      title={t("user_preset_audition")}
+                      className="shrink-0 rounded px-1 text-[10px] text-text-dim hover:text-accent"
+                    >
+                      ▷
+                    </button>
+                  )}
                   <button
                     type="button"
                     onClick={() => onExport(preset)}

@@ -126,6 +126,7 @@ import {
 } from "../../data/arrangementHistory";
 import { SYNTH_PRESETS } from "../../data/synthPresets.generated";
 import { UserPresetList } from "./UserPresetList";
+import { Gs1PresetPreview } from "../../audio/gs1/Gs1PresetPreview";
 import { deleteUserPreset, exportUserPreset, renameUserPreset, saveUserPreset } from "../../data/userPresets";
 import type { UserPreset } from "../../data/userPresets";
 import { loadUserPresets, updateUserPresets } from "../../features/arrangement/userPresetStore";
@@ -391,6 +392,49 @@ export function ArrangementViewV2({ currentSong, songId, capture, bar = 0, playe
    * ⭐ **The tempo map's commit, handed to the editor so the control itself stays pure.** It returns nothing when the model
    * refuses the pair, which is why the editor keeps a draft: a rejected value must not be left looking accepted.
    */
+  /**
+   * ⭐ **The audition yard, created lazily and torn down with the view.**
+   *
+   * Lazily because it costs a GS-1 host, and disposed on unmount because a worklet-backed voice left running is a leak the
+   * next preview would pay for. It is keyed to the engine's own context and master destination — the *engine's*, so a
+   * preview is audible, and a **separate pool**, so it is never the voice a lane is playing through.
+   */
+  const previewRef = useRef<{ play: (code: string) => Promise<{ sounded: boolean; problem?: string }>; stop: () => void; dispose: () => void } | null>(null);
+  const [previewProblem, setPreviewProblem] = useState<string | undefined>(undefined);
+  useEffect(() => {
+    // An engine torn down (or not yet wired) must not keep a yard alive against a dead context.
+    const context = engineRef?.current?.audioContext ?? null;
+    const dest = engineRef?.current?.musicDestination ?? null;
+    if (context === null || dest === null) return undefined;
+    /**
+     * ⭐ **`genreId: null` and an explicit role, because the preview is not a lane.**
+     *
+     * A genre re-voices a lane through `GENRE_GS1_PATCH_OVERRIDES`, which is right for a track playing in a genre and wrong
+     * here: a factory preset is a **sound**, and a person auditioning `bladerunner` wants to hear `bladerunner`. The role is
+     * stated because voicing depends on it — `planGs1Notes` resolves through `resolveGs1Lane(role, …)` — and `lead` is the
+     * role a single auditioned note reads as.
+     */
+    const yard = new Gs1PresetPreview({ context, dest, role: "lead", genreId: null });
+    previewRef.current = yard;
+    return () => {
+      previewRef.current = null;
+      yard.dispose();
+    };
+  }, [engineRef]);
+
+  const onAuditionPreset = useCallback((preset: { shareCode: string }) => {
+    const yard = previewRef.current;
+    if (yard === null) {
+      // Said rather than silent: a ▷ that does nothing is the control this project refuses.
+      setPreviewProblem(t("user_preset_audition_failed"));
+      return;
+    }
+    setPreviewProblem(undefined);
+    void yard.play(preset.shareCode).then((outcome) => {
+      if (!outcome.sounded) setPreviewProblem(outcome.problem ?? t("user_preset_audition_failed"));
+    });
+  }, [t]);
+
   const onTempoMapChange = useCallback(
     (before: readonly { atBar: number; bpm: number; curve?: "jump" | "linear" }[], after: readonly { atBar: number; bpm: number; curve?: "jump" | "linear" }[]) => {
       const command = setArrangementTempoMapCommand(before, after);
@@ -2586,6 +2630,8 @@ export function ArrangementViewV2({ currentSong, songId, capture, bar = 0, playe
               onDelete={(id) => {
                 void updateUserPresets((current) => ({ presets: deleteUserPreset(current, id) })).then((result) => setDevicePresets(result.presets));
               }}
+              onAudition={onAuditionPreset}
+              {...(previewProblem === undefined ? {} : { problem: previewProblem })}
               onExport={(preset) => {
                 const out = exportUserPreset(preset);
                 void navigator.clipboard?.writeText(out.shareCode);

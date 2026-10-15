@@ -36,13 +36,13 @@ type Measure = { productionFiles: number; exports: number; dead: Entry[]; testOn
  * capability's last expression, which is an owner's call rather than a budget's. `docs/OPEN_WORK.md` records it. `dead`
  * went **down** 27 → 26 in the same change, because one export had no reader at all and was removed.
  *
- * ⚠️ **101 → 102 on 2026-10-16, and this one is work-in-progress rather than a finding.** `Gs1PresetPreview` is the
- * audition yard for the synth presets (owner chose B1); the class, its behaviour and its criteria are written and green, and
- * **nothing in the interface constructs it yet**. It is counted here rather than wired half-way, because the alternative —
- * a preview button with no context to build a yard from — is a control that looks like it plays and does not. Wiring it is
- * the next step and this number comes back down with it; see `docs/OPEN_WORK.md` §414-3.
+ * ⭐ **The `Gs1PresetPreview` bump was reverted the same day, which is the lifecycle this number should have.** It was briefly
+ * 102 while the audition yard (owner's B1) existed with green criteria and **no interface constructing it** — a real
+ * work-in-progress, and counted rather than wired half-way, because a preview button with no context to build a yard from is a
+ * control that looks like it plays and does not. Wiring it into `ArrangementViewV2` put it back to 101. Recorded because the
+ * round-trip is the evidence that the number means something.
  */
-const CAP = { dead: 27, testOnly: 102 };
+const CAP = { dead: 27, testOnly: 101 };
 
 function measure(): Measure {
   const out = execFileSync("node", ["scripts/check_dead_exports.mjs"], { encoding: "utf8" });

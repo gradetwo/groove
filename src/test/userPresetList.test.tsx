@@ -93,3 +93,32 @@ describe("UserPresetList", () => {
     expect(container.querySelector(`[data-testid="user-presets-item-${mine.id}"]`)!.className).toContain("accent");
   });
 });
+
+/**
+ * ⭐ **Auditioning, which is the only way a list of 120 sounds is usable.**
+ *
+ * Choosing by name alone is how somebody ends up applying each preset and undoing to compare two. The button is optional on
+ * the component — a host with no audio draws none rather than one that does nothing — and the **reason** a preview could not
+ * sound is shown rather than swallowed, because a ▷ that silently does nothing is the "looks like it works" control this
+ * project refuses.
+ */
+describe("UserPresetList · audition", () => {
+  it("⭐ offers the button only when the host can audition, and asks for that preset", () => {
+    const mine = preset();
+    // No handler ⇒ no button: a control that cannot act is worse than an absent one.
+    renderList(<UserPresetList {...props({ presets: [mine] })} />);
+    expect(screen.queryByTestId(`user-presets-audition-${mine.id}`)).toBeNull();
+
+    const onAudition = vi.fn();
+    renderList(<UserPresetList {...props({ presets: [mine], onAudition })} />);
+    fireEvent.click(screen.getByTestId(`user-presets-audition-${mine.id}`));
+    expect(onAudition).toHaveBeenCalledWith(mine);
+  });
+
+  it("⚠️ shows why a preview could not sound rather than staying silent", () => {
+    const mine = preset();
+    renderList(<UserPresetList {...props({ presets: [mine], onAudition: vi.fn(), problem: "not a share code: it must start with \"gs1.1.\"" })} />);
+    const shown = screen.getByTestId("user-presets-problem");
+    expect(shown.textContent).toMatch(/gs1\.1\./);
+  });
+});
