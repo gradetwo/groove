@@ -35,8 +35,14 @@ type Measure = { productionFiles: number; exports: number; dead: Entry[]; testOn
  * The module is **kept** rather than deleted: it is a coherent, tested library and deleting it would also delete the
  * capability's last expression, which is an owner's call rather than a budget's. `docs/OPEN_WORK.md` records it. `dead`
  * went **down** 27 → 26 in the same change, because one export had no reader at all and was removed.
+ *
+ * ⚠️ **101 → 102 on 2026-10-16, and this one is work-in-progress rather than a finding.** `Gs1PresetPreview` is the
+ * audition yard for the synth presets (owner chose B1); the class, its behaviour and its criteria are written and green, and
+ * **nothing in the interface constructs it yet**. It is counted here rather than wired half-way, because the alternative —
+ * a preview button with no context to build a yard from — is a control that looks like it plays and does not. Wiring it is
+ * the next step and this number comes back down with it; see `docs/OPEN_WORK.md` §414-3.
  */
-const CAP = { dead: 27, testOnly: 101 };
+const CAP = { dead: 27, testOnly: 102 };
 
 function measure(): Measure {
   const out = execFileSync("node", ["scripts/check_dead_exports.mjs"], { encoding: "utf8" });
