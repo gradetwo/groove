@@ -6,6 +6,7 @@
  *
  * Every function returns a **new arrangement**, because a track list is state that an interface re-renders from; mutating in place is how a UI ends up showing something the model does not say.
  */
+import type { UserPreset } from "./userPresets";
 import type { ArrangementV2, NoteEvent, TakeRegion, TrackKindV2, TrackV2, TrackRegion } from "../types/arrangementV2";
 import { clampForParameter, clampGainDb, type AutomationLane } from "./automation";
 import { normaliseTrackRegion, regionBars, sameTrackRegion } from "./arrangementLanes";
@@ -741,6 +742,23 @@ export function setTrackGs1Patch(arrangement: ArrangementV2, trackId: string, sh
       return next;
     }),
   };
+}
+
+/**
+ * ⭐ **The creator's own presets, replaced as a list — the model half of the save/rename/delete tools.**
+ *
+ * Kept as one setter rather than a save/delete pair because both callers (the MCP tools and, later, a Web list) hold the
+ * whole list: `data/userPresets.ts` does the validating and the id derivation, and this writes the result onto the
+ * arrangement, which is what makes a preset travel inside a `.groove` file.
+ *
+ * An empty list removes the field rather than storing `[]`, so "no presets" has one representation and an older file that
+ * never heard of them reads the same way.
+ */
+export function setUserPresets(arrangement: ArrangementV2, presets: readonly UserPreset[]): ArrangementV2 {
+  const next = { ...arrangement };
+  if (presets.length === 0) delete next.userPresets;
+  else next.userPresets = [...presets];
+  return next;
 }
 
 export function setTrackSample(arrangement: ArrangementV2, trackId: string, assetId: string): ArrangementV2 {

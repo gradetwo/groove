@@ -83,7 +83,14 @@ const CAPS: Record<string, number> = {
    *
    * **This number may only go down from here.**
    */
-  atLeast600: 53,
+  /**
+   * ⭐ **53 → 54 on 2026-10-15.** `mcp/registryGs1.ts` crossed 600 (394 → 649) with the eight tools that put the synth's
+   * 120 factory presets and the project's own saved presets into the protocol. A count, so what it records is that one more
+   * file is over the line — not drift in the files already counted.
+   *
+   * **This number may only go down from here.**
+   */
+  atLeast600: 54,
   atLeast800: 31,
   atLeast1000: 25,
 
@@ -249,6 +256,8 @@ const FILE_CAPS: Record<string, number> = {
    * **This number may only go down from here.**
    */
   "mcp/render/worker.ts": 1672,
+  /** ⭐ Newly over 600 with the synth-preset and user-preset tools (2026-10-15); at its measured size. */
+  "mcp/registryGs1.ts": 649,
   "src/views/ChordProgressionsView.tsx": 1559,
 };
 

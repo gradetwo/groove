@@ -261,7 +261,16 @@ describe("MCP · the declared surface", () => {
      */
     const WRITING_VERBS = new Set(["add", "apply", "assign", "create", "delete", "duplicate", "export", "import", "make", "move", "normalize", "load", "quantize", "remove", "rename", "render", "save", "select", "set", "synthesize", "transpose", "undo", "vary"]);
     // `export_*` names a verb that sounds like writing and returns bytes while changing nothing: the promise `readOnly` makes is about the state, not about the word.
-    const RETURNS_BYTES_DESPITE_THE_VERB = new Set(["export_arrangement_musicxml", "export_logic_project"]);
+    const RETURNS_BYTES_DESPITE_THE_VERB = new Set([
+    "export_arrangement_musicxml",
+    "export_logic_project",
+    /**
+     * ⭐ **`export_gs1_preset` returns a string and changes nothing**, like the two above: it reads a saved preset and hands
+     * back the `gs1.1.…` code. The verb is the same one the rule is named for, which is why it has to be listed rather than
+     * inferred.
+     */
+    "export_gs1_preset",
+  ]);
 
     const looksLikeAWriter = (name: string) => WRITING_VERBS.has(name.split("_")[0]!) && !RETURNS_BYTES_DESPITE_THE_VERB.has(name);
     const mislabelled = TOOLS.filter((tool) => looksLikeAWriter(tool.name) === tool.readOnly).map((tool) => tool.name);

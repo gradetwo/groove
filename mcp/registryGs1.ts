@@ -7,10 +7,18 @@ import path from "node:path";
 import { gs1ParameterReadings, gs1RouteOverrideReadings, gs1RouteReadings, mergeGs1Overrides } from "../src/audio/gs1/gs1ParamOverrides";
 import { decodeGs1PatchCode } from "../src/audio/gs1/gs1PatchCode";
 import { SYNTH_PRESETS, SYNTH_PRESET_CATEGORIES, synthPresetById } from "../src/data/synthPresets.generated";
+import {
+  deleteUserPreset,
+  exportUserPreset,
+  findUserPreset,
+  importUserPreset,
+  renameUserPreset,
+  saveUserPreset,
+} from "../src/data/userPresets";
 import { resolveGs1Lane } from "../src/audio/gs1/gs1Tracks";
 import { DEFAULT_NOTE_CONVENTION, NoteConvention, describePitch } from "../src/data/pitchTruth";
 import { DEFAULT_PARAMS, MAX_ROUTES } from "../vendor/gs1/src/audio/params";
-import { getMcpArrangement, getMcpTrack, setMcpTrackGs1 } from "./arrangement";
+import { getMcpArrangement, getMcpTrack, setMcpTrackGs1, setMcpUserPresets } from "./arrangement";
 import { laneInstrumentForTrack, laneRoleForTrack } from "../src/data/arrangementCompile";
 import { auditionInstrumentNote } from "./render/worker";
 import { ToolDefinition, describeGs1Sound, failure } from "./toolKit";
@@ -463,6 +471,179 @@ export const GS1_TOOLS: ToolDefinition[] = [
         preset: { id: preset.id, name: preset.name, cat: preset.cat, tag: preset.tag },
         summary: result.summary,
       };
+    },
+  },
+  {
+    /**
+     * ⭐ **The creator's own presets, kept with the project.** They live on the arrangement, so a `.groove` file carries the
+     * sounds its lanes use, and they are **never** written into the synth repository — whose list is generated data that
+     * `check:synth-presets` verifies against the synth's own answer.
+     *
+     * Reached through `edit`, so saving is undoable like every other arrangement change. That is not decoration: a save
+     * that overwrote a patch a person had spent time on, with no way back, is the failure this shape prevents.
+     */
+    name: "save_gs1_preset",
+    title: "Save a lane's GS-1 sound as one of your own presets",
+    description:
+      "Save the GS-1 sound a lane is currently using as a named user preset, kept with the project (a .groove file carries it) and never sent to the synth repository. The share code and the lane's parameter overrides are both stored. Refuses a blank name, and a code that could not be a share code.",
+    readOnly: false,
+    inputSchema: {
+      arrangementId: z.string(),
+      track: z.string().min(1).describe("the lane to copy the sound from, by track id or name"),
+      name: z.string().min(1).max(60).describe("what to call it, which is how it is found again"),
+      cat: z.string().max(16).optional().describe("a category to file it under; defaults to USER"),
+    },
+    handler: (args) => {
+      const arrangementId = String(args.arrangementId);
+      const arrangement = getMcpArrangement(arrangementId);
+      if (!arrangement) return failure(`no arrangement "${arrangementId}" — create one first`);
+      const key = String(args.track);
+      const target = arrangement.tracks.find((row) => row.id === key) ?? arrangement.tracks.find((row) => row.name === key);
+      if (!target) return failure(`no track "${key}" in "${arrangementId}" — get_arrangement lists them`);
+
+      const result = saveUserPreset(arrangement.userPresets ?? [], {
+        name: String(args.name),
+        shareCode: target.gs1Patch ?? "",
+        ...(target.gs1PatchOverrides === undefined ? {} : { overrides: target.gs1PatchOverrides }),
+        ...(args.cat === undefined ? {} : { cat: String(args.cat) }),
+      });
+      if ("problem" in result) return failure(result.problem);
+      // ⭐ Persist through `edit`: the first version computed the new list and dropped it, so a save reported success and
+      // stored nothing. `edit` is also what records the state being left behind, which is what undo returns to.
+      const written = setMcpUserPresets(arrangementId, result.presets);
+      return { arrangementId, saved: result.saved, count: result.presets.length, summary: written.summary };
+    },
+  },
+  {
+    /** ⭐ The list half, so a saved preset is discoverable rather than merely stored. */
+    name: "list_user_presets",
+    title: "List the project's own saved presets",
+    description:
+      "Every user preset saved in this arrangement: id, name, category and when it was saved. Apply one by passing its share code to apply_gs1_patch, or export it to send to somebody.",
+    readOnly: true,
+    inputSchema: { arrangementId: z.string() },
+    handler: (args) => {
+      const arrangementId = String(args.arrangementId);
+      const arrangement = getMcpArrangement(arrangementId);
+      if (!arrangement) return failure(`no arrangement "${arrangementId}" — create one first`);
+      const presets = arrangement.userPresets ?? [];
+      return {
+        count: presets.length,
+        presets: presets.map((preset) => ({
+          id: preset.id,
+          name: preset.name,
+          cat: preset.cat,
+          savedAt: preset.savedAt,
+          /** Whether the sound lives partly in overrides the share code cannot carry — the reason export reports a count. */
+          overrides: (preset.overrides?.parameters?.length ?? 0) + (preset.overrides?.routes?.length ?? 0),
+        })),
+      };
+    },
+  },
+  {
+    /** Rename and delete are one tool each because both address a preset by id or by the name a person reads. */
+    name: "rename_user_preset",
+    title: "Rename one of your saved presets",
+    description:
+      "Rename a user preset, found by its id or by its current name. Keeps its sound. An unknown preset, or a blank new name, is refused.",
+    readOnly: false,
+    inputSchema: {
+      arrangementId: z.string(),
+      preset: z.string().min(1).describe("the preset's id, or its current name"),
+      name: z.string().min(1).max(60).describe("the new name"),
+    },
+    handler: (args) => {
+      const arrangementId = String(args.arrangementId);
+      const arrangement = getMcpArrangement(arrangementId);
+      if (!arrangement) return failure(`no arrangement "${arrangementId}" — create one first`);
+      const found = findUserPreset(arrangement.userPresets ?? [], String(args.preset));
+      if (!found) return failure(`no user preset "${String(args.preset)}" — list_user_presets has them`);
+      const renamed = renameUserPreset(arrangement.userPresets ?? [], found.id, String(args.name));
+      setMcpUserPresets(arrangementId, renamed);
+      return { arrangementId, preset: found.id, name: String(args.name).trim(), count: renamed.length };
+    },
+  },
+  {
+    name: "delete_user_preset",
+    title: "Delete one of your saved presets",
+    description: "Delete a user preset, found by its id or by its name. An unknown preset is refused rather than ignored.",
+    readOnly: false,
+    inputSchema: {
+      arrangementId: z.string(),
+      preset: z.string().min(1).describe("the preset's id, or its name"),
+    },
+    handler: (args) => {
+      const arrangementId = String(args.arrangementId);
+      const arrangement = getMcpArrangement(arrangementId);
+      if (!arrangement) return failure(`no arrangement "${arrangementId}" — create one first`);
+      const found = findUserPreset(arrangement.userPresets ?? [], String(args.preset));
+      if (!found) return failure(`no user preset "${String(args.preset)}" — list_user_presets has them`);
+      const left = deleteUserPreset(arrangement.userPresets ?? [], found.id);
+      setMcpUserPresets(arrangementId, left);
+      return { arrangementId, deleted: found.id, count: left.length, summary: found.name };
+    },
+  },
+  {
+    /**
+     * ⭐ **Export and import are the sharing path, and the format is the synth's own.**
+     *
+     * A user preset is a `gs1.1.…` code plus the overrides layered on it; the string both apps accept is the base code. So
+     * export reports how many overrides did **not** travel rather than letting the recipient believe they got the whole
+     * patch — the difference is audible, and silence about it would be the "looks like it worked" failure this project
+     * refuses.
+     */
+    name: "export_gs1_preset",
+    title: "Export a saved preset as a share code, to send to somebody",
+    description:
+      "Export a user preset as a gs1.1.… share code, the string the synth project's own gs1.patch.set accepts. If the preset's sound also lives in parameter overrides, they cannot travel in a share code and the count says how many were left behind.",
+    readOnly: true,
+    inputSchema: {
+      arrangementId: z.string(),
+      preset: z.string().min(1).describe("the preset's id, or its name"),
+    },
+    handler: (args) => {
+      const arrangementId = String(args.arrangementId);
+      const arrangement = getMcpArrangement(arrangementId);
+      if (!arrangement) return failure(`no arrangement "${arrangementId}" — create one first`);
+      const found = findUserPreset(arrangement.userPresets ?? [], String(args.preset));
+      if (!found) return failure(`no user preset "${String(args.preset)}" — list_user_presets has them`);
+      const out = exportUserPreset(found);
+      return {
+        arrangementId,
+        preset: found.id,
+        name: found.name,
+        shareCode: out.shareCode,
+        overridesOmitted: out.overridesOmitted,
+        ...(out.overridesOmitted > 0
+          ? { note: `${out.overridesOmitted} parameter/route override(s) are not part of a share code — send them separately if they matter` }
+          : {}),
+      };
+    },
+  },
+  {
+    name: "import_gs1_preset",
+    title: "Import a share code as one of your presets",
+    description:
+      "Import a gs1.1.… share code as a named user preset in this project. The code is stored as given; a string that could not be a share code is refused rather than saved.",
+    readOnly: false,
+    inputSchema: {
+      arrangementId: z.string(),
+      shareCode: z.string().min(1).describe('a GS-1 share code ("gs1.1.…")'),
+      name: z.string().min(1).max(60).describe("what to call the imported preset"),
+      cat: z.string().max(16).optional(),
+    },
+    handler: (args) => {
+      const arrangementId = String(args.arrangementId);
+      const arrangement = getMcpArrangement(arrangementId);
+      if (!arrangement) return failure(`no arrangement "${arrangementId}" — create one first`);
+      const result = importUserPreset(arrangement.userPresets ?? [], {
+        shareCode: String(args.shareCode),
+        name: String(args.name),
+        ...(args.cat === undefined ? {} : { cat: String(args.cat) }),
+      });
+      if ("problem" in result) return failure(result.problem);
+      setMcpUserPresets(arrangementId, result.presets);
+      return { arrangementId, saved: result.saved, count: result.presets.length };
     },
   },
 ];

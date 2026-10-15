@@ -107,6 +107,11 @@ const UI_LEDGER: Record<string, Ruling> = {
     reason:
       "Census G4. A track in the arrangement cannot be renamed from the interface at all: `TrackHeaderV2.tsx` only reads `track.name` (:97 aria-label, :295 trackName) and the track list's own comment names `renameTrack` among the functions it uses while the component never calls it. The MCP tool `rename_arrangement_track` reaches it, which is why `mcpCoverage` is green. Wiring it up needs a command shell in `src/data/arrangementHistory.ts` — inside the read-only `src/data/**` this round is not allowed to touch — so the owner has to rule first.",
   },
+  setUserPresets: {
+    status: "pending-owner-ruling",
+    reason:
+      "Census G10. Saving a preset is reachable from the MCP tools (`save_gs1_preset`, `list_user_presets`, `rename_user_preset`, `delete_user_preset`, `import_gs1_preset`, `export_gs1_preset`), which is why `mcpCoverage` is green, but the interface has no list, no save button and no rename or delete — so this operation has no Web entry point at all. Whether the Web gets one, and what it looks like beside the instrument picker, is the owner's ruling rather than a missing line of wiring.",
+  },
   setTrackSends: {
     status: "pending-owner-ruling",
     reason:

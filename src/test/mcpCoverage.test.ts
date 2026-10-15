@@ -40,6 +40,12 @@ const EXPOSED: Record<string, string> = {
    * `load_synth_preset` is the friendlier way to reach the same field with one of the synth's 120 factory presets.
    */
   setTrackGs1Patch: "apply_gs1_patch",
+  /**
+   * ⭐ **The project's own saved patches.** `save_gs1_preset` is the tool that writes the list, and `list_user_presets`,
+   * `rename_user_preset`, `delete_user_preset` and `import_gs1_preset` all reach the same field; naming the saver is what
+   * this map asks for, because it is the operation that creates an entry.
+   */
+  setUserPresets: "save_gs1_preset",
   setTrackSteps: "set_arrangement_track_steps",
   addTrackNote: "add_arrangement_note",
   addTrackNotes: "add_arrangement_notes",
