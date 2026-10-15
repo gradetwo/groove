@@ -483,6 +483,7 @@ export const studioMessages = {
   instrument_search_clear: { en: "Clear search", zh: "清除搜索" },
   instrument_categories: { en: "Instrument categories", zh: "音色分类" },
   instrument_category_all: { en: "All", zh: "全部" },
+  arrangement_time_signature: { en: "Time", zh: "拍号" },
   track_rename_label: { en: "Track name", zh: "轨道名" },
   track_rename_hint: { en: "Click to rename this track", zh: "点击重命名这条轨道" },
   user_preset_label: { en: "My presets", zh: "我的预置" },

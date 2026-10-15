@@ -115,7 +115,12 @@ import { generateEuclidean } from "../../audio/Euclidean";
 import { useDensityPreference } from "../../hooks/useDensityPreference";
 import { useGs1Setting } from "../../features/sequencer/useGs1Setting";
 import { DEFAULT_SYNTH_PRESETS } from "../../audio/PolySynth";
-import { renameTrackCommand, setTrackGs1PatchCommand, setTrackInstrumentCommand } from "../../data/arrangementHistory";
+import {
+  renameTrackCommand,
+  setArrangementTimeSignatureCommand,
+  setTrackGs1PatchCommand,
+  setTrackInstrumentCommand,
+} from "../../data/arrangementHistory";
 import { SYNTH_PRESETS } from "../../data/synthPresets.generated";
 import { UserPresetList } from "./UserPresetList";
 import { deleteUserPreset, exportUserPreset, renameUserPreset, saveUserPreset } from "../../data/userPresets";
@@ -140,7 +145,14 @@ import { useMidiInput } from "../../features/sequencer/hooks/useMidiInput";
  * loop brace both round to. Values are named as note values, which in 4/4 *are* fractions of a bar (a whole note is a
  * bar, a quarter note is a beat, a sixteenth is a sixteenth of a bar) — see `SNAP_BARS`.
  */
-export const SNAP_VALUES = ["1/1", "1/2", "1/4", "1/8", "1/16", "1/32"] as const;
+export /**
+ * ⭐ **The time signatures a person actually writes**, which is also the set the model accepts. Listing them is what keeps
+ * the control from offering a value the model refuses — it throws rather than clamping, deliberately, so the control that
+ * feeds it must not be able to produce `"waltz"`.
+ */
+const TIME_SIGNATURES = ["4/4", "3/4", "5/4", "6/8", "7/8", "12/8"] as const;
+
+const SNAP_VALUES = ["1/1", "1/2", "1/4", "1/8", "1/16", "1/32"] as const;
 export type SnapValue = (typeof SNAP_VALUES)[number];
 /**
  * ⭐ **The default is a bar**, not the sixteenth the label carried while it did nothing.
@@ -1646,6 +1658,37 @@ export function ArrangementViewV2({ currentSong, songId, capture, bar = 0, playe
             onChange={(event) => commit(setArrangementBarsCommand(bars, Number(event.target.value)))}
             className="min-h-11 h-11 sm:h-6 w-12 rounded border border-[rgb(var(--d-line))] bg-transparent px-1 font-['JetBrains_Mono'] text-xs text-text"
           />
+        </label>
+
+        {/**
+         * ⭐ **The time signature, which no interface could set** (Web-reachability ledger). A select over the signatures
+         * a person actually writes rather than a free-text field: the model *throws* on `"waltz"` on purpose (an
+         * assumption must not look like a reading), and a control that can produce a value the model refuses would be a
+         * button that fails only after being pressed.
+         *
+         * `timeSignatureFor` supplies the current value so the select is never blank: an older arrangement has no field
+         * at all and means 4/4, which is what every existing file already assumes.
+         */}
+        <label className="flex items-center gap-1 text-[10px] text-text opacity-80">
+          {t("arrangement_time_signature")}
+          <select
+            aria-label={t("arrangement_time_signature")}
+            data-testid="arrangement-time-signature"
+            value={arrangement.timeSignature ?? "4/4"}
+            onChange={(event) => {
+              const command = setArrangementTimeSignatureCommand(arrangement.timeSignature ?? "4/4", event.target.value);
+              // `undefined` means the model refused it; the option list should make that unreachable, and if it ever
+              // happens the arrangement must not gain an undo step for a value it does not hold.
+              if (command !== undefined) commit(command);
+            }}
+            className="min-h-11 h-11 sm:h-6 rounded border border-[rgb(var(--d-line))] bg-transparent px-1 font-['JetBrains_Mono'] text-xs text-text"
+          >
+            {TIME_SIGNATURES.map((signature) => (
+              <option key={signature} value={signature}>
+                {signature}
+              </option>
+            ))}
+          </select>
         </label>
 
         {/**

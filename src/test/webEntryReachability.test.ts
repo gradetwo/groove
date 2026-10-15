@@ -117,11 +117,6 @@ const UI_LEDGER: Record<string, Ruling> = {
     reason:
       "Census G6a. The arrangement has one fixed BPM input and no tempo track / tempo-marker surface, while the model, the renderer and the MCP tool `set_arrangement_tempo_map` all support a map — the field's own comment in `src/types/arrangementV2.ts:194` records the half-built shape. Nothing in `src/components`, `src/views` or `src/features` references the function today.",
   },
-  setArrangementTimeSignature: {
-    status: "pending-owner-ruling",
-    reason:
-      "Census G6b. The arrangement toolbar has tempo, bars, snap, loop and zoom but no time signature at all, and no product file references this function outside its own module. Whether the arrangement's meter and the studio's `timeSignature` are one fact or two is a product ruling the census explicitly left to the owner.",
-  },
   setTrackSteps: {
     status: "pending-owner-ruling",
     reason:
@@ -379,12 +374,11 @@ describe("G10 · every arrangement operation the model can do, the Web can reach
     // first run. If one of them is wired up this criterion goes red until the name is removed — which is the
     // other half of "the guard can be green afterwards".
     //
-    // ⭐ **`renameTrack` has been wired up and removed from this list** (a track can be renamed from its header now), so
-    // the census's four are three. The list stays hard-coded on purpose: it is the record of what the census predicted,
-    // and a name leaving it should be a deliberate edit with a commit behind it, not a set difference that quietly
-    // catches up.
+    // ⭐ **Two have been wired up and removed**: `renameTrack` (a track can be renamed from its header now) and
+    // `setArrangementTimeSignature` (the toolbar has a signature control). A name leaves this list only with a commit
+    // behind it — the list is the record of what the census predicted, not a set difference that quietly catches up.
     const { unreachable } = scanWebEntries();
-    const censusGaps = ["setTrackParent", "setArrangementTempoMap", "setArrangementTimeSignature"];
+    const censusGaps = ["setTrackParent", "setArrangementTempoMap"];
     for (const name of censusGaps) {
       expect(unreachable, `${name} (census G4/G5/G6) is now reachable — delete its ledger entry`).toContain(name);
     }

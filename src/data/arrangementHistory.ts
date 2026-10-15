@@ -51,6 +51,8 @@ import {
   selectTrackTake,
   setArrangementBars,
   setArrangementTempo,
+  setArrangementTimeSignature,
+  createArrangement,
   setCollapsed,
   setTrackFlag,
   setTrackAutomation,
@@ -336,6 +338,36 @@ export function setTrackGs1PatchCommand(trackId: string, before: string, after: 
 
 export function setArrangementTempoCommand(before: number, after: number): ArrangementCommand {
   return setterCommand("tempo", setArrangementTempo, before, after);
+}
+
+/**
+ * ⭐ **The time signature, which no interface could set** (Web-reachability ledger: `setArrangementTimeSignature`).
+ *
+ * It is the one setter in this family that **throws** rather than clamping, and deliberately — the model's own comment
+ * explains why: `"4/5"` or `"waltz"` clamped to `"4/4"` would leave a caller believing a 7/8 arrangement had been written
+ * when a 4/4 one had, and "an assumption must not look like a reading".
+ *
+ * ⚠️ **That throw has a consequence for the undo stack, and this is where it is handled.** `ArrangementCommand.undo` and
+ * `.redo` must be **total functions over any arrangement** (the module's comment at the top states it), so a command that
+ * could throw when replayed would break undo for every entry above it. `undefined` is therefore returned for a value the
+ * model refuses, and the caller decides what to say — the alternative, clamping here, would put a *different* time
+ * signature on the undo stack than the one the person asked for.
+ */
+/**
+ * A throwaway arrangement used **only** to ask the model whether a time signature is legal. Built once, never mutated by
+ * a caller, and never returned — so a validation probe cannot leak into anybody's project.
+ */
+const PROBE_ARRANGEMENT = createArrangement("probe");
+
+export function setArrangementTimeSignatureCommand(before: string, after: string): ArrangementCommand | undefined {
+  // Validated by applying it to a throwaway arrangement, so this cannot disagree with the model about what is legal.
+  try {
+    setArrangementTimeSignature(PROBE_ARRANGEMENT, after);
+    setArrangementTimeSignature(PROBE_ARRANGEMENT, before);
+  } catch {
+    return undefined;
+  }
+  return setterCommand("timeSignature", setArrangementTimeSignature, before, after);
 }
 
 export function setArrangementBarsCommand(before: number, after: number): ArrangementCommand {
