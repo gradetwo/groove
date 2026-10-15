@@ -117,7 +117,7 @@ import { useGs1Setting } from "../../features/sequencer/useGs1Setting";
 import { DEFAULT_SYNTH_PRESETS } from "../../audio/PolySynth";
 import { setTrackGs1PatchCommand, setTrackInstrumentCommand, setUserPresetsCommand } from "../../data/arrangementHistory";
 import { SYNTH_PRESETS } from "../../data/synthPresets.generated";
-import { UserPresetList, presetSourceOf } from "./UserPresetList";
+import { UserPresetList } from "./UserPresetList";
 import { deleteUserPreset, exportUserPreset, renameUserPreset, saveUserPreset } from "../../data/userPresets";
 
 /** ⭐ The names a synth track may choose from — the keys of the engine's own preset table, in one place. */
