@@ -25969,3 +25969,30 @@ GlueCompressor 等已有 DSP 的编辑与使用路径 ✓。
     是**多轮功能而非单步** ✓ ⇒ **我没有在一轮末尾硬塞一个半成品** ✓。
   · **`setTrackSends` —— 同上一轮的裁定** ✓：两个模型同时活着 ✓，是"谁拥有混音决定权" ✓，不是接线 ✓。
 ```
+
+### 四百一十二之三：✅ `setTrackSteps` 定性为"已覆盖"（`f8d3805` ✓）；`removeNotesWithinRect` 我核实了台账的说法
+
+```
+**✅ `setTrackSteps` → `excluded-by-policy` ✓（不是缺口 ✓）**
+  台账里本来就写着反对它自己的论据 ✓：`mcpCoverage` 把 `toggleStep` 从协议排除 ✓，因为
+  `set_arrangement_track_steps` 一次写整个模式 ✓、而一个 toggle"**会是同一件事的第二种说法，两者会漂移**" ✓。
+  ⭐ **同一个论证反过来也成立 ✓，而采用它是一次决定、不是一个借口 ✓**：界面通过 `toggleStep` 一次一格地写步 ✓
+  ⇒ **能力确实从 Web 可达** ✓（一个人可以按出任何步型 ✓）。缺的只是一个**批量字段** ✓，
+  而那正是本仓已经拒绝过的"第二种说法" ✓。⇒ 条目从 `pending-owner-ruling` 移到 **`excluded-by-policy`** ✓，
+  于是**两条门禁记录同一个判断的两半** ✓：`mcpCoverage` 把逐格 toggle 排除出协议 ✓，
+  本台账把批量写入排除出编排 ✓。将来谁想要批量步字段，**两处都得改** ✓ —— 理由里写明了 ✓。
+  也顺带退役了"`excluded-by-policy` 必须为空"那条判据 ✓：它在每个条目都未定时是对的 ✓，
+  但现在它会**让一个已被正确决定**的条目**看起来仍未定** ✓ ⇒ 换成它原本的理由 ✓
+  （把**剩余仍未定的**条目塞进去，才仍是这条门禁在替业主做决定 ✓）。
+
+**🔍 `removeNotesWithinRect` —— 我核实了台账的说法 ✓，它是对的 ✓，而我这次读到了一条台账没写的理由**
+  台账说"面板用**自己的**命令删选区 ✓，而这个区域 helper 由协议与判据触达 ✓"。核实结果 ✓：
+  · 活代码里**没有任何生产者**调用 `removeNotesWithinRect` ✓（只有 `arrangementEdits.ts` 的定义 ✓）；
+  · 面板（`PianoRollV2` → `ArrangementViewV2`）走的是 `onRemoveSelection` ✓，而视图的那一行是
+    `commit(setterCommand("Remove selection", (_current, value) => value, arrangement, after))` ✓
+    —— ⭐ **按一次 = 一个撤销步** ✓（这正是 `PianoRollV2` 那行注释说的"有了整选区回报，面板提交一个命令" ✓）。
+  ⇒ ⭐ **台账没写的那条**：把视图改成用区域 helper **不会让它更简单** ✓。视图删的是**选区**，
+    它手上是**被选中音符的精确集合** ✓，而 helper 要的是**矩形几何** ✓ —— 用几何去重新推导一个已知集合 ✓
+    既多一步、又多一处可能与面板不一致 ✓。⇒ 这条**确实**是裁定（"两条删除路径该不该合一" ✓），
+    但**倾向于不合** ✓，且它是**产品判断** ✓ ⇒ 按纪律留在 `pending-owner-ruling` ✓，不替业主决定 ✓。
+```
