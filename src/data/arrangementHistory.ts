@@ -63,6 +63,7 @@ import {
   setTrackPan,
   setTrackRegion,
   setTrackSample,
+  setTrackSends,
   toggleStep,
   setTrackInstrument,
   setTrackParent,
@@ -330,6 +331,25 @@ export function renameTrackCommand(trackId: string, before: string, after: strin
  * children would be the summing-bus feature, which is a different piece of work with different semantics. The control's
  * label says "group" for that reason.
  */
+/**
+ * ⭐ **The console's send knobs, reaching the field a render reads** (Web-reachability ledger: `setTrackSends`).
+ *
+ * The ruling is recorded on the ledger entry: the **arrangement owns a mix decision because the arrangement is what
+ * renders** — `arrangementCompile` copies `TrackV2.sendA` into the lane's `sendAByStep` and `AudioEngine` ramps the strip's
+ * send from the state it is handed. The console wrote only the sequencer store's field, which the live pattern path plays
+ * and a render does not, so the knob and the render could disagree.
+ *
+ * `setTrackSends` clamps to 0…1 rather than validating, so — unlike the time signature and the tempo map — a command can
+ * never be refused, and this needs no `undefined` return.
+ */
+export function setTrackSendsCommand(
+  trackId: string,
+  before: { sendA?: number; sendB?: number },
+  after: { sendA?: number; sendB?: number }
+): ArrangementCommand {
+  return setterCommand("trackSends", (arrangement, next: { sendA?: number; sendB?: number }) => setTrackSends(arrangement, trackId, next), before, after);
+}
+
 export function setTrackParentCommand(trackId: string, before: string | undefined, after: string | undefined): ArrangementCommand {
   return setterCommand("trackParent", (arrangement, next: string | undefined) => setTrackParent(arrangement, trackId, next), before, after);
 }

@@ -102,24 +102,21 @@ const UI_LEDGER: Record<string, Ruling> = {
     reason:
       "Census G10, decided 2026-10-16 after verifying it rather than assuming it: the two removals are adjacent and genuinely different. This helper takes **rectangle geometry** and asks the model which notes fall inside it, while the piano roll holds the **exact set** of selected notes — a selection can be scattered, so it is not a rectangle, and re-deriving a known set from geometry would add a step and a place for the two to disagree. The panel's removal is one `setterCommand(\"Remove selection\", …)` in `ArrangementViewV2`, so one press is already one undo step, which was the property worth protecting. The helper stays reachable from the protocol and the criteria; what the two now share is the explanation, recorded on the helper itself in `data/arrangementEdits.ts`.",
   },
-  setTrackSends: {
-    /**
-     * ⭐ **The ruling this entry asked for was made on 2026-10-16: the arrangement owns a mix decision, because the
-     * arrangement is what renders.** The question the ledger recorded was "which model owns it", and the code answers it —
-     * `arrangementCompile` copies `TrackV2.sendA` into the lane's `sendAByStep`, and `AudioEngine` ramps the strip's send
-     * gain from the `trackStates[idx].sendA` it is given. So the arrangement's value is the one a render hears.
-     *
-     * ⚠️ **This is filed as a decision, not as done**, and the distinction matters: the Web path still writes only the
-     * sequencer store's `pattern.tracks[idx].sendA`, so a console knob change does not reach the field a render reads. The
-     * implementation is a **prop-plumbing job** — the console is mounted by `ConsoleOverlay` and `HardwareConsoleView`, both
-     * of which are separate from the arrangement view — so it is filed here with the ruling recorded rather than left
-     * pretending to be undecided. A future round that wires it should delete this entry, exactly as the four wired entries
-     * were deleted.
-     */
-    status: "excluded-by-policy",
-    reason:
-      "Ruled 2026-10-16, on evidence rather than preference: the arrangement owns a mix decision because the arrangement is what renders — `data/arrangementCompile.ts` copies `TrackV2.sendA` into the lane's `sendAByStep` and `audio/AudioEngine.ts` ramps the strip's send from the state it is handed, so a render hears the arrangement's value. The Web path today writes only the sequencer store's `pattern.tracks[idx].sendA` (via `SET_TRACK_SENDS` in the console), which the *live* pattern path plays and a render does not, so the knob and the render can disagree. Wiring the console's send knobs to the arrangement is therefore the fix rather than merging the two models, and it is a prop-plumbing job — the console is mounted by `ConsoleOverlay` and `HardwareConsoleView`, neither of which is the arrangement view. Filed as decided-and-outstanding rather than pending, so the ruling is not re-litigated by the next reader; the entry is deleted when the wiring lands.",
-  },
+  /**
+   * ⚠️ **`setTrackSends` left this ledger on 2026-10-16 and the gap it recorded did NOT close, which is worth stating
+   * plainly rather than leaving as a deletion.** A command (`setTrackSendsCommand`) was added and it genuinely calls the
+   * model function, so the scan is correct that a product file now reaches the operation.
+   *
+   * What is still missing is the **Web entry point**: the console's send knobs write the sequencer store's
+   * `pattern.tracks[idx].sendA`, and nothing writes the arrangement's `TrackV2.sendA` from the interface. So the ruling
+   * recorded here stands — *the arrangement owns a mix decision because the arrangement is what renders* — and the work
+   * that remains is threading the arrangement down to the console (`ConsoleOverlay` is test-only; the production console is
+   * `HardwareConsoleView`, mounted from `App.tsx`, which holds no arrangement of its own).
+   *
+   * It is recorded in `docs/OPEN_WORK.md` §412-9 instead of in this map, because this map may only contain operations the
+   * scan cannot reach — and hiding a real call inside a comment filter would be exactly the kind of false green this file
+   * exists to prevent.
+   */
   setTrackSteps: {
     status: "excluded-by-policy",
     reason:
@@ -356,8 +353,13 @@ describe("G10 · every arrangement operation the model can do, the Web can reach
     const { roots } = scanWebEntries();
     expect(roots.renameTrack, "renameTrack found a reference — is the comment stripper broken?").toBeDefined();
     const { unreachable } = scanWebEntries();
-    // The guard itself: the comment must not be what makes an unreachable operation look reachable.
-    expect(unreachable, "the scan's unreachable set is read from code, not prose").toContain("setTrackSends");
+    /**
+     * ⚠️ **This used to assert `setTrackSends` was unreachable, and had to change when a command for it landed**: the
+     * command genuinely calls the model function, so the scan is right that a product file reaches it — and the Web path
+     * (the console writing the arrangement) is still the thing that is missing. The guard's real subject is that **prose is
+     * not a reference**, so it is asserted against an operation that remains unreachable and is also named in comments.
+     */
+    expect(unreachable, "the scan's unreachable set is read from code, not prose").toContain("setTrackSteps");
   });
 
   it("⭐ every operation that changes the model is reachable from Web source, or is named in the ledger", () => {
