@@ -103,19 +103,27 @@ const UI_LEDGER: Record<string, Ruling> = {
       "Census G10, decided 2026-10-16 after verifying it rather than assuming it: the two removals are adjacent and genuinely different. This helper takes **rectangle geometry** and asks the model which notes fall inside it, while the piano roll holds the **exact set** of selected notes — a selection can be scattered, so it is not a rectangle, and re-deriving a known set from geometry would add a step and a place for the two to disagree. The panel's removal is one `setterCommand(\"Remove selection\", …)` in `ArrangementViewV2`, so one press is already one undo step, which was the property worth protecting. The helper stays reachable from the protocol and the criteria; what the two now share is the explanation, recorded on the helper itself in `data/arrangementEdits.ts`.",
   },
   /**
-   * ⚠️ **`setTrackSends` left this ledger on 2026-10-16 and the gap it recorded did NOT close, which is worth stating
-   * plainly rather than leaving as a deletion.** A command (`setTrackSendsCommand`) was added and it genuinely calls the
-   * model function, so the scan is correct that a product file now reaches the operation.
+   * ⭐ **`setTrackSends` was ruled on 2026-10-16, twice, and the second ruling corrected the first.** Kept here as a note
+   * rather than as an entry because the map may only hold operations the scan cannot reach.
    *
-   * What is still missing is the **Web entry point**: the console's send knobs write the sequencer store's
-   * `pattern.tracks[idx].sendA`, and nothing writes the arrangement's `TrackV2.sendA` from the interface. So the ruling
-   * recorded here stands — *the arrangement owns a mix decision because the arrangement is what renders* — and the work
-   * that remains is threading the arrangement down to the console (`ConsoleOverlay` is test-only; the production console is
-   * `HardwareConsoleView`, mounted from `App.tsx`, which holds no arrangement of its own).
+   * **The first ruling was route-blind.** It reasoned "the arrangement owns a mix decision because the arrangement is what
+   * renders", which is true of a render — `arrangementCompile` copies `TrackV2.sendA` into the lane's `sendAByStep` and
+   * `AudioEngine` ramps the strip's send from the state it is handed. But the console does not run beside an arrangement:
+   * **the arrangement lives inside `ArrangementViewV2`'s own state and only exists on the `/new` route**, while the console
+   * is `HardwareConsoleView` on the studio route with its **own `useSequencerStore(startingGenre)`**. The two are never
+   * mounted together, and nothing in the UI can reach the MCP's arrangement store at all. So "wire the console to the
+   * arrangement" was never a wire: it was a question about state ownership that the first ruling had not asked.
    *
-   * It is recorded in `docs/OPEN_WORK.md` §412-9 instead of in this map, because this map may only contain operations the
-   * scan cannot reach — and hiding a real call inside a comment filter would be exactly the kind of false green this file
-   * exists to prevent.
+   * **The owner's ruling, 2026-10-16: for now the studio route's sequencer pattern is the authority for its own sends**
+   * ("先 B"). The console therefore keeps writing `pattern.tracks[idx].sendA`, which is the field its own playback path
+   * reads, and **no code changed** for this ruling. The arrangement's `sendA` remains what a *compiled render* reads, and
+   * remains writable from the protocol (`set_arrangement_track_sends`), which is why `setTrackSendsCommand` exists.
+   *
+   * ⚠️ **What that leaves, stated rather than glossed:** the same concept has an authority per route, so a send set on the
+   * console is not in a render and a send set through the protocol is not on the console. The owner chose the follow-on
+   * direction too — **"再 A": lift the arrangement into shared state** so one surface can drive both — and that work is
+   * recorded in `docs/OPEN_WORK.md` §412-10 rather than started here, because it touches the arrangement's undo and
+   * persistence boundaries (IndexedDB in `projectDb`, file export) which that view currently owns.
    */
   setTrackSteps: {
     status: "excluded-by-policy",
