@@ -85,7 +85,9 @@
     "check:file-sizes": "node scripts/check_file_sizes.mjs",
     "check:module-boundaries": "node scripts/check_module_boundaries.mjs",
     "probe:render-cpu:gate": "node scripts/check_render_cpu_budget.mjs",
-    "check:dead-exports": "node scripts/check_dead_exports.mjs"
+    "check:dead-exports": "node scripts/check_dead_exports.mjs",
+    "sync:synth-presets": "node scripts/sync_synth_presets.mjs",
+    "check:synth-presets": "node scripts/sync_synth_presets.mjs --check"
   },
   "dependencies": {
     "@breezystack/lamejs": "^1.2.7",
