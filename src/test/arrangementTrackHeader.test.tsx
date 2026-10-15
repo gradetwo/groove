@@ -43,6 +43,7 @@ function renderHeader(overrides: Partial<React.ComponentProps<typeof TrackHeader
     onChangeInstrument: vi.fn(),
     onLibraryOpenChange: vi.fn(),
     onRenameTrack: vi.fn(),
+    onSelectTrack: vi.fn(),
   };
   const { container } = render(
     <LanguageProvider>
@@ -187,7 +188,7 @@ describe("the instrument slot on the header", () => {
 describe("TrackHeaderV2 · renaming the track", () => {
   it("⭐ commits the typed name once, on Enter", () => {
     const { handlers, container } = renderHeader();
-    fireEvent.click(container.querySelector("[data-testid='track-name-t1-header']")!);
+    fireEvent.doubleClick(container.querySelector("[data-testid='track-name-t1-header']")!);
     const input = container.querySelector<HTMLInputElement>("[data-testid='track-name-input-t1-header']")!;
     expect(input, "the label becomes an input only while editing").toBeTruthy();
 
@@ -201,7 +202,7 @@ describe("TrackHeaderV2 · renaming the track", () => {
 
   it("⭐ commits on blur, so clicking away does not silently discard the typing", () => {
     const { handlers, container } = renderHeader();
-    fireEvent.click(container.querySelector("[data-testid='track-name-t1-header']")!);
+    fireEvent.doubleClick(container.querySelector("[data-testid='track-name-t1-header']")!);
     const input = container.querySelector<HTMLInputElement>("[data-testid='track-name-input-t1-header']")!;
     fireEvent.change(input, { target: { value: "Pads" } });
     fireEvent.blur(input);
@@ -210,32 +211,83 @@ describe("TrackHeaderV2 · renaming the track", () => {
 
   it("⭐ abandons on Escape, and refuses a blank or unchanged name", () => {
     const { handlers, container } = renderHeader();
-    fireEvent.click(container.querySelector("[data-testid='track-name-t1-header']")!);
+    fireEvent.doubleClick(container.querySelector("[data-testid='track-name-t1-header']")!);
     let input = container.querySelector<HTMLInputElement>("[data-testid='track-name-input-t1-header']")!;
     fireEvent.change(input, { target: { value: "Discarded" } });
     fireEvent.keyDown(input, { key: "Escape" });
     expect(handlers.onRenameTrack, "Escape is not a rename").not.toHaveBeenCalled();
 
     // Blank is refused by the control rather than committed and ignored by the model.
-    fireEvent.click(container.querySelector("[data-testid='track-name-t1-header']")!);
+    fireEvent.doubleClick(container.querySelector("[data-testid='track-name-t1-header']")!);
     input = container.querySelector<HTMLInputElement>("[data-testid='track-name-input-t1-header']")!;
     fireEvent.change(input, { target: { value: "   " } });
     fireEvent.keyDown(input, { key: "Enter" });
     expect(handlers.onRenameTrack, "a blank name is not a rename").not.toHaveBeenCalled();
 
     // And an unchanged name is not an edit, so it does not push an undo step onto the stack.
-    fireEvent.click(container.querySelector("[data-testid='track-name-t1-header']")!);
+    fireEvent.doubleClick(container.querySelector("[data-testid='track-name-t1-header']")!);
     input = container.querySelector<HTMLInputElement>("[data-testid='track-name-input-t1-header']")!;
     fireEvent.keyDown(input, { key: "Enter" });
     expect(handlers.onRenameTrack, "renaming to the same name is not a change").not.toHaveBeenCalled();
   });
 
-  it("⭐ stays a plain label when the header cannot rename, rather than a control that lies", () => {
-    const { container } = renderHeader({ onRenameTrack: undefined });
+  it("⭐ stays a plain label when the header can do neither, rather than a control that lies", () => {
+    /**
+     * ⚠️ **Both handlers have to be absent for this case**, and that is the point rather than an inconvenience: since
+     * selection was added, a header that can select is legitimately an enabled control even when it cannot rename. The
+     * disabled state belongs to a rendering that can do *nothing* — a report, where a clickable name would promise an
+     * action the view does not have.
+     */
+    const { container } = renderHeader({ onRenameTrack: undefined, onSelectTrack: undefined });
     const label = container.querySelector<HTMLButtonElement>("[data-testid='track-name-t1-header']")!;
-    // A read-only header has no input to open, and its label is disabled rather than pretending to be clickable.
-    expect(label.disabled, "no handler ⇒ not offered as editable").toBe(true);
+    expect(label.disabled, "no handler at all ⇒ not offered as clickable").toBe(true);
     fireEvent.click(label);
     expect(container.querySelector("[data-testid='track-name-input-t1-header']")).toBeNull();
+    // And with only selection available it is enabled and selects — the case the old assertion would have called a lie.
+    const { container: selectable } = renderHeader({ onRenameTrack: undefined });
+    expect(selectable.querySelector<HTMLButtonElement>("[data-testid='track-name-t1-header']")!.disabled).toBe(false);
+  });
+});
+
+/**
+ * ⭐ **Selecting a track, which nothing could do.**
+ *
+ * The view has held a `selectedTrackId` all along and **no control ever set it** — so every per-track surface had to guess
+ * which track the person meant, and the preset list was the first that needed to know (it anchored on the first synth lane
+ * because there was no alternative).
+ *
+ * ⚠️ **Selection and rename share the name, so the presses are split**, and that is the property worth pinning: one press
+ * selects (the DAW convention for "this track"), two presses rename. Both on one press would make selecting impossible —
+ * every attempt would open an editor — and the reverse (rename on one press, select on two) would make the commoner action
+ * the hidden one. A criterion asserts each press does its own job and **not** the other's.
+ */
+describe("TrackHeaderV2 · selecting the track", () => {
+  it("⭐ one press selects, and does not open the rename editor", () => {
+    const { handlers, container } = renderHeader();
+    fireEvent.click(container.querySelector("[data-testid='track-name-t1-header']")!);
+    expect(handlers.onSelectTrack).toHaveBeenCalledWith("t1");
+    expect(handlers.onRenameTrack, "a press is not a rename").not.toHaveBeenCalled();
+    expect(
+      container.querySelector("[data-testid='track-name-input-t1-header']"),
+      "and it does not open the editor, or selecting would be impossible"
+    ).toBeNull();
+  });
+
+  it("⭐ two presses rename, and the header says which track is selected", () => {
+    const { handlers, container } = renderHeader();
+    const name = container.querySelector("[data-testid='track-name-t1-header']")!;
+    fireEvent.doubleClick(name);
+    expect(container.querySelector("[data-testid='track-name-input-t1-header']"), "the editor opens").toBeTruthy();
+    expect(handlers.onSelectTrack, "a double press is not two selections").not.toHaveBeenCalled();
+  });
+
+  it("⭐ marks the selected header, so the choice is visible rather than only internal", () => {
+    const { container } = renderHeader({ selected: true });
+    const name = container.querySelector("[data-testid='track-name-t1-header']")!;
+    expect(name.getAttribute("data-selected")).toBe("true");
+    expect(name.getAttribute("aria-current"), "and a screen reader is told").toBe("true");
+    // An unselected header must not claim it.
+    const { container: other } = renderHeader();
+    expect(other.querySelector("[data-testid='track-name-t1-header']")!.getAttribute("data-selected")).toBeNull();
   });
 });

@@ -43,6 +43,13 @@ export interface TrackHeaderV2Props {
    * rendering of a header (reports, tests) keeps working without pretending to be editable.
    */
   onRenameTrack?: (trackId: string, name: string) => void;
+  /**
+   * ⭐ **Selecting a track, which nothing could do either.** The view has held a `selectedTrackId` all along and no
+   * control ever set it, so per-track surfaces had no way to know which track the person meant.
+   */
+  onSelectTrack?: (trackId: string) => void;
+  /** Whether this is the selected track, so the header says so. Absent ⇒ never selected. */
+  selected?: boolean;
   onRemoveTrack?: (trackId: string) => void;
   onToggleCollapse?: (trackId: string, collapsed: boolean) => void;
   /** Whether this track's level curve is shown. Absent means the header offers no such control. */
@@ -89,6 +96,8 @@ export function TrackHeaderV2({
   onChangeGain,
   onChangeKind,
   onRenameTrack,
+  onSelectTrack,
+  selected = false,
   onRemoveTrack,
   onToggleCollapse,
   automationOpen = false,
@@ -265,17 +274,29 @@ export function TrackHeaderV2({
           <button
             type="button"
             data-testid={`track-name-${track.id}-header`}
-            /** A button only when it can do something, so a read-only header has no control that lies about being one. */
-            {...(onRenameTrack
+            /**
+             * ⭐ **One press selects, two presses rename** — the DAW convention, and the reason it is split rather than
+             * both on one press: the name is what a person points at to say *this track*, so a single press that opened
+             * an editor would make selecting impossible. A button only when it can do something, so a read-only header has
+             * no control lying about being one.
+             */
+            {...(onSelectTrack || onRenameTrack
               ? {
-                  onClick: () => {
-                    setNameDraft(track.name);
-                    setEditingName(true);
-                  },
-                  title: t("track_rename_hint"),
+                  onClick: () => onSelectTrack?.(track.id),
+                  onDoubleClick: onRenameTrack
+                    ? () => {
+                        setNameDraft(track.name);
+                        setEditingName(true);
+                      }
+                    : undefined,
+                  title: onRenameTrack ? t("track_rename_hint") : track.name,
                 }
               : { disabled: true, title: track.name })}
-            className={`min-w-[2.5rem] truncate text-left text-xs text-text ${onRenameTrack ? "hover:text-accent" : ""}`}
+            aria-current={selected ? "true" : undefined}
+            data-selected={selected ? "true" : undefined}
+            className={`min-w-[2.5rem] truncate rounded text-left text-xs ${selected ? "bg-accent/20 text-accent" : "text-text"} ${
+              onSelectTrack || onRenameTrack ? "hover:text-accent" : ""
+            }`}
             style={{ flex: "1 1 2rem" }}
           >
             {track.name}

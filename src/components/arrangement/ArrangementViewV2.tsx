@@ -378,10 +378,17 @@ export function ArrangementViewV2({ currentSong, songId, capture, bar = 0, playe
   const { commit, undo: undoEdit, redo: redoEdit, canUndo, canRedo, undoAction, redoAction } = useArrangementHistory(arrangement, setArrangement);
   const [selectedTrackId, setSelectedTrackId] = useState<string | undefined>(undefined);
   /**
-   * ⭐ The lane the project's preset list saves from and applies to. There is no per-track selection in this view yet, so
-   * this is the first synth lane — stated here rather than hidden, because "which lane am I saving?" has to be answerable.
+   * ⭐ **The lane the preset list saves from and applies to: the selected one, when it is a synth.**
+   *
+   * It used to be the first synth lane, because nothing selected a track — the name control does now, so the list follows
+   * the person's choice. The fallback is kept rather than dropped: with nothing selected, a list anchored on nothing would
+   * be a control that cannot act, and the first synth lane is a defensible default that the label names out loud.
    */
-  const userPresetTrack = useMemo(() => arrangement.tracks.find((track) => track.kind === "synth"), [arrangement.tracks]);
+  const userPresetTrack = useMemo(() => {
+    const chosen = selectedTrackId === undefined ? undefined : arrangement.tracks.find((row) => row.id === selectedTrackId);
+    if (chosen?.kind === "synth") return chosen;
+    return arrangement.tracks.find((track) => track.kind === "synth");
+  }, [arrangement.tracks, selectedTrackId]);
   /**
    * ⭐ **The device's preset library, loaded once and refreshed after each edit.** It is not part of the arrangement, so it
    * has its own state: writing it must not mark the project dirty or enter the undo stack, and a preset made in one project
@@ -2144,6 +2151,13 @@ export function ArrangementViewV2({ currentSong, songId, capture, bar = 0, playe
                     onRenameTrack={(trackId, name) =>
                       commit(renameTrackCommand(trackId, trackFor(trackId)?.name ?? "", name))
                     }
+                    /**
+                     * ⭐ **The name press selects the track.** `selectedTrackId` has existed in this view all along with
+                     * nothing setting it, which is why every per-track surface had to guess; the preset list below is the
+                     * first that needed to know.
+                     */
+                    onSelectTrack={(trackId) => setSelectedTrackId(trackId)}
+                    selected={selectedTrackId === track.id}
                     automationOpen={openAutomationFor.includes(track.id)}
                     onToggleAutomation={(trackId, open) =>
                       setOpenAutomationFor((current) =>
@@ -2435,9 +2449,11 @@ export function ArrangementViewV2({ currentSong, songId, capture, bar = 0, playe
         {/**
          * ⭐ **The project's own saved sounds, beside the sounds they were made from.**
          *
-         * ⚠️ **Which lane it acts on is `userPresetTrack`: the first synth lane.** Saving is inherently per-lane — it
-         * captures one track's code and overrides — while the *list* belongs to the project. A per-lane chooser is the
-         * honest next step, and the label says which lane this is so the button is never ambiguous about what it captures.
+         * ⭐ **Which lane it acts on is the selected one** (`userPresetTrack`), and that is now a choice the person makes
+         * rather than a fixed answer: pressing a track's name selects it, which is what that control was added for. Saving
+         * is inherently per-lane — it captures one track's code and overrides — while the *list* belongs to the device. The
+         * label names the lane, so the button is never ambiguous about what it will capture, and with nothing selected it
+         * falls back to the first synth lane rather than becoming a control that cannot act.
          */}
         {userPresetTrack !== undefined && (
           <div className="border-t border-[rgb(var(--d-line))] px-2 py-2">
