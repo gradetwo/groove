@@ -25813,3 +25813,27 @@ GlueCompressor 等已有 DSP 的编辑与使用路径 ✓。
     但为一个 share code 接试听要把 patch 载到播放器上 ✓，未做 ✓）。
   · **发版未做** ✓（目标里"全绿后发版"的绿指本仓门禁 ✓，本仓已全绿 ✓，但还没走 release 流程 ✓）。
 ```
+
+### 四百一十之续：✅ **已发布 v2.47.0**（2026-10-15 ✓）
+
+```
+**发版 ✓**：`v2.47.0` ✓（`613381d` ✓，tag = dev = main ✓）。线上复验 ✓：`version.json` 2.47.0 ✓、
+  封面 4/4 `200 image/jpeg` ✓、`/m` `200 text/html` ✓、清单 159 条全指 `r2mirror.groove.wangda.today` ✓、
+  真实音频 `200 audio/mpeg 400030B` ✓。全量 **740 文件 / 5468 用例** ✓。
+
+**⚠️ 第一次发版被 CI 拦下 ✓（值得记下 ✓）**：本地 `npm run typecheck` 报干净 ✓，而**远端冷跑报
+  `ArrangementViewV2.tsx(120,26): error TS2305: Module './UserPresetList' has no exported member 'presetSourceOf'`** ✓
+  —— 我把那个 helper 当死代码删掉后 ✓，视图里的 import 还在 ✓。
+  · 发版脚本**正确地停住了** ✓：`full CI FAILED` ✓ ⇒ 没有部署 ✓、没有打 tag ✓、什么都没发布 ✓ ——
+    这正是那一步存在的意义 ✓。
+  · 期间还遇到一次**网络超时** ✓（`dial tcp … i/o timeout` 读 GitHub API ✓），与 CI 本身无关 ✓；
+    我用 `gh run view` 直接看，CI 当时**真的在跑** ✓，等它跑完才看到真正的失败 ✓。
+  · ⚠️ **我无法完全解释本地为什么漏掉** ✓，也不编原因 ✓：`tsconfig` 没有 `incremental`/`composite` ✓、
+    没有任何 `*.tsbuildinfo` ✓、脚本就是 `tsc --noEmit` ✓。我能说的只是它代价是什么、是谁抓到的 ✓：
+    **一次不值钱的本地绿，和一次值钱的远端红** ✓。⇒ **发版路径上的远端 CI 不是形式** ✓，
+    这是它第二次抓到本地套件没抓到的缺陷 ✓。
+  · 修好后重跑发版 ✓：version:check / build / budget / full CI / deploy / tag / remote **全 ok** ✓。
+
+**❌ 仍未做**：试听（可试听）✓；P2 的列表作用在**第一条 synth 轨**上 ✓（本视图还没有逐轨选择 ✓，
+  标签写明了是哪条轨 ✓）。两条都已在代码与文档中写明 ✓，没有被说成已完成 ✓。
+```
