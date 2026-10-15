@@ -50,6 +50,13 @@ export interface TrackHeaderV2Props {
   onSelectTrack?: (trackId: string) => void;
   /** Whether this is the selected track, so the header says so. Absent ⇒ never selected. */
   selected?: boolean;
+  /**
+   * ⭐ **Which folder this track is grouped under, and the folders it may join.** Absent ⇒ no grouping control is drawn,
+   * which is how a read-only header stays read-only.
+   */
+  parentId?: string;
+  folderOptions?: readonly { id: string; name: string }[];
+  onChangeParent?: (trackId: string, parentId: string | undefined) => void;
   onRemoveTrack?: (trackId: string) => void;
   onToggleCollapse?: (trackId: string, collapsed: boolean) => void;
   /** Whether this track's level curve is shown. Absent means the header offers no such control. */
@@ -98,6 +105,9 @@ export function TrackHeaderV2({
   onRenameTrack,
   onSelectTrack,
   selected = false,
+  parentId,
+  folderOptions,
+  onChangeParent,
   onRemoveTrack,
   onToggleCollapse,
   automationOpen = false,
@@ -232,6 +242,32 @@ export function TrackHeaderV2({
             {INSERT_AUTOMATION_PARAMETERS.map((parameter) => (
               <option key={parameter} value={parameter}>
                 {parameter}
+              </option>
+            ))}
+          </select>
+        )}
+        {onChangeParent && (folderOptions?.length ?? 0) > 0 && (
+          /**
+           * ⭐ **Joining or leaving a folder** (Web-reachability ledger: `setTrackParent`). `parentId` was read by the track
+           * list's indentation, by `ArrangementLaneV2`'s hiding of a folded folder's children and by `depthOf`, so the
+           * grouping always *rendered* — nothing could set it.
+           *
+           * ⚠️ **A closed list of actual folder tracks, not free text.** A `parentId` naming a track that is not a folder,
+           * or that no longer exists, would indent a track under nothing and hide it behind a fold that cannot open — so the
+           * only values offered are the folders in this arrangement, plus "none" to leave.
+           */
+          <select
+            aria-label={`${track.name} ${t("track_group_label")}`}
+            data-testid={`track-group-${track.id}-header`}
+            value={parentId ?? ""}
+            onChange={(event) => onChangeParent(track.id, event.target.value === "" ? undefined : event.target.value)}
+            title={t("track_group_hint")}
+            className="h-7 shrink-0 rounded border border-[rgb(var(--d-line))] bg-transparent text-[10px] text-text opacity-80"
+          >
+            <option value="">{t("track_group_none")}</option>
+            {folderOptions!.map((folder) => (
+              <option key={folder.id} value={folder.id}>
+                {folder.name}
               </option>
             ))}
           </select>

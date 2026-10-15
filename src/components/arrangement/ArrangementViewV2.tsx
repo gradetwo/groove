@@ -119,6 +119,7 @@ import { DEFAULT_SYNTH_PRESETS } from "../../audio/PolySynth";
 import {
   renameTrackCommand,
   setArrangementTempoMapCommand,
+  setTrackParentCommand,
   setArrangementTimeSignatureCommand,
   setTrackGs1PatchCommand,
   setTrackInstrumentCommand,
@@ -397,6 +398,31 @@ export function ArrangementViewV2({ currentSong, songId, capture, bar = 0, playe
       return command !== undefined;
     },
     [commit]
+  );
+
+  /**
+   * ⭐ **The folders this track may join: every folder track except itself and its own descendants.** A cycle would make
+   * `depthOf` recurse forever behind its `seen` guard and hide a track behind a fold that cannot open, so the list is
+   * computed rather than trusted — the same reason the control is a closed list.
+   */
+  const folderOptionsFor = useCallback(
+    (track: { id: string; parentId?: string }): { id: string; name: string }[] => {
+      const forbidden = new Set<string>([track.id]);
+      let grew = true;
+      while (grew) {
+        grew = false;
+        for (const row of arrangement.tracks) {
+          if (row.parentId !== undefined && forbidden.has(row.parentId) && !forbidden.has(row.id)) {
+            forbidden.add(row.id);
+            grew = true;
+          }
+        }
+      }
+      return arrangement.tracks
+        .filter((row) => row.kind === "folder" && !forbidden.has(row.id))
+        .map((row) => ({ id: row.id, name: row.name }));
+    },
+    [arrangement.tracks]
   );
 
   const userPresetTrack = useMemo(() => {
@@ -2187,6 +2213,16 @@ export function ArrangementViewV2({ currentSong, songId, capture, bar = 0, playe
                      */
                     onSelectTrack={(trackId) => setSelectedTrackId(trackId)}
                     selected={selectedTrackId === track.id}
+                    /**
+                     * ⭐ **Grouping, which the model could do and nothing could ask for** (the ledger's last entry).
+                     * `parentId` has been read by the indentation, by a folded folder hiding its children and by `depthOf`,
+                     * so the grouping always rendered; this is the control.
+                     */
+                    parentId={track.parentId}
+                    folderOptions={folderOptionsFor(track)}
+                    onChangeParent={(trackId, parentId) =>
+                      commit(setTrackParentCommand(trackId, trackFor(trackId)?.parentId, parentId))
+                    }
                     automationOpen={openAutomationFor.includes(track.id)}
                     onToggleAutomation={(trackId, open) =>
                       setOpenAutomationFor((current) =>

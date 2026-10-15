@@ -65,6 +65,7 @@ import {
   setTrackSample,
   toggleStep,
   setTrackInstrument,
+  setTrackParent,
   setTrackGs1Patch,
 } from "./arrangementEdits";
 import type { AutomationLane } from "./automation";
@@ -314,6 +315,23 @@ export function setTrackRegionCommand(trackId: string, before: TrackRegion | und
  */
 export function renameTrackCommand(trackId: string, before: string, after: string): ArrangementCommand {
   return setterCommand("renameTrack", (arrangement, next: string) => renameTrack(arrangement, trackId, next), before, after);
+}
+
+/**
+ * ⭐ **Joining or leaving a folder, which the model could do and nothing could ask for** (Web-reachability ledger:
+ * `setTrackParent`).
+ *
+ * `parentId` has been read all along — the track list indents by it, `ArrangementLaneV2` hides a folded folder's children,
+ * and `depthOf` mirrors it — so the grouping **renders**; what was missing was any way to set it. `undefined` leaves the
+ * folder, which is why the command takes it rather than a sentinel id.
+ *
+ * ⚠️ **This groups; it does not mix.** `setCollapsed` touches only `collapsed` and there is a criterion for it, because a
+ * fold that silenced its children would be blamed on the engine rather than on the model — and a folder that summed its
+ * children would be the summing-bus feature, which is a different piece of work with different semantics. The control's
+ * label says "group" for that reason.
+ */
+export function setTrackParentCommand(trackId: string, before: string | undefined, after: string | undefined): ArrangementCommand {
+  return setterCommand("trackParent", (arrangement, next: string | undefined) => setTrackParent(arrangement, trackId, next), before, after);
 }
 
 export function setTrackSampleCommand(trackId: string, before: string, after: string): ArrangementCommand {

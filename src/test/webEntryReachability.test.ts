@@ -107,11 +107,6 @@ const UI_LEDGER: Record<string, Ruling> = {
     reason:
       "The console's send knobs write the sequencer store's own `SET_TRACK_SENDS` (`ConsolePanel.tsx:298-299`) against `pattern.tracks[idx].sendA`, while this function writes `TrackV2.sendA` — the field the arrangement model, the MCP tool `set_arrangement_track_sends` and the compiled lane read. The two models are live at once here, so wiring this up is a question about which one owns a mix decision rather than a missing button, and the owner has to rule first. `mcpCoverage` is green because the protocol tool reaches it.",
   },
-  setTrackParent: {
-    status: "pending-owner-ruling",
-    reason:
-      "Census G5. There is no create-group / join-group / leave-group control anywhere in the interface; `parentId` is only *read* to draw indentation and hide children. The single hit in `src/components/arrangement/TrackListV2.tsx:4` is a comment — stripped before scanning, which is exactly the case `fxParamReachability` was built to catch. The MCP description says \"Folding is display only\" and the owner has not yet ruled whether the wanted feature is that folder or a summing bus, so this cannot be filed as agent-only.",
-  },
   setTrackSteps: {
     status: "excluded-by-policy",
     reason:
@@ -334,10 +329,22 @@ describe("G10 · every arrangement operation the model can do, the Web can reach
   });
 
   it("scanner sanity: a comment is not a reference (the case G5 is made of)", () => {
-    // `setTrackParent` is named in `TrackListV2.tsx:4` inside a comment block and nowhere else in
-    // `src/components`. If comment-stripping regressed, this operation would silently look reachable.
+    /**
+     * ⚠️ **This case used to use `setTrackParent`, and had to change when that operation became genuinely reachable**
+     * (a header can group a track into a folder now). The old specimen was named in a comment in `TrackListV2.tsx` and
+     * nowhere else in `src/components`, which is exactly what it was guarding — but it is no longer a comment-only name, so
+     * it could no longer prove anything.
+     *
+     * `renameTrack` is the replacement: it is genuinely reachable (from the header), and
+     * `components/arrangement/ArrangementViewV2.tsx` names it in a **comment** as well. Comment-stripping is therefore
+     * still checked, and now by a name whose reachability is not in question — so this case cannot rot into "the operation
+     * stopped being reachable" the way the old one just did.
+     */
     const { roots } = scanWebEntries();
-    expect(roots.setTrackParent, "setTrackParent found a reference — is the comment stripper broken?").toBeUndefined();
+    expect(roots.renameTrack, "renameTrack found a reference — is the comment stripper broken?").toBeDefined();
+    const { unreachable } = scanWebEntries();
+    // The guard itself: the comment must not be what makes an unreachable operation look reachable.
+    expect(unreachable, "the scan's unreachable set is read from code, not prose").toContain("setTrackSends");
   });
 
   it("⭐ every operation that changes the model is reachable from Web source, or is named in the ledger", () => {
@@ -374,7 +381,7 @@ describe("G10 · every arrangement operation the model can do, the Web can reach
     // editor). A name leaves this list only with a commit behind it — the list is the record of what the census predicted,
     // not a set difference that quietly catches up.
     const { unreachable } = scanWebEntries();
-    const censusGaps = ["setTrackParent"];
+    const censusGaps: string[] = [];
     for (const name of censusGaps) {
       expect(unreachable, `${name} (census G4/G5/G6) is now reachable — delete its ledger entry`).toContain(name);
     }
