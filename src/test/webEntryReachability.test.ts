@@ -98,9 +98,9 @@ interface Ruling {
  */
 const UI_LEDGER: Record<string, Ruling> = {
   removeNotesWithinRect: {
-    status: "pending-owner-ruling",
+    status: "excluded-by-policy",
     reason:
-      "Census G10. The panel removes a selection with a command of its own rather than with this region helper, which the protocol and the criteria are what reach; the owner decides whether the two should share one removal.",
+      "Census G10, decided 2026-10-16 after verifying it rather than assuming it: the two removals are adjacent and genuinely different. This helper takes **rectangle geometry** and asks the model which notes fall inside it, while the piano roll holds the **exact set** of selected notes — a selection can be scattered, so it is not a rectangle, and re-deriving a known set from geometry would add a step and a place for the two to disagree. The panel's removal is one `setterCommand(\"Remove selection\", …)` in `ArrangementViewV2`, so one press is already one undo step, which was the property worth protecting. The helper stays reachable from the protocol and the criteria; what the two now share is the explanation, recorded on the helper itself in `data/arrangementEdits.ts`.",
   },
   setTrackSends: {
     status: "pending-owner-ruling",
