@@ -25772,3 +25772,44 @@ GlueCompressor 等已有 DSP 的编辑与使用路径 ✓。
     选择是被静默丢弃的** ✓。我只确认了这一处 ✓；修它属于另一个判断 ✓，我没有动 ✓。
   · **P2 用户自建预置**整块未做 ✓（存储定为项目 IndexedDB ✓；MCP 五个工具 ✓ 仍需一个 groove 侧落地位置 ✓）。
 ```
+
+## 四百一十、🎛️ **synth 全部 120 预置 + 用户自建预置：数据层与 MCP 层已完成**（2026-10-15）
+
+```
+**业主决定 ✓**：预置进 groove 用**生成表 + 自动校验** ✓；用户预置**跟项目走** ✓。
+
+**✅ P1 数据层 ✓（`a67a540` ✓）／MCP 层 ✓（`f6d40ee` ✓）／Web 选择器 ✓（`38760ab` ✓）**
+  · `scripts/sync_synth_presets.mjs` ✓ 跑 synth 的 MCP 生成全表 ✓；`src/data/synthPresets.generated.ts` ✓
+    **120 个** ✓、7 个分类 ✓；`npm run sync:synth-presets` ✓ / `check:synth-presets` ✓（差异即红 ✓）。
+  · MCP `list_synth_presets` ✓（可选分类过滤 ✓，**故意不返回 share code** ✓）、`load_synth_preset` ✓
+    （按 id 写到轨 ✓，**先校验后写** ✓）。
+  · Web ✓：新增 `setTrackGs1Patch` ✓ + `setTrackGs1PatchCommand` ✓（可撤销 ✓）；`TrackListV2` 给 synth 轨
+    再画一个 **按分类分组** 的下拉 ✓（原生 `<optgroup>` ✓ —— 120 行正是原生控件仍然更优的规模 ✓：
+    免写搜索 ✓、键盘可达 ✓、无自己的状态 ✓）；`ArrangementViewV2` 提交**预置的 share code** ✓。
+    ⭐ **两个控件而不是一个长列表** ✓ —— 合并会让**两个模型字段共用一个值** ✓（`instrument` vs `gs1Patch` ✓）。
+
+**✅ P2 模型层 + MCP 全部六个工具 ✓（`04c1366` ✓）**
+  · 存在**编排上** ✓（`ArrangementV2.userPresets` ✓）⇒ `.groove` 文件即项目 ✓ ⇒ 预置随项目走 ✓；
+    **绝不写入 synth 仓库** ✓。
+  · 格式是 **synth 自己的 share code** ✓ ⇒ "分享一个预置"= 一个字符串 ✓，两个 app 都能粘 ✓。
+  · 工具 ✓：`save_gs1_preset`／`list_user_presets`／`rename_user_preset`／`delete_user_preset`／
+    `export_gs1_preset`／`import_gs1_preset` ✓。
+  · ⭐ **判据抓到一个真 bug ✓**：第一版工具算出新列表**然后丢掉** ✓ —— 报成功、什么都没存 ✓。
+    判据红在 `expected undefined to deeply equal ['user-preset-…']` ✓；修法是经 `edit` 写回 ✓，
+    这同时让保存**可撤销** ✓（一次覆盖掉别人花了时间的音色、又回不去 ⇒ 正是这个形状要防的失败 ✓）。
+    我读代码不会发现它 ✓。
+
+**判据合计 ✓**：`synthPresetsSync` 5 ✓ ＋ `mcpSynthPresets` 4 ✓ ＋ `gs1PatchCommand` 6 ✓ ＋
+  `synthPresetChoice` +2 ✓ ＋ `userPresets` 8 ✓ ＋ `mcpUserPresets` 7 ✓。红证明两处 ✓。
+  全量 **739 文件 / 5463 用例** ✓ 全绿 ✓。
+**门禁对账（不是绕开 ✓）**：`mcpCoverage` 把 `setUserPresets` 映到 `save_gs1_preset` ✓；`mcpTools` 把
+  `export_gs1_preset` 列入"动词像写、实际只返回字节" ✓；对齐表列全六个 ✓；`fileSizeBudget` 的
+  `atLeast600` 53 → 54 ✓ 并把 `mcp/registryGs1.ts` 钉在 649 ✓（它随这些工具越过 600 ✓）；
+  `webEntryReachability` 加了账目条目 ✓。
+
+**❌ 未做**
+  · **P2 的 Web 半边** ✓："我的预置" 列表（重命名／删除／导出）✓ —— 已记入 `webEntryReachability` 账目 ✓。
+  · **试听（可试听）** ✓：厂商预置的试听未实现 ✓（既有乐器控件的 `onAudition` 缝存在 ✓，
+    但为一个 share code 接试听要把 patch 载到播放器上 ✓，未做 ✓）。
+  · **发版未做** ✓（目标里"全绿后发版"的绿指本仓门禁 ✓，本仓已全绿 ✓，但还没走 release 流程 ✓）。
+```
