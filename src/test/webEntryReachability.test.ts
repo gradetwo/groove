@@ -102,11 +102,6 @@ const UI_LEDGER: Record<string, Ruling> = {
     reason:
       "Census G10. The panel removes a selection with a command of its own rather than with this region helper, which the protocol and the criteria are what reach; the owner decides whether the two should share one removal.",
   },
-  renameTrack: {
-    status: "pending-owner-ruling",
-    reason:
-      "Census G4. A track in the arrangement cannot be renamed from the interface at all: `TrackHeaderV2.tsx` only reads `track.name` (:97 aria-label, :295 trackName) and the track list's own comment names `renameTrack` among the functions it uses while the component never calls it. The MCP tool `rename_arrangement_track` reaches it, which is why `mcpCoverage` is green. Wiring it up needs a command shell in `src/data/arrangementHistory.ts` — inside the read-only `src/data/**` this round is not allowed to touch — so the owner has to rule first.",
-  },
   setTrackSends: {
     status: "pending-owner-ruling",
     reason:
@@ -380,12 +375,17 @@ describe("G10 · every arrangement operation the model can do, the Web can reach
   });
 
   it("⭐ records the red the census predicted, so it can be run as a criterion and not only read as prose", () => {
-    // The catalogued gaps, by name. This is the census's four (G4/G5/G6) plus the two this scan found on its
+    // The catalogued gaps, by name. This was the census's four (G4/G5/G6) plus the two this scan found on its
     // first run. If one of them is wired up this criterion goes red until the name is removed — which is the
     // other half of "the guard can be green afterwards".
+    //
+    // ⭐ **`renameTrack` has been wired up and removed from this list** (a track can be renamed from its header now), so
+    // the census's four are three. The list stays hard-coded on purpose: it is the record of what the census predicted,
+    // and a name leaving it should be a deliberate edit with a commit behind it, not a set difference that quietly
+    // catches up.
     const { unreachable } = scanWebEntries();
-    const censusFour = ["renameTrack", "setTrackParent", "setArrangementTempoMap", "setArrangementTimeSignature"];
-    for (const name of censusFour) {
+    const censusGaps = ["setTrackParent", "setArrangementTempoMap", "setArrangementTimeSignature"];
+    for (const name of censusGaps) {
       expect(unreachable, `${name} (census G4/G5/G6) is now reachable — delete its ledger entry`).toContain(name);
     }
     // The hard form: `GROOVE_UI_REACHABILITY=hard` runs the same scan with the ledger ignored, which is the

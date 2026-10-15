@@ -42,6 +42,7 @@ function renderHeader(overrides: Partial<React.ComponentProps<typeof TrackHeader
     onToggleCollapse: vi.fn(),
     onChangeInstrument: vi.fn(),
     onLibraryOpenChange: vi.fn(),
+    onRenameTrack: vi.fn(),
   };
   const { container } = render(
     <LanguageProvider>
@@ -165,5 +166,76 @@ describe("the instrument slot on the header", () => {
   it("says which track the chip belongs to, so a column of chips is navigable", () => {
     renderHeader();
     expect(screen.getByTestId("instrument-open-t1-header").getAttribute("aria-label")).toBe("Keys instrument");
+  });
+});
+
+/**
+ * ⭐ **Renaming a track, which no interface could do.**
+ *
+ * The operation has existed in the model and behind `rename_arrangement_track` in the protocol since v2, while
+ * `TrackHeaderV2` only ever *read* `track.name` — so the Web-reachability ledger recorded it as reachable from an agent and
+ * from nothing else. What was missing was a command and a control; the control is what these cases hold.
+ *
+ * The failures worth catching are the ones a person would notice and a shallow test would not:
+ *
+ *   - **every keystroke on the undo stack.** The draft is local state and only the committed name becomes a command, so one
+ *     rename is one undo step;
+ *   - **a rename lost by clicking away.** Blur commits, because that is what a person expects after typing;
+ *   - **a blank name committed.** The model refuses it, but a control that *offers* it (and then appears to work while the
+ *     name stays) is the "looks like it works" failure this project refuses.
+ */
+describe("TrackHeaderV2 · renaming the track", () => {
+  it("⭐ commits the typed name once, on Enter", () => {
+    const { handlers, container } = renderHeader();
+    fireEvent.click(container.querySelector("[data-testid='track-name-t1-header']")!);
+    const input = container.querySelector<HTMLInputElement>("[data-testid='track-name-input-t1-header']")!;
+    expect(input, "the label becomes an input only while editing").toBeTruthy();
+
+    fireEvent.change(input, { target: { value: "Lead Synth" } });
+    // ⭐ Still nothing committed: a draft is not a model change.
+    expect(handlers.onRenameTrack).not.toHaveBeenCalled();
+    fireEvent.keyDown(input, { key: "Enter" });
+    expect(handlers.onRenameTrack).toHaveBeenCalledTimes(1);
+    expect(handlers.onRenameTrack).toHaveBeenCalledWith("t1", "Lead Synth");
+  });
+
+  it("⭐ commits on blur, so clicking away does not silently discard the typing", () => {
+    const { handlers, container } = renderHeader();
+    fireEvent.click(container.querySelector("[data-testid='track-name-t1-header']")!);
+    const input = container.querySelector<HTMLInputElement>("[data-testid='track-name-input-t1-header']")!;
+    fireEvent.change(input, { target: { value: "Pads" } });
+    fireEvent.blur(input);
+    expect(handlers.onRenameTrack).toHaveBeenCalledWith("t1", "Pads");
+  });
+
+  it("⭐ abandons on Escape, and refuses a blank or unchanged name", () => {
+    const { handlers, container } = renderHeader();
+    fireEvent.click(container.querySelector("[data-testid='track-name-t1-header']")!);
+    let input = container.querySelector<HTMLInputElement>("[data-testid='track-name-input-t1-header']")!;
+    fireEvent.change(input, { target: { value: "Discarded" } });
+    fireEvent.keyDown(input, { key: "Escape" });
+    expect(handlers.onRenameTrack, "Escape is not a rename").not.toHaveBeenCalled();
+
+    // Blank is refused by the control rather than committed and ignored by the model.
+    fireEvent.click(container.querySelector("[data-testid='track-name-t1-header']")!);
+    input = container.querySelector<HTMLInputElement>("[data-testid='track-name-input-t1-header']")!;
+    fireEvent.change(input, { target: { value: "   " } });
+    fireEvent.keyDown(input, { key: "Enter" });
+    expect(handlers.onRenameTrack, "a blank name is not a rename").not.toHaveBeenCalled();
+
+    // And an unchanged name is not an edit, so it does not push an undo step onto the stack.
+    fireEvent.click(container.querySelector("[data-testid='track-name-t1-header']")!);
+    input = container.querySelector<HTMLInputElement>("[data-testid='track-name-input-t1-header']")!;
+    fireEvent.keyDown(input, { key: "Enter" });
+    expect(handlers.onRenameTrack, "renaming to the same name is not a change").not.toHaveBeenCalled();
+  });
+
+  it("⭐ stays a plain label when the header cannot rename, rather than a control that lies", () => {
+    const { container } = renderHeader({ onRenameTrack: undefined });
+    const label = container.querySelector<HTMLButtonElement>("[data-testid='track-name-t1-header']")!;
+    // A read-only header has no input to open, and its label is disabled rather than pretending to be clickable.
+    expect(label.disabled, "no handler ⇒ not offered as editable").toBe(true);
+    fireEvent.click(label);
+    expect(container.querySelector("[data-testid='track-name-input-t1-header']")).toBeNull();
   });
 });

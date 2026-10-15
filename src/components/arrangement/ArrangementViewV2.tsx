@@ -115,7 +115,7 @@ import { generateEuclidean } from "../../audio/Euclidean";
 import { useDensityPreference } from "../../hooks/useDensityPreference";
 import { useGs1Setting } from "../../features/sequencer/useGs1Setting";
 import { DEFAULT_SYNTH_PRESETS } from "../../audio/PolySynth";
-import { setTrackGs1PatchCommand, setTrackInstrumentCommand } from "../../data/arrangementHistory";
+import { renameTrackCommand, setTrackGs1PatchCommand, setTrackInstrumentCommand } from "../../data/arrangementHistory";
 import { SYNTH_PRESETS } from "../../data/synthPresets.generated";
 import { UserPresetList } from "./UserPresetList";
 import { deleteUserPreset, exportUserPreset, renameUserPreset, saveUserPreset } from "../../data/userPresets";
@@ -2093,6 +2093,14 @@ export function ArrangementViewV2({ currentSong, songId, capture, bar = 0, playe
                       if (previous !== undefined) commit(changeTrackKindCommand(previous, kind));
                     }}
                     onToggleCollapse={(trackId, collapsed) => commit(setCollapsedCommand(trackId, collapsed))}
+                    /**
+                     * ⭐ **Renaming, which the interface could not do** (Web-reachability ledger: `renameTrack` was
+                     * reachable from the protocol and from nothing else). One command per committed name, so a rename is
+                     * one undo step.
+                     */
+                    onRenameTrack={(trackId, name) =>
+                      commit(renameTrackCommand(trackId, trackFor(trackId)?.name ?? "", name))
+                    }
                     automationOpen={openAutomationFor.includes(track.id)}
                     onToggleAutomation={(trackId, open) =>
                       setOpenAutomationFor((current) =>

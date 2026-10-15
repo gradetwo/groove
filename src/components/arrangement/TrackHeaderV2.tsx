@@ -1,3 +1,4 @@
+import { useState } from "react";
 /**
  * The arrangement track header: Bitwig's documented minimum set, in the order Bitwig's manual states it.
  *
@@ -37,6 +38,11 @@ export interface TrackHeaderV2Props {
   onToggleArm?: (trackId: string, armed: boolean) => void;
   onChangeGain?: (trackId: string, gainDb: number) => void;
   onChangeKind?: (trackId: string, kind: TrackKindV2) => void;
+  /**
+   * ⭐ **Give a track the name its author wants.** Absent ⇒ the name is a plain label, which is how every read-only
+   * rendering of a header (reports, tests) keeps working without pretending to be editable.
+   */
+  onRenameTrack?: (trackId: string, name: string) => void;
   onRemoveTrack?: (trackId: string) => void;
   onToggleCollapse?: (trackId: string, collapsed: boolean) => void;
   /** Whether this track's level curve is shown. Absent means the header offers no such control. */
@@ -82,6 +88,7 @@ export function TrackHeaderV2({
   onToggleArm,
   onChangeGain,
   onChangeKind,
+  onRenameTrack,
   onRemoveTrack,
   onToggleCollapse,
   automationOpen = false,
@@ -89,6 +96,12 @@ export function TrackHeaderV2({
   automationParameter = "gainDb",
   onAutomationParameterChange,
 }: TrackHeaderV2Props) {
+  /**
+   * ⭐ **Editing the name is local to this header.** It is not arrangement state until it is committed: a draft that lived
+   * in the model would put every keystroke on the undo stack, so one rename would take a dozen undos to walk back.
+   */
+  const [editingName, setEditingName] = useState(false);
+  const [nameDraft, setNameDraft] = useState(track.name);
   const { t } = useLanguage();
   const gain = track.gainDb ?? 0;
   // The strip carries the track's own colour when it has one, and the kind's colour otherwise — so a colour is
@@ -214,9 +227,60 @@ export function TrackHeaderV2({
             ))}
           </select>
         )}
-        <span data-testid={`track-name-${track.id}-header`} className="min-w-[2.5rem] truncate text-xs text-text" style={{ flex: "1 1 2rem" }} title={track.name}>
-          {track.name}
-        </span>
+        {onRenameTrack && editingName ? (
+          /**
+           * ⭐ **Renaming, which no interface could do before this** (Web-reachability ledger: `renameTrack` was reachable
+           * from the protocol and from nothing else).
+           *
+           * An input that replaces the label only while it is being edited, so the header's normal state stays a compact
+           * label rather than a row of text fields. Enter commits, Escape abandons, and **blur commits** — a person who
+           * clicks away expects their typing to have counted, and losing it silently is the failure this shape avoids.
+           */
+          <input
+            type="text"
+            autoFocus
+            value={nameDraft}
+            aria-label={`${t("track_rename_label")}: ${track.name}`}
+            data-testid={`track-name-input-${track.id}-header`}
+            onChange={(event) => setNameDraft(event.target.value)}
+            onBlur={() => {
+              setEditingName(false);
+              if (nameDraft.trim() !== "" && nameDraft.trim() !== track.name) onRenameTrack(track.id, nameDraft.trim());
+            }}
+            onKeyDown={(event) => {
+              if (event.key === "Enter") {
+                event.preventDefault();
+                setEditingName(false);
+                if (nameDraft.trim() !== "" && nameDraft.trim() !== track.name) onRenameTrack(track.id, nameDraft.trim());
+              } else if (event.key === "Escape") {
+                event.preventDefault();
+                setEditingName(false);
+                setNameDraft(track.name);
+              }
+            }}
+            className="min-w-[2.5rem] rounded border border-[rgb(var(--d-line))] bg-transparent px-1 text-xs text-text outline-none focus-visible:border-accent/60"
+            style={{ flex: "1 1 2rem" }}
+          />
+        ) : (
+          <button
+            type="button"
+            data-testid={`track-name-${track.id}-header`}
+            /** A button only when it can do something, so a read-only header has no control that lies about being one. */
+            {...(onRenameTrack
+              ? {
+                  onClick: () => {
+                    setNameDraft(track.name);
+                    setEditingName(true);
+                  },
+                  title: t("track_rename_hint"),
+                }
+              : { disabled: true, title: track.name })}
+            className={`min-w-[2.5rem] truncate text-left text-xs text-text ${onRenameTrack ? "hover:text-accent" : ""}`}
+            style={{ flex: "1 1 2rem" }}
+          >
+            {track.name}
+          </button>
+        )}
       </span>
 
       {/*

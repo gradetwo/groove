@@ -36,7 +36,6 @@
  * are applied to is whatever the editor holds when the button is pressed — see `undoArrangement` below, where the entry
  * is applied to the caller's live value rather than to a stored one.
  */
-import type { UserPreset } from "./userPresets";
 import type { ArrangementV2, NoteEvent, TrackKindV2, TrackRegion, TrackV2 } from "../types/arrangementV2";
 import {
   addTake,
@@ -46,6 +45,7 @@ import {
   insertTrack,
   moveTrackNote,
   removeTrack,
+  renameTrack,
   removeTrackNote,
   replaceTrack,
   selectTrackTake,
@@ -299,6 +299,18 @@ export function setTrackPanCommand(trackId: string, before: number, after: numbe
  */
 export function setTrackRegionCommand(trackId: string, before: TrackRegion | undefined, after: TrackRegion | undefined): ArrangementCommand {
   return setterCommand("region", (arrangement, next: TrackRegion | undefined) => setTrackRegion(arrangement, trackId, next), before, after);
+}
+
+/**
+ * ⭐ **Renaming a track, which no interface could do** (Web-reachability ledger, `renameTrack`).
+ *
+ * The operation has existed in the model and behind `rename_arrangement_track` in the protocol since v2, and
+ * `TrackHeaderV2` only ever *read* `track.name` — so a person could not give a track their own name, and the ledger
+ * recorded it as reachable from an agent and from nothing else. A model function without a command is the whole reason it
+ * stayed that way, so this is the missing half.
+ */
+export function renameTrackCommand(trackId: string, before: string, after: string): ArrangementCommand {
+  return setterCommand("renameTrack", (arrangement, next: string) => renameTrack(arrangement, trackId, next), before, after);
 }
 
 export function setTrackSampleCommand(trackId: string, before: string, after: string): ArrangementCommand {
