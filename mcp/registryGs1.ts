@@ -6,6 +6,7 @@
 import path from "node:path";
 import { gs1ParameterReadings, gs1RouteOverrideReadings, gs1RouteReadings, mergeGs1Overrides } from "../src/audio/gs1/gs1ParamOverrides";
 import { decodeGs1PatchCode } from "../src/audio/gs1/gs1PatchCode";
+import { SYNTH_PRESETS, SYNTH_PRESET_CATEGORIES, synthPresetById } from "../src/data/synthPresets.generated";
 import { resolveGs1Lane } from "../src/audio/gs1/gs1Tracks";
 import { DEFAULT_NOTE_CONVENTION, NoteConvention, describePitch } from "../src/data/pitchTruth";
 import { DEFAULT_PARAMS, MAX_ROUTES } from "../vendor/gs1/src/audio/params";
@@ -388,6 +389,79 @@ export const GS1_TOOLS: ToolDefinition[] = [
           instrument,
           track: laneKey,
         }),
+      };
+    },
+  },
+  {
+    /**
+     * ⭐ **The synth's whole factory library, listed so it can be chosen rather than guessed.**
+     *
+     * The table is generated data (`scripts/sync_synth_presets.mjs`) rather than read at runtime, because the synth's
+     * presets are TypeScript modules this repository's Node process cannot load — the reasoning is in the generated file's
+     * own header. What this tool adds is discoverability: without it a caller has to already know that `catlead` or
+     * `bladerunner` exists, which is the complaint that started this work.
+     */
+    name: "list_synth_presets",
+    title: "List the synth's factory presets",
+    description:
+      "Every preset the synth project ships: id, name, category, tag and which wave it starts from. Use the id with load_synth_preset (or apply_gs1_patch) to give a lane that sound. Optionally filter by `cat`, one of the synth's own categories.",
+    readOnly: true,
+    inputSchema: {
+      cat: z.string().optional().describe(`one of ${SYNTH_PRESET_CATEGORIES.join(", ")}; omit for all`),
+    },
+    handler: (args) => {
+      const wanted = args.cat === undefined ? undefined : String(args.cat).toUpperCase();
+      const rows = wanted === undefined ? SYNTH_PRESETS : SYNTH_PRESETS.filter((preset) => preset.cat === wanted);
+      return {
+        count: rows.length,
+        categories: SYNTH_PRESET_CATEGORIES,
+        // The share code is deliberately **not** returned: it is a 900-character blob, and a caller choosing a sound wants
+        // the id. `load_synth_preset` is what carries the code, so a listing stays readable in a transcript.
+        presets: rows.map((preset) => ({ id: preset.id, name: preset.name, cat: preset.cat, tag: preset.tag })),
+        ...(wanted !== undefined && rows.length === 0 ? { problem: `no presets in category "${wanted}"` } : {}),
+      };
+    },
+  },
+  {
+    /**
+     * ⭐ **One of the 120, put on a lane by id.** The write is `setMcpTrackGs1`, so it is an undoable `edit` exactly like
+     * every other arrangement change — and the share code is the synth's own, from the generated table, so a caller never
+     * has to handle a 900-character string to choose a sound.
+     */
+    name: "load_synth_preset",
+    title: "Give a lane one of the synth's factory presets",
+    description:
+      "Load a factory preset onto a lane by id (list_synth_presets has them; catlead, bladerunner, dxepiano, vocalah…). Writes the lane's own GS-1 sound, so its notes sound through that preset. Accepts the lane by track id or name.",
+    readOnly: false,
+    inputSchema: {
+      arrangementId: z.string().describe("the arrangement holding the track"),
+      track: z.string().min(1).describe("the lane, by track id or name"),
+      presetId: z.string().min(1).describe("a factory preset id from list_synth_presets"),
+    },
+    handler: (args) => {
+      const arrangementId = String(args.arrangementId);
+      const arrangement = getMcpArrangement(arrangementId);
+      if (!arrangement) return failure(`no arrangement "${arrangementId}" — create one first`);
+
+      const preset = synthPresetById(String(args.presetId));
+      if (!preset) {
+        /**
+         * ⭐ **Validate first, write second.** `setMcpTrackGs1` goes through `edit`, which records the state being left
+         * behind, so a refusal after the write would leave an undo step for a change that never happened.
+         */
+        return failure(`no factory preset "${String(args.presetId)}" — list_synth_presets has all ${SYNTH_PRESETS.length}`);
+      }
+      const key = String(args.track);
+      const target = arrangement.tracks.find((row) => row.id === key) ?? arrangement.tracks.find((row) => row.name === key);
+      if (!target) return failure(`no track "${key}" in "${arrangementId}" — get_arrangement lists them`);
+
+      const result = setMcpTrackGs1(arrangementId, target.id, preset.shareCode, null);
+      return {
+        arrangementId,
+        trackId: target.id,
+        track: target.name,
+        preset: { id: preset.id, name: preset.name, cat: preset.cat, tag: preset.tag },
+        summary: result.summary,
       };
     },
   },

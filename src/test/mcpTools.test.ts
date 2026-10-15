@@ -259,7 +259,7 @@ describe("MCP · the declared surface", () => {
      * now binds a lane to one of the synth's factory vowel voices — a real write. Naming the verb is the point of the
      * rule: the annotation follows what the tool *does*, not what its name suggests.
      */
-    const WRITING_VERBS = new Set(["add", "apply", "assign", "create", "delete", "duplicate", "export", "import", "make", "move", "normalize", "quantize", "remove", "rename", "render", "save", "select", "set", "synthesize", "transpose", "undo", "vary"]);
+    const WRITING_VERBS = new Set(["add", "apply", "assign", "create", "delete", "duplicate", "export", "import", "make", "move", "normalize", "load", "quantize", "remove", "rename", "render", "save", "select", "set", "synthesize", "transpose", "undo", "vary"]);
     // `export_*` names a verb that sounds like writing and returns bytes while changing nothing: the promise `readOnly` makes is about the state, not about the word.
     const RETURNS_BYTES_DESPITE_THE_VERB = new Set(["export_arrangement_musicxml", "export_logic_project"]);
 

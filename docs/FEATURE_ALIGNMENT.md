@@ -35,7 +35,7 @@
 | 14 | ⭐ 段落试听渲染（span） | ✓ | ✗（Web 靠实时播放） | ✓ `render_arrangement_preview`、`render_preview_clip` | **Web ✗**：MCP 独有的"便宜听一段"；⚠️ span 语义 2026-10-05 改为**裁到 span**（`mcp/arrangement.ts` 的 `intoSpan`） |
 | 15 | 分轨导出（stems） | ✓ | ✅ **有入口**：`src/components/arrangement/ArrangementFileEntriesV2.tsx` 的 `onExportStems`（`data-testid="arrangement-export-stems"` ✓，文案 `toolbar_export_stems` ✓） | ✓ `render_arrangement_stems` | ✅ **三方齐**（2026-10-05 核实 ✓）；⚠️ 8 小节 5 轨 ≈ 300 s，**RPC 会超时**（见"未暴露/待办"） |
 | 16 | 响度与频谱分析 | ✓ | 🔶 `src/views/AnalyzerView.tsx` | ✓ `normalize_loudness`、`get_loudness_report`、`analyze_audio`、`spectral_balance` | Web 只读展示；MCP 可**产出报告** |
-| 17 | GS-1 音色（patch） | ✓ | 🔶 `StudioView` 的开关与选择器 | ✓ `apply_gs1_patch`、`get_gs1_patch` | MCP 面**更深**（完整 patch 设计） |
+| 17 | GS-1 音色（patch） | ✓ | 🔶 `StudioView` 的开关与选择器 | ✓ `apply_gs1_patch`、`get_gs1_patch`、`list_synth_presets`、`load_synth_preset` | MCP 面**更深**（完整 patch 设计）；⭐ synth 全部 **120** 个出厂预置按 id 可选 ✓（生成表 `synthPresets.generated.ts` ✓） |
 | 18 | 采样库管理 | ✓ | ✓ `src/components/settings/SampleLibrariesPanel.tsx` | ✓ `list_sample_libraries`、`add_sample_library`、`list_arrangement_instruments`、`inspect_instrument_sfz` | 三方齐 |
 | 19 | 采样乐器试听（单音） | ✓ | ✓ 键盘试听 | ✓ `render_instrument_note` | 三方齐 |
 | 20 | 主课／教学 | ✓ | ✓ `src/views/MasterclassView.tsx` | ✓ `list_masterclasses` | 三方齐（MCP 仅**列举**，无逐步教学状态） |
