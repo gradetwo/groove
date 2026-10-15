@@ -25727,3 +25727,48 @@ GlueCompressor 等已有 DSP 的编辑与使用路径 ✓。
   真实音频 `200 audio/mpeg 400030B` ✓。全量本地 **734 文件 / 5431 用例** ✓（发版树冻结后复跑 ✓）。
   发布链路 ✓：version:check / version:new / build / budget / **full CI** / deploy / tag / remote 全 ok ✓。
 ```
+
+## 四百零九、🎛️ **synth 全部 120 预置已可用（MCP 侧）；Web 选择器待做**（2026-10-15，进行中）
+
+```
+**业主决定 ✓**（我已核实并更正两处前提 ✓）
+  · 预置怎么进 groove：**生成表 + 自动校验** ✓（不是"运行时动态加载" ✓ —— 理由见下 ✓）
+  · 用户自建预置存哪：**跟项目走（IndexedDB）** ✓
+
+**⭐ 一处前提不成立 ✓（这是本轮最重要的发现 ✓）**：**"动态加载、不打包"在本架构下做不到 ✓**
+  synth 的预置是 **TypeScript 模块** ✓（`src/state/presets.ts` ✓）；**连它自己的 MCP 都要经构建管线打包**才能读 ✓
+  （`mcp/lib/data.mjs` ✓ 生成入口 + esbuild ✓ + 从 `.tmp/mcp/` 导入 ✓）。而本仓 MCP 是**独立 Node 进程** ✓，
+  够不到那份源码 ✓ ⇒ share code 只能靠**一个真在跑的 synth** ✓，而它的失败方式是**静默**的 ✓
+  （groove 只是比它宣称的少几个预置 ✓，没有任何东西说出口 ✓）。
+  ⇒ 所以走**生成表** ✓，但业主真正在意的"每次同步都要 review 91 个预置" ✓ 用**让表可被机器核对**解决得更彻底 ✓。
+
+**✅ 已完成 ✓**
+  · `scripts/sync_synth_presets.mjs` ✓：跑 synth 的 MCP ✓（`gs1.presets.list` + `gs1.patch.get` ✓）生成全表 ✓。
+    实测 **share code 可复现** ✓（同一预置在**两次独立进程**里逐字节相同 ✓）⇒ 提交表才可能被校验 ✓。
+  · `src/data/synthPresets.generated.ts` ✓：**120 个** ✓，7 个分类 ✓，含 `catlead`／`bladerunner`／`dxepiano` ✓。
+  · `npm run sync:synth-presets` ✓ 重新生成 ✓、`npm run check:synth-presets` ✓ 差异即红 ✓
+    （⚠️ check 需要 synth 检出 ✓，CI 没有 ✓ ⇒ 所以与 `synthPresetsSync.test.ts` **分工明确** ✓：
+      check 答"这是不是 synth 当前的答案" ✓；测试答"这份答案自身是否成立" ✓ —— 后者只需仓库 ✓）。
+  · MCP `list_synth_presets` ✓（可选按 synth 自己的分类过滤 ✓，**故意不返回 share code** ✓ —— 900 字符的 blob ✓
+    会让列表在对话里没法读 ✓）、`load_synth_preset` ✓（按 id 把预置写到轨 ✓，接受轨 id 或名字 ✓，
+    **先校验后写** ✓，拒绝时什么都没写 ✓）。
+  · 判据 ✓：`synthPresetsSync.test.ts` 5 条 ✓（每个 code 用本仓 `decodeGs1PatchCode` 解一遍 ✓、id/code 唯一 ✓、
+    分类是 synth 自己的 7 个 ✓、三个点名预置在 ✓、人声五个在 ✓）＋ `mcpSynthPresets.test.ts` 4 条 ✓。
+    红证明 ✓：截断一个 code（仍带前缀、看着合法 ✓）⇒ 解码条红 ✓。
+
+**⚠️ 两处更正业主的提案 ✓**
+  · **分类不是提案里那套 ✓**：它写 人声/语音、生物/科幻、复古/电影… ✓ 但 synth 的 `PRESET_CATEGORIES` 是
+    `BASIC, BASS, FX, KEYS, LEAD, PAD, PLUCK` ✓（**7 个** ✓，实测非假定 ✓）。自造第二套分类会让
+    groove 的选择器与 synth 的抽屉**对"这是什么预置"各说各话** ✓ —— 正是这份表要防的漂移 ✓。
+  · **手写补丁是 19 个不是 10 个 ✓**：`GS1_PATCHES` 实测 19 项 ✓（`sampleSurface`／`electricPiano`／`supersawStack`… ✓）。
+    按约定**未改动** ✓。
+
+**❌ 未做（P1 剩余 + 整个 P2 ✓）**
+  · **Web 端"Synth 预置"分类（可搜索、可试听）** ✓ —— 需改 `InstrumentPicker`／`TrackInspector`／`ConsolePanel`
+    的**状态写入路径** ✓（`InstrumentPicker` 选的是**乐器名** ✓，写 `track.instrument` ✓；而预置要写
+    `track.gs1Patch` ✓ —— 是**另一个字段、另一条数据路径** ✓，不是加一个分类项那么简单 ✓）。
+  · ⚠️ **顺手发现一个既有缺陷（与本次改动无关 ✓）**：真正的 `ConsolePanel` 调用点传的
+    `onInstrumentChange` 是**空实现** ✓（注释写"选择器在条带上 ✓" ✓）⇒ **用户在用真实的音色选择器时，
+    选择是被静默丢弃的** ✓。我只确认了这一处 ✓；修它属于另一个判断 ✓，我没有动 ✓。
+  · **P2 用户自建预置**整块未做 ✓（存储定为项目 IndexedDB ✓；MCP 五个工具 ✓ 仍需一个 groove 侧落地位置 ✓）。
+```
