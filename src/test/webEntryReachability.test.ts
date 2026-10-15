@@ -118,9 +118,9 @@ const UI_LEDGER: Record<string, Ruling> = {
       "Census G6a. The arrangement has one fixed BPM input and no tempo track / tempo-marker surface, while the model, the renderer and the MCP tool `set_arrangement_tempo_map` all support a map — the field's own comment in `src/types/arrangementV2.ts:194` records the half-built shape. Nothing in `src/components`, `src/views` or `src/features` references the function today.",
   },
   setTrackSteps: {
-    status: "pending-owner-ruling",
+    status: "excluded-by-policy",
     reason:
-      "Found by this gate. The whole-pattern step write has no caller in product source: the interface toggles one step at a time through `toggleStep`, and `mcpCoverage.test.ts:57` already records the adjudication that a toggle \"would be a second way to say the same thing, and the two would drift\". That reasoning argues the capability is covered, but it is an MCP-side decision; whether the arrangement needs a bulk step entry is not something this gate may decide on the owner's behalf.",
+      "The reversal of an adjudication this repository had already made, applied to the other direction. `mcpCoverage` excludes `toggleStep` from the protocol because `set_arrangement_track_steps` writes a whole pattern in one call and a toggle \"would be a second way to say the same thing, and the two would drift\". The same argument runs backwards: the interface already writes steps through `toggleStep`, one at a time, so a bulk step field in the arrangement would be that same second way. The capability is therefore reached from the Web — a person can write any step pattern, one press per step — and the only thing missing is a bulk entry the repository has already ruled against. Note this is a decision, not an excuse: the two gates now record opposite halves of one judgement, and a future round that wants a bulk step field must change both.",
   },
 };
 
@@ -408,8 +408,10 @@ describe("G10 · every arrangement operation the model can do, the Web can reach
     const pending = ledgerByStatus("pending-owner-ruling");
     const excluded = ledgerByStatus("excluded-by-policy");
     expect(pending.filter((name) => excluded.includes(name))).toEqual([]);
-    // ⭐ Today `excluded-by-policy` is empty on purpose: every one of the six is undecided, so filing one as
-    // an exclusion would be this gate making the owner's decision. When the owner rules, one moves here.
+    // ⭐ `excluded-by-policy` is no longer empty: `setTrackSteps` moved there on 2026-10-15, by applying the
+    // adjudication `mcpCoverage` had already made about the same pair of operations in the other direction (see its
+    // `EXCLUDED` entry for `toggleStep`). The rest are still undecided, and filing one of *them* here would be this gate
+    // making the owner's decision rather than recording it.
     // Documentation only — printed so the unreached half of the ledger is visible in CI output.
     // eslint-disable-next-line no-console
     console.info(
