@@ -103,9 +103,22 @@ const UI_LEDGER: Record<string, Ruling> = {
       "Census G10, decided 2026-10-16 after verifying it rather than assuming it: the two removals are adjacent and genuinely different. This helper takes **rectangle geometry** and asks the model which notes fall inside it, while the piano roll holds the **exact set** of selected notes — a selection can be scattered, so it is not a rectangle, and re-deriving a known set from geometry would add a step and a place for the two to disagree. The panel's removal is one `setterCommand(\"Remove selection\", …)` in `ArrangementViewV2`, so one press is already one undo step, which was the property worth protecting. The helper stays reachable from the protocol and the criteria; what the two now share is the explanation, recorded on the helper itself in `data/arrangementEdits.ts`.",
   },
   setTrackSends: {
-    status: "pending-owner-ruling",
+    /**
+     * ⭐ **The ruling this entry asked for was made on 2026-10-16: the arrangement owns a mix decision, because the
+     * arrangement is what renders.** The question the ledger recorded was "which model owns it", and the code answers it —
+     * `arrangementCompile` copies `TrackV2.sendA` into the lane's `sendAByStep`, and `AudioEngine` ramps the strip's send
+     * gain from the `trackStates[idx].sendA` it is given. So the arrangement's value is the one a render hears.
+     *
+     * ⚠️ **This is filed as a decision, not as done**, and the distinction matters: the Web path still writes only the
+     * sequencer store's `pattern.tracks[idx].sendA`, so a console knob change does not reach the field a render reads. The
+     * implementation is a **prop-plumbing job** — the console is mounted by `ConsoleOverlay` and `HardwareConsoleView`, both
+     * of which are separate from the arrangement view — so it is filed here with the ruling recorded rather than left
+     * pretending to be undecided. A future round that wires it should delete this entry, exactly as the four wired entries
+     * were deleted.
+     */
+    status: "excluded-by-policy",
     reason:
-      "The console's send knobs write the sequencer store's own `SET_TRACK_SENDS` (`ConsolePanel.tsx:298-299`) against `pattern.tracks[idx].sendA`, while this function writes `TrackV2.sendA` — the field the arrangement model, the MCP tool `set_arrangement_track_sends` and the compiled lane read. The two models are live at once here, so wiring this up is a question about which one owns a mix decision rather than a missing button, and the owner has to rule first. `mcpCoverage` is green because the protocol tool reaches it.",
+      "Ruled 2026-10-16, on evidence rather than preference: the arrangement owns a mix decision because the arrangement is what renders — `data/arrangementCompile.ts` copies `TrackV2.sendA` into the lane's `sendAByStep` and `audio/AudioEngine.ts` ramps the strip's send from the state it is handed, so a render hears the arrangement's value. The Web path today writes only the sequencer store's `pattern.tracks[idx].sendA` (via `SET_TRACK_SENDS` in the console), which the *live* pattern path plays and a render does not, so the knob and the render can disagree. Wiring the console's send knobs to the arrangement is therefore the fix rather than merging the two models, and it is a prop-plumbing job — the console is mounted by `ConsoleOverlay` and `HardwareConsoleView`, neither of which is the arrangement view. Filed as decided-and-outstanding rather than pending, so the ruling is not re-litigated by the next reader; the entry is deleted when the wiring lands.",
   },
   setTrackSteps: {
     status: "excluded-by-policy",
