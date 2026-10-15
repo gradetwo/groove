@@ -253,7 +253,13 @@ describe("MCP · the declared surface", () => {
      * The promise being checked is the client's: `readOnly` means calling the tool changes nothing. So the annotation has to agree with the verb in the name, and the two tools that use a writing verb while only returning bytes are named here rather
      * than hidden behind a prefix list that would misclassify them.
      */
-    const WRITING_VERBS = new Set(["add", "apply", "assign", "create", "delete", "duplicate", "export", "import", "make", "move", "normalize", "quantize", "remove", "rename", "render", "save", "select", "set", "transpose", "undo", "vary"]);
+    /**
+     * ⭐ **`synthesize` is here because the tool that carries it now writes.** The verb sounds like it only computes,
+     * which is exactly why the rule missed it: `synthesize_vocal` used to be an honest stub (`readOnly: true`), and it
+     * now binds a lane to one of the synth's factory vowel voices — a real write. Naming the verb is the point of the
+     * rule: the annotation follows what the tool *does*, not what its name suggests.
+     */
+    const WRITING_VERBS = new Set(["add", "apply", "assign", "create", "delete", "duplicate", "export", "import", "make", "move", "normalize", "quantize", "remove", "rename", "render", "save", "select", "set", "synthesize", "transpose", "undo", "vary"]);
     // `export_*` names a verb that sounds like writing and returns bytes while changing nothing: the promise `readOnly` makes is about the state, not about the word.
     const RETURNS_BYTES_DESPITE_THE_VERB = new Set(["export_arrangement_musicxml", "export_logic_project"]);
 

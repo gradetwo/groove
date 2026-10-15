@@ -6,7 +6,8 @@
 import path from "node:path";
 import { ToolDefinition, failure } from "./toolKit";
 import { setVocalMelody } from "./vocal";
-import { flattenMcpArrangement, setMcpTrackNotes } from "./arrangement";
+import { flattenMcpArrangement, getMcpArrangement, getMcpTrack, setMcpTrackGs1, setMcpTrackNotes } from "./arrangement";
+import { FACTORY_VOCAL_PATCHES, vocalPatchById } from "../src/data/vocalPatches";
 import { STEPS_PER_BAR } from "../src/data/noteEvents";
 import { z } from "zod";
 
@@ -83,29 +84,79 @@ export const VOCAL_TOOLS: ToolDefinition[] = [
   },
   {
     /**
-     * Owner decision 4: the singing-synthesis interface is **reserved and empty**, and it says so.
+     * ⭐ **The vocal lane gets a voice, which is the piece that was actually missing.**
      *
-     * A hole an agent will guess at is worse than a refusal: with no tool at all it builds a vocal out of what it has and produces something that sounds like a
-     * mistake. This is reachable, validates the arguments a real implementation would need, and answers honestly — so the absence is a fact about the server
-     * instead of a surprise, and a `check:mcp` case holds the answer in place.
+     * This tool used to be an honest stub: it reported singing synthesis as reserved, because this repository had **no
+     * vocal patch at all**. The synth project then shipped five formant vocal-choir presets (`gradetwo/synth` `d75630c`),
+     * and `data/vocalPatches.ts` carries them; what was missing after that was the wiring, not the voice.
+     *
+     * ⚠️ **What it does and does not do, because the difference is the whole point.** It binds the lane to one of those
+     * factory patches — writing `TrackV2.gs1Patch`, the field the GS-1 host loads a lane's sound from — so the notes
+     * already on that lane sound through a vowel-shaped voice. It does **not** turn a lyric into singing: a share code
+     * carries a voice, not words, so "sing these syllables" is not something this can honour and it does not pretend to.
+     * The lyric is bound to the notes with `set_arrangement_vocal_melody`, which is where a syllable's tone is checked
+     * against the pitch it is sung on.
      */
     name: "synthesize_vocal",
-    title: "Sing a lyric (reserved — not implemented)",
+    title: "Give a vocal lane one of the factory vowel voices",
     description:
-      "Reserved for singing synthesis (SVS) and **not implemented**: this call always reports that the capability is reserved. Changes nothing. It exists so an agent discovers the absence instead of guessing. It validates the arguments a future implementation would take (a lyric, one tone per syllable, and the lane to sing on) so the failure explains what is missing rather than what is malformed.",
-    readOnly: true,
+      "Voice a lane with one of the synth's five factory vocal-choir patches: vocalah, vocaloh, vocalee, vocaloo, vocalhum. Writes the lane's own GS-1 sound (`gs1Patch`) to that patch's share code, so the notes already on the lane sound through it. Pick by `patch` id or by `vowel` (a/o/e/oo/hum). This does not synthesise singing: a share code carries a voice, not words, so bind the lyric to the notes with set_arrangement_vocal_melody instead.",
+    readOnly: false,
     inputSchema: {
-      syllables: z.array(z.string().max(8)).min(1).max(64).describe("one syllable per note, as set_arrangement_vocal_melody takes them"),
-      tones: z.array(z.number().int().min(0).max(5)).min(1).max(64).describe("one tone per syllable"),
-      track: z.string().max(40).optional().describe("the lane to sing on; default lead"),
+      arrangementId: z.string(),
+      track: z.string().max(40).describe("the lane to voice, by track id or name"),
+      patch: z.string().max(24).optional().describe("a factory vocal patch id; omit to use the one named by `vowel`"),
+      vowel: z.string().max(8).optional().describe("ah, oh, ee, oo or hum — picks the patch by the vowel it is shaped for"),
     },
     handler: (args) => {
-      if ((args.syllables as string[]).length !== (args.tones as number[]).length) {
-        return failure("one tone per syllable, as set_arrangement_vocal_melody requires — and note that this tool is reserved and does not sing anything yet");
+      const arrangementId = String(args.arrangementId);
+      const arrangement = getMcpArrangement(arrangementId);
+      if (!arrangement) return failure(`no arrangement "${arrangementId}" — create one first`);
+
+      /**
+       * ⭐ **The voice is resolved before anything is written.** `setMcpTrackGs1` goes through `edit`, which records the
+       * state being left behind, so a refusal after the write would leave an undo step for a change that never happened.
+       */
+      const wanted = args.patch === undefined ? undefined : String(args.patch);
+      const vowel = args.vowel === undefined ? undefined : String(args.vowel).toLowerCase();
+      const patch = wanted !== undefined ? vocalPatchById(wanted) : undefined;
+      if (wanted !== undefined && patch === undefined) {
+        return failure(
+          `no factory vocal patch "${wanted}" — the five are ${FACTORY_VOCAL_PATCHES.map((row) => row.id).join(", ")}`
+        );
       }
-      return failure(
-        "reserved, not implemented: singing synthesis is an interface here and no implementation. For a sung line today use set_arrangement_vocal_melody (which binds syllables to notes and checks the tones) with the synth voices the genre already has; the SVS direction is the upstream synth project (docs/SYNTH_UPSTREAM_PLAN.md)."
-      );
+      const byVowel = vowel === undefined ? undefined : FACTORY_VOCAL_PATCHES.find((row) => row.vowel === vowel || row.id.endsWith(vowel));
+      if (patch === undefined && vowel !== undefined && byVowel === undefined) {
+        return failure(
+          `no factory vocal patch for vowel "${vowel}" — the five are ${FACTORY_VOCAL_PATCHES.map((row) => `${row.id} (${row.vowel})`).join(", ")}`
+        );
+      }
+      const chosen = patch ?? byVowel ?? vocalPatchById("vocalah")!;
+
+      // The lane, by id first and then by name — the same two ways an agent has of naming it.
+      const key = String(args.track);
+      const target = arrangement.tracks.find((row) => row.id === key) ?? arrangement.tracks.find((row) => row.name === key);
+      if (!target) {
+        return failure(
+          `no track "${key}" in "${arrangementId}" — the tracks are ${arrangement.tracks.map((row) => `${row.id} (${row.name})`).join(", ")}`
+        );
+      }
+      if (getMcpTrack(arrangementId, target.id) === undefined) return failure(`track "${key}" disappeared before it could be voiced`);
+
+      const result = setMcpTrackGs1(arrangementId, target.id, chosen.shareCode, null);
+      return {
+        arrangementId,
+        trackId: target.id,
+        track: target.name,
+        voice: { patch: chosen.id, label: chosen.label, vowel: chosen.vowel, shareCode: chosen.shareCode },
+        /**
+         * Stated in the reply rather than left to the description: the caller is told which half it got, so "the lane
+         * sings this lyric" cannot be mistaken for something this returned.
+         */
+        bound: "the lane's own sound, so its notes sound through this voice",
+        notDone: "singing synthesis — a share code carries a voice, not words; bind the lyric with set_arrangement_vocal_melody",
+        summary: result.summary,
+      };
     },
   },
 ];
