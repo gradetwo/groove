@@ -72,10 +72,20 @@ const ROOT_DIR = path.resolve(SRC_DIR, "..");
 const EDITS_PATH = path.join(SRC_DIR, "data", "arrangementEdits.ts");
 
 /**
- * The same verb list `mcpCoverage.test.ts` uses, kept identical on purpose: the two gates must agree about
- * what counts as "an operation that changes the model", or one of them will cover for the other's blind spot.
+ * ⭐ **Read-only exports, each with a reason — and everything else counts as an operation.**
+ *
+ * This list is **identical on purpose** to the one in `mcpCoverage.test.ts`, and a criterion there compares the two by
+ * reading this file's source: the two gates read one module, so two lists that drifted would each cover for the other's
+ * blind spot. The inversion itself is explained in full on that list; the short version is that a white-list of verbs
+ * (`/^(add|set|remove|…)/`) made **twelve mutating exports invisible to both gates**, including one —
+ * `duplicateNotesByDelta` — that also had no Web entry, which is exactly the defect this file exists to catch.
  */
-const OPERATION = /^(add|set|remove|rename|change|toggle|select|assign|create)/;
+const READ_ONLY: Record<string, string> = {
+  carriesStarterNotes: "a query: does this lane still hold the starter content, or has a person replaced it?",
+  starterNotesFor: "a query: the notes a kind is created with, exposed so a caller can tell them from a person's own",
+  requireTrackKind: "a validator that throws when a track is missing; it returns nothing and changes nothing",
+  notesWithinRect: "a query: which notes fall inside a rectangle — the reader both rectangle edits are built from",
+};
 
 /** `src/test/**` is not a product surface; `mcp/**` is the other direction. */
 const EXCLUDED_DIRS = new Set([path.join(SRC_DIR, "test")]);
@@ -103,6 +113,23 @@ const UI_LEDGER: Record<string, Ruling> = {
       "Census G10, decided 2026-10-16 after verifying it rather than assuming it: the two removals are adjacent and genuinely different. This helper takes **rectangle geometry** and asks the model which notes fall inside it, while the piano roll holds the **exact set** of selected notes — a selection can be scattered, so it is not a rectangle, and re-deriving a known set from geometry would add a step and a place for the two to disagree. The panel's removal is one `setterCommand(\"Remove selection\", …)` in `ArrangementViewV2`, so one press is already one undo step, which was the property worth protecting. The helper stays reachable from the protocol and the criteria; what the two now share is the explanation, recorded on the helper itself in `data/arrangementEdits.ts`.",
   },
   /**
+   * ⭐ **Two entries the operation-verb inversion added, measured rather than assumed.** Until 2026-10-16 this gate
+   * filtered exports by a white-list of verbs, so neither of these was ever scanned: `duplicateNotesByDelta` and
+   * `resetTrackIdsForTests` begin with no verb on that list. The inversion (`READ_ONLY` above) made the default "it
+   * changes the model", and the scan then reported exactly four unreachable operations instead of two — these are the
+   * two new ones, and both are decisions rather than gaps.
+   */
+  duplicateNotesByDelta: {
+    status: "excluded-by-policy",
+    reason:
+      "Measured 2026-10-16, and it is the same adjudication as `removeNotesWithinRect` on the other half of the same pair. The interface's copy is `arrangement-copy-selection`, which copies the **exact marked set** by the selection's own span — and a scattered selection is not a rectangle, so re-deriving one from the marks would copy notes the person did not select. Its only readers are the criteria and this rule; the MCP-side exclusion in `mcpCoverage` says the same thing from the protocol's side, where a caller names the notes it wants through `add_arrangement_note`. The helper is therefore kept for the protocol and the criteria, with the reason recorded rather than the function deleted, because the rectangle-copy capability is a real one a future surface may drive.",
+  },
+  resetTrackIdsForTests: {
+    status: "excluded-by-policy",
+    reason:
+      "A **test seam** rather than an operation: it exists so a criterion can predict the id a fresh arrangement will mint. `mcpCoverage`'s EXCLUDED list carries the identical reason from the protocol's side, so the two gates agree rather than one of them quietly excusing what the other covers.",
+  },
+  /**
    * ⭐ **`setTrackSends` was ruled on 2026-10-16, twice, and the second ruling corrected the first.** Kept here as a note
    * rather than as an entry because the map may only hold operations the scan cannot reach.
    *
@@ -116,14 +143,22 @@ const UI_LEDGER: Record<string, Ruling> = {
    *
    * **The owner's ruling, 2026-10-16: for now the studio route's sequencer pattern is the authority for its own sends**
    * ("先 B"). The console therefore keeps writing `pattern.tracks[idx].sendA`, which is the field its own playback path
-   * reads, and **no code changed** for this ruling. The arrangement's `sendA` remains what a *compiled render* reads, and
-   * remains writable from the protocol (`set_arrangement_track_sends`), which is why `setTrackSendsCommand` exists.
+   * reads, and **no code changed** for this ruling. The arrangement's `sendA` remains what a *compiled render* reads.
    *
-   * ⚠️ **What that leaves, stated rather than glossed:** the same concept has an authority per route, so a send set on the
-   * console is not in a render and a send set through the protocol is not on the console. The owner chose the follow-on
-   * direction too — **"再 A": lift the arrangement into shared state** so one surface can drive both — and that work is
-   * recorded in `docs/OPEN_WORK.md` §412-10 rather than started here, because it touches the arrangement's undo and
-   * persistence boundaries (IndexedDB in `projectDb`, file export) which that view currently owns.
+   * ⭐ **And the arrangement's own half landed the same day** (2026-10-16): `TrackListV2` now draws a reverb and a delay
+   * send beside the level and pan, and `ArrangementViewV2` commits them through `setTrackSendsCommand` — measured before
+   * the change, **no non-test file outside `arrangementEdits`/`arrangementHistory` named `sendA` at all**, so the field
+   * this operation writes had no control anywhere in the Web even on its own route. `arrangementSendControl.test.tsx`
+   * pins both halves (the control reports; the call site wires). Before that, an arrangement could *automate* a send while
+   * the value the curve modulates was unreachable.
+   *
+   * ⚠️ **What that leaves, stated rather than glossed:** the same concept still has an authority per route — a send set on
+   * the console is not in a render, and a send set on the arrangement is not on the console. The owner chose the follow-on
+   * direction too — **"再 A": lift the arrangement into shared state** — and measuring it first **moved its blocker**:
+   * the two routes share no track key at all (v1 lanes are addressed by *index* through `SET_TRACK_SENDS` and
+   * `SequencerTrack` has no `id`; an arrangement track is keyed by `freshId(kind)`), so A begins with an **identity**
+   * decision rather than with a store. That measurement and the options are recorded in `docs/OPEN_WORK.md` §四百一十六;
+   * the persistence and undo boundaries §412-10 named are still what a lift would touch.
    */
   setTrackSteps: {
     status: "excluded-by-policy",
@@ -260,7 +295,7 @@ export function scanWebEntries(): WebEntryScan {
 function runScan(): WebEntryScan {
   const definitions = fs.readFileSync(EDITS_PATH, "utf8");
   const exports = [...definitions.matchAll(/^export function ([A-Za-z0-9_]+)\(/gm)].map((match) => match[1]!).sort();
-  const operations = exports.filter((name) => OPERATION.test(name));
+  const operations = exports.filter((name) => !(name in READ_ONLY));
 
   /**
    * The data module's own function bodies. Kept for **every** export, not only the verb-shaped ones: a helper

@@ -14,8 +14,33 @@ import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import { TOOLS } from "../../mcp/registry";
 
-/** `resetTrackIdsForTests` is a seam, and the verbs below are how an operation that changes the model names itself. */
-const OPERATION = /^(add|set|remove|rename|change|toggle|select|assign|create)/;
+/**
+ * ⭐ **Read-only exports, each with a reason — and *everything else* counts as an operation.**
+ *
+ * This used to be the other way round: a white-list of verbs an operation could start with
+ * (`/^(add|set|remove|rename|change|toggle|select|assign|create)/`), and anything outside it was invisible to this gate.
+ * Measured 2026-10-16, `src/data/arrangementEdits.ts` exported **twelve functions that change the model whose names begin
+ * with none of those verbs** — `arpeggiateNotesInRect`, `duplicateNotesByDelta`, `humanizeArrangementNoteVelocity`,
+ * `insertTrack`, `legatoNotesInRect`, `quantizeArrangementNoteLengths`, `rampArrangementNoteVelocity`, `rampVelocityInRange`,
+ * `replaceTrack`, `stampChordInRect`, `transposeNotesInRange`, `varyArrangementNotes` — so neither this gate nor its
+ * Web-side twin (`webEntryReachability.test.ts`, which copied the same expression on purpose) could see them at all.
+ * Three of them had a tool all along and were simply not linked to it; one of them had **no Web entry either**, which is
+ * precisely the defect the twin exists to catch.
+ *
+ * The default is now "it changes the model", and the exceptions are named here. The cost is deliberate: a new *query* or
+ * validator in this module needs one line with a reason, while a new *operation* is covered the moment it is written.
+ * Erring towards "operation" is the right side for a gate whose whole job is to notice that nobody wired something up.
+ *
+ * ⚠️ **This list and the one in `webEntryReachability.test.ts` must stay identical** — both gates read one module, and two
+ * lists that drifted would each be able to cover for the other's blind spot. A criterion below compares them by reading
+ * the other file's source.
+ */
+const READ_ONLY: Record<string, string> = {
+  carriesStarterNotes: "a query: does this lane still hold the starter content, or has a person replaced it?",
+  starterNotesFor: "a query: the notes a kind is created with, exposed so a caller can tell them from a person's own",
+  requireTrackKind: "a validator that throws when a track is missing; it returns nothing and changes nothing",
+  notesWithinRect: "a query: which notes fall inside a rectangle — the reader both rectangle edits are built from",
+};
 
 /**
  * Operation → the tool that exposes it. Both directions are checked below, so a tool named here that does not exist is also a failure.
@@ -66,6 +91,15 @@ const EXPOSED: Record<string, string> = {
   addTake: "add_arrangement_take",
   selectTrackTake: "select_arrangement_take",
   assignTakeToRange: "assign_arrangement_take_range",
+  /**
+   * ⭐ **Three tools that already existed, linked for the first time by the read-only inversion.** They were reached from
+   * `mcp/arrangement.ts` all along (`varyArrangementNotes` at `:928`, `quantizeArrangementNoteLengths` at `:933`,
+   * `transposeNotesInRange` at `:985`); what was missing was any record that they are operations, because their names do
+   * not start with a verb from the old list.
+   */
+  varyArrangementNotes: "vary_arrangement_notes",
+  quantizeArrangementNoteLengths: "quantize_arrangement_note_lengths",
+  transposeNotesInRange: "transpose_arrangement_notes",
 };
 
 /**
@@ -74,11 +108,31 @@ const EXPOSED: Record<string, string> = {
 const EXCLUDED: Record<string, string> = {
   toggleStep: "`set_arrangement_track_steps` writes a whole pattern in one call; a toggle would be a second way to say the same thing, and the two would drift",
   duplicateNotesByDelta:
-    "a region edit driven by a drag, and the protocol reaches the same notes one at a time through add_arrangement_note and move_arrangement_note",
+    "a rectangle copy, and the interface's own copy acts on the **exact marked set** (`arrangement-copy-selection`) rather than on geometry — a scattered selection is not a rectangle, and re-deriving one would copy notes the person did not select. The protocol reaches the notes one at a time through add_arrangement_note",
   removeNotesWithinRect:
-    "the deletion half of that region edit, and remove_arrangement_note removes one note, which is what a protocol caller asks for",
+    "the deletion half of that rectangle pair, with the same reason: the interface removes the marked set, and remove_arrangement_note removes one note, which is what a protocol caller asks for",
   legatoNotesInRect:
     "a note-length edit driven by a selection, and the protocol sets one length at a time through set_arrangement_note_length",
+  /**
+   * ⭐ **The selection gestures the inversion surfaced.** Each is a Web editing action over the roll's marks; the protocol
+   * writes the notes it wants one at a time, and a *selection* is a surface concept with no protocol equivalent (a tool
+   * call names notes, not a selection). Writing the policy down once, here, is the point of the four entries — before the
+   * inversion nothing asked whether these needed a tool.
+   */
+  stampChordInRect:
+    "a selection gesture: the roll's marks decide where the chord lands, and the protocol writes the notes it wants through add_arrangement_note",
+  arpeggiateNotesInRect:
+    "the arpeggio half of the same gesture — the marks decide the span — and the protocol adds the notes one at a time",
+  humanizeArrangementNoteVelocity:
+    "a humanising pass over a selection; the hash that makes it reproducible is a Web editing decision, and the protocol sets one note's velocity through set_arrangement_note_velocity",
+  rampArrangementNoteVelocity:
+    "a velocity ramp drawn across a selection, which a protocol caller expresses by writing the velocities it wants (set_arrangement_note_velocity)",
+  rampVelocityInRange:
+    "the span-scoped form of that ramp; its caller is `arrangementFormPlan`'s form port, not a tool",
+  insertTrack:
+    "an undo primitive rather than an operation: `arrangementHistory`'s track commands call it to put a track back at its index, and the protocol reaches those through add_arrangement_track",
+  replaceTrack:
+    "the same for a whole track object — how a kind change and a track restore put the previous track back — reached through set_arrangement_track_kind",
   resetTrackIdsForTests: "a test seam rather than an operation — it exists so a criterion can predict an id",
 };
 
@@ -88,7 +142,20 @@ function everyExport(): string[] {
 }
 
 function operationsInSource(): string[] {
-  return everyExport().filter((name) => OPERATION.test(name));
+  /**
+   * ⭐ **Everything that is not named as read-only is an operation.** `everyExport` reads the source rather than the module
+   * for the reason this file's header gives: the point is to notice an export nobody wired up, and an import list would
+   * only see the ones somebody did.
+   */
+  return everyExport().filter((name) => !(name in READ_ONLY));
+}
+
+/** The read-only names the Web-side twin pins, read from its source so the two cannot drift apart in silence. */
+function readOnlyInTheOtherGate(): string[] {
+  const source = readFileSync("src/test/webEntryReachability.test.ts", "utf8");
+  const start = source.indexOf("const READ_ONLY");
+  const block = source.slice(start, source.indexOf("};", start));
+  return [...block.matchAll(/^\s{2}([A-Za-z0-9_]+):/gm)].map((match) => match[1]!).sort();
 }
 
 describe("the arrangement surface covers the arrangement layer", () => {
@@ -117,10 +184,37 @@ describe("the arrangement surface covers the arrangement layer", () => {
   });
 
   it("keeps MCP first for anything added later, which is what the operation verb marks", () => {
-    // The rule the three above implement: a verb that changes the model means a tool, unless a reason is written down.
+    // The rule the three above implement: the default is "it changes the model" and needs a tool, unless a reason says otherwise.
     for (const name of operationsInSource()) {
       if (name in EXCLUDED) expect(EXCLUDED[name]!.length, `${name} needs a real reason`).toBeGreaterThan(30);
     }
+  });
+
+  it("⭐ erring towards 'operation' is only cheap while the read-only list stays a list of reasons", () => {
+    /**
+     * ⭐ **The inversion is only safe if the exception list cannot quietly become a dump.** A blank reason, or one that
+     * just restates the name, would turn "everything else is an operation" into "everything is exempt" — a worse blind
+     * spot than the verb list it replaced. So each exception carries a sentence, and the list is short enough to read.
+     */
+    for (const [name, reason] of Object.entries(READ_ONLY)) {
+      expect(reason.length, `${name} needs a real reason, not a label`).toBeGreaterThan(40);
+      expect(reason, `${name}'s reason should say what it is`).toMatch(/^a (query|validator)/);
+    }
+    expect(Object.keys(READ_ONLY).length, "a long exception list means the default is wrong").toBeLessThan(8);
+  });
+
+  it("⭐ classifies the read-only exports exactly as the Web-side gate does", () => {
+    /**
+     * ⭐ **Two gates, one module, and therefore one list.** `webEntryReachability.test.ts` copied the verb expression from
+     * here on purpose ("the two gates must agree about what counts as an operation that changes the model, or one of them
+     * will cover for the other's blind spot"). With the default inverted, that agreement now has to be checked rather than
+     * assumed: two lists that drifted apart would each hide the other's gap. The other file's source is read so the pin
+     * is about what is written, not about what this file hopes is written.
+     */
+    expect(
+      readOnlyInTheOtherGate(),
+      "these two files must classify the same exports as read-only — see the note on READ_ONLY"
+    ).toEqual(Object.keys(READ_ONLY).sort());
   });
 });
 
