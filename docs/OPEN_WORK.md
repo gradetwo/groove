@@ -26328,3 +26328,47 @@ GlueCompressor 等已有 DSP 的编辑与使用路径 ✓。
 
 **👤 业主三项至此全部完成 ✓**：① B 已裁定并记录（A 的设计已备 ✓）；② A3 人性化已落地 ✓；③ B1 预览已落地并可达 ✓。
   全量 **744 文件 / 5439 用例** ✓（满量程时 `mobileClipProgress` 抖动 ✓、单独跑绿 ✓ —— 见 §402 ✓）。
+
+---
+
+## 四百一十五、🚀 **已发布 v2.48.1：编排的编辑能力补齐并线上复验**（2026-10-16 ✓）
+
+**业主指令 ✓**："发版v2.48.1" ✓ —— 此前"不用发版本"的约束**由这一句解除** ✓（发版是业主的动作 ✓，我不自行发起 ✓）。
+
+**`category: feature` ✓**：这一版是 **Web 界面追上编排模型** ✓。五件编辑器该有的能力此前**没有任何界面** ✓
+  —— **改名** ✓、**拍号** ✓、**速度图** ✓、**分组** ✓、**人性化** ✓；随行的还有**用户预置试听** ✓
+  （自己的发声槽 `PREVIEW_SLOT = -1` ✓）与**删掉死掉的钢琴卷帘屏** ✓（3,264 行 ✓，连同只指向它的两步教程 ✓）。
+
+**发版读数 ✓**（`SKIP_LOCAL_GATE=1 bash scripts/release.sh` ✓，日志 `/var/tmp/release-2.48.1.log` ✓）：
+  `version:check ok` ✓／`version:new ok` ✓／`local gate skipped (SKIP_LOCAL_GATE=1)` ✓／`build ok` ✓／
+  `budget ok` ✓／`full CI ok` ✓／`deploy ok` ✓／`tag ok` ✓／`remote ok` ✓。
+  派发的全量 run `38826213785` ✓ 最终 `success` ✓（`Typecheck, Lint, Unit Tests & Build` ✓ ＋
+  `E2E Desktop browsers (Playwright)` ✓；`nightly` 与 4 个 shard 按 `nightly=false` 跳过 ✓，发版要的是浏览器矩阵 ✓）。
+
+**线上复验 ✓（读文件，不读"推送成功" ✓）**：
+  · `version.json` = **2.48.1** ✓（`releaseDate` / `latest.date` 均 `2026-10-15` ✓、`changelogCount: 10` ✓、`truncated: true` ✓）；
+  · `genre-clips.json` = **159 条 ✓、`engineVersion` 全部 2.48.1** ✓、主机 `r2mirror.groove.wangda.today` ✓
+    —— 这一版是**重新盖章**而不是重渲染 ✓：本版没有改变任何 genre 片段如何解析 ✓，
+    而清单的**新鲜度判据**（`genreClips.test.ts` ✓）会拿它和 `public/version.json` 比 ✓ ⇒ 不盖章就必红 ✓；
+  · `sw.js` = `CACHE_VERSION = "groove-v2.48.1"` ✓；
+  · `origin/dev` ✓ = `origin/main` ✓ = `v2.48.1^{}` ✓ = **`81d9b74`** ✓，四处 `package.json` 都是 2.48.1 ✓；
+  · ⭐ **线上分块里真的是这次的新字符串** ✓：`assets/index-aJyNV1Y7.js` 含 `人性化` ✓、`拍号` ✓、`分组` ✓、`速度图` ✓，
+    这四条**都是本版新增的 i18n** ✓（`git diff v2.48.0..HEAD -- src/i18n/locales/studio.ts` ✓）——
+    **"版本号对了"与"新界面真的在线上"是两件事** ✓，这里读的是后者 ✓。
+    ⚠️ **`data-testid` 在生产包里被剥掉** ✓ ⇒ **不能用 testid 求证上线** ✓：
+    `arrangement-humanize-selection` ✓、`tempo-map-add` ✓、`track-name-input` 等**一律 0 次** ✓，
+    而 `arrangement-editor-roll` 只出现 1 次是因为它写在教程数据里 ✓（不是标记 ✓）。
+
+**⭐ 两件值得记住的事 ✓（都是这一轮量出来的 ✓，不是推测 ✓）**：
+  1. **发布要从 `dev` 那棵 worktree 跑** ✓（`/home/crow/music/groove-int` ✓）。主工作树 `/home/crow/music/groove`
+     停在 **`next`**（`ee5cb9c` ✓，2026-10-01 ✓，`package.json` 2.34.34 ✓），而**它的 `release.sh` 还调着已退休的镜像两步** ✓
+     （`sync_release_mirror.sh` / `commit_release_mirror.sh` 现在都 `exit 1` ✓）⇒
+     **在那里发版会在 `deploy` 之后失败** ✓ —— 正是"线上已经是新版本、`main` 与 tag 不是"的半发布形状 ✓，
+     也正是 `DEPLOYED` 标记存在的原因 ✓。**已记录，未去动那条早已停用的分支** ✓（`先量后改`：它不在这条链上 ✓）。
+  2. **`version.mjs` 的日期取的是 UTC** ✓（`new Date().toISOString().slice(0,10)` ✓）⇒
+     本地 08:00 之后发版会写成**前一天** ✓：本次本地是 2026-10-16 07:5x ✓，而 `releaseDate` 与 `BUILD_DATE` 都是 `2026-10-15` ✓。
+     我把 changelog 条目日期**对齐成产物自己的日期** ✓（`latest.date` = `releaseDate` ✓），
+     免得**同一个 `version.json` 里躺着两个互相矛盾的日期** ✓。要改成按本地日算，那是 `version.mjs` 的一次改动 ✓，不是发布动作的一部分 ✓。
+
+**判据 ✓**：发版前跑过的版本相邻判据 6 个文件全绿 ✓（`changelogSize` ✓、`changelogCategory` ✓、`changelogUpdate` ✓、
+  `genreClips` ✓、`genreClipManifestCommitted` ✓、`genreClipWarnings` ✓）＋ `docs:check` ✓ ＋ `redlines` 40 条 ✓。
