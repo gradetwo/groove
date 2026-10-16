@@ -7,9 +7,16 @@
  * `arrangementCompile` copies `TrackV2.sendA` into the lane's `sendAByStep`, and `AudioEngine` ramps the strip's send gain
  * from the state it is handed — so **a render hears the arrangement's value**, and the arrangement owns the decision.
  *
- * This file holds the half that is model-side and testable: the undoable command the console will need. ⚠️ The wiring
- * itself (the console reaching the arrangement) is **not** done — see `docs/OPEN_WORK.md` §412-8 — and the ledger entry says
- * so rather than pretending otherwise.
+ * This file holds the half that is model-side and testable: the undoable command. ⚠️ **Two halves that used to travel
+ * together are now separate, and the difference matters:**
+ *
+ *   · the **arrangement's own** send controls landed (`TrackListV2` draws them, `ArrangementViewV2` commits through this
+ *     command, and `arrangementSendControl.test.tsx` pins both halves), so a person can state a send without the protocol;
+ *   · the **console reaching the arrangement** is still not done, and the reason is now measured rather than assumed: the
+ *     two routes share no track key at all — the console's v1 lanes are addressed by *index* (`SET_TRACK_SENDS` carries
+ *     `trackIdx`) and `SequencerTrack` has no `id` field, while an arrangement track is keyed by `freshId(kind)`
+ *     (`synth-3`, …). So lifting the sends into shared state (the "A" of §四百一十三) begins with an identity decision,
+ *     not with a store. Recorded in `docs/OPEN_WORK.md` §四百一十六.
  *
  * The property worth pinning is the one that differs from the time signature and the tempo map: `setTrackSends` **clamps**
  * rather than validating, so a command can never be refused and needs no `undefined` return. Getting that wrong would mean
@@ -69,5 +76,24 @@ describe("setTrackSendsCommand", () => {
     const both = setTrackSendsCommand(base.tracks[0]!.id, { sendB: 0.25 }, { sendA: 0.75 }).redo(withB);
     expect(both.tracks[0]!.sendA).toBe(0.75);
     expect(both.tracks[0]!.sendB, "the B the command never named is still there").toBe(0.25);
+  });
+
+  it("⭐ a slider's first gesture undoes back to the value it was showing", () => {
+    const base = arrangement();
+    const id = base.tracks[0]!.id;
+    /**
+     * ⭐ **Exactly what the interface commits** (`ArrangementViewV2`'s `commitSendA`): only the touched side, with `?? 0`
+     * standing in for the field's absence — because that 0 is the value the audio path was already using. This case
+     * exists because the alternative shape (passing the raw, possibly `undefined` value as the before-state) *looks*
+     * right and produces an undo that does nothing: `undefined` means "leave this one alone" in a merge, so the slider
+     * would stay where the drag put it. Pinned in the model rather than in the component, because it is the model's
+     * semantics that make the interface's expression correct.
+     */
+    const drag = setTrackSendsCommand(id, { sendA: base.tracks[0]!.sendA ?? 0 }, { sendA: 0.6 });
+    const after = drag.redo(base);
+    expect(after.tracks[0]!.sendA).toBe(0.6);
+    const undone = drag.undo(after);
+    expect(undone.tracks[0]!.sendA, "the slider returns to what it showed").toBe(0);
+    expect(undone.tracks[0]!.sendB, "and the bus nobody touched is still unstated").toBeUndefined();
   });
 });

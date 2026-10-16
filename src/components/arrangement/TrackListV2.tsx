@@ -54,6 +54,20 @@ export interface TrackListV2Props {
   /** A track's level in dB and its place in the stereo field, both inline — Logic's track header has both for a reason: they are what a person reaches for while listening. */
   onChangeGain?: (trackId: string, gainDb: number) => void;
   onChangePan?: (trackId: string, pan: number) => void;
+  /**
+   * ⭐ **The two bus sends, beside the level and the pan.**
+   *
+   * `TrackV2.sendA`/`sendB` were fields the interface could not reach at all: a lane's automation could *target* `sendA`
+   * — the track header's ∿ selector offers it — while the value that curve modulates had no control anywhere in the
+   * Web, so the only way to state it was the protocol (`set_arrangement_track_sends`). Measured before wiring: nothing
+   * outside `arrangementEdits`/`arrangementHistory` named `sendA`, and `arrangementCompile` carries it into the lane, so
+   * a value set here is what both the live engine and a render hear.
+   *
+   * Optional like every other handler in this file, so the list still renders as a *report* of an arrangement rather
+   * than as an editor — and a report does not offer controls it cannot honour.
+   */
+  onChangeSendA?: (trackId: string, value: number) => void;
+  onChangeSendB?: (trackId: string, value: number) => void;
 }
 
 /**
@@ -110,7 +124,7 @@ function depthOf(track: TrackV2, all: readonly TrackV2[], seen = new Set<string>
 /** The kinds the add menu offers — one table, shared with the new-project panel and the kind chooser. */
 const ADDABLE = TRACK_KIND_ORDER;
 
-export function TrackListV2({ arrangement, onAddTrack, onRemoveTrack, onToggle, onToggleCollapse, onChangeKind, instruments = [], onChangeInstrument, onAudition, presets, onChangePreset, synthPresets, onChangeSynthPreset, onToggleStep, bar = 0, onChangeGain, onChangePan }: TrackListV2Props) {
+export function TrackListV2({ arrangement, onAddTrack, onRemoveTrack, onToggle, onToggleCollapse, onChangeKind, instruments = [], onChangeInstrument, onAudition, presets, onChangePreset, synthPresets, onChangeSynthPreset, onToggleStep, bar = 0, onChangeGain, onChangePan, onChangeSendA, onChangeSendB }: TrackListV2Props) {
   const { t } = useLanguage();
   // Which row's library panel is open. One at a time: two panels open would make the list jump as each one changes its height.
   const [openLibraryFor, setOpenLibraryFor] = useState<string | undefined>(undefined);
@@ -258,6 +272,41 @@ export function TrackListV2({ arrangement, onAddTrack, onRemoveTrack, onToggle, 
                   data-testid={`track-pan-${track.id}`}
                   onChange={(event) => onChangePan(track.id, Number(event.target.value))}
                   className="w-16 accent-[rgb(var(--d-accent))]"
+                />
+              )}
+              {/*
+                ⭐ **Two sends, and the value shown is the value the engine uses.**
+                There is no "unset" reading to invent: `arrangementCompile` spreads `sendA` only when it is a number and
+                `deriveTrackStates` falls back to 0 otherwise, so an absent field *is* 0 in live playback — which is why
+                the slider reads `?? 0` rather than pretending the genre's declared mix is in force here. A tooltip names
+                the bus, because two bare sliders would be a guessing game.
+              */}
+              {onChangeSendA && (
+                <input
+                  type="range"
+                  min={0}
+                  max={1}
+                  step={0.05}
+                  value={track.sendA ?? 0}
+                  aria-label={`${track.name} reverb send`}
+                  title={`${track.name} reverb send`}
+                  data-testid={`track-send-a-${track.id}`}
+                  onChange={(event) => onChangeSendA(track.id, Number(event.target.value))}
+                  className="w-12 accent-[rgb(var(--d-accent))]"
+                />
+              )}
+              {onChangeSendB && (
+                <input
+                  type="range"
+                  min={0}
+                  max={1}
+                  step={0.05}
+                  value={track.sendB ?? 0}
+                  aria-label={`${track.name} delay send`}
+                  title={`${track.name} delay send`}
+                  data-testid={`track-send-b-${track.id}`}
+                  onChange={(event) => onChangeSendB(track.id, Number(event.target.value))}
+                  className="w-12 accent-[rgb(var(--d-accent))]"
                 />
               )}
               <button type="button" className={`relative w-7 h-7 rounded text-xs after:absolute after:-inset-2 after:content-[''] ${track.muted ? "bg-[rgb(var(--d-accent))] text-[rgb(var(--d-accent-ink))]" : "border border-[rgb(var(--d-line))] text-text"}`} aria-pressed={Boolean(track.muted)} onClick={() => onToggle(track.id, "muted", !track.muted)}>

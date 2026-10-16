@@ -68,6 +68,7 @@ import {
   setTrackPanCommand,
   setTrackRegionCommand,
   setTrackSampleCommand,
+  setTrackSendsCommand,
   toggleStepCommand,
 } from "../../data/arrangementHistory";
 import { useArrangementHistory } from "../../features/arrangement/useArrangementHistory";
@@ -702,6 +703,34 @@ export function ArrangementViewV2({ currentSong, songId, capture, bar = 0, playe
   const trackFor = (trackId: string) => arrangement.tracks.find((candidate) => candidate.id === trackId);
   const noteFor = (trackId: string, at: { pitch: number; startBeats: number }) =>
     (arrangement.notesByTrack?.[trackId] ?? []).find((note) => note.pitch === at.pitch && note.startBeats === at.startBeats);
+
+  /**
+   * ⭐ **The two bus sends, committed one side at a time with an explicit "before".**
+   *
+   * `setTrackSends` **merges**, so an `undefined` in the before-pair means "leave this one alone" — and a first gesture
+   * whose before-value was `undefined` could therefore not be undone back to where the slider started. `?? 0` is the
+   * same expression the level and pan commit, and it is the honest default rather than a stand-in: an absent send
+   * compiles to no field at all and `deriveTrackStates` then falls back to 0, so 0 **is** what is heard before the
+   * control is touched. The consequence — that a first undo materialises the field at 0 instead of deleting the key —
+   * is pinned as the stated semantics in `arrangementSendCommand.test.ts` rather than left to be discovered.
+   *
+   * Only the touched side is named, so dragging the reverb send cannot move the delay send; that property is the one
+   * `setTrackSends`'s own criterion protects in the model.
+   */
+  const commitSendA = useCallback(
+    (trackId: string, value: number) => {
+      const current = arrangement.tracks.find((track) => track.id === trackId)?.sendA ?? 0;
+      commit(setTrackSendsCommand(trackId, { sendA: current }, { sendA: value }));
+    },
+    [arrangement, commit]
+  );
+  const commitSendB = useCallback(
+    (trackId: string, value: number) => {
+      const current = arrangement.tracks.find((track) => track.id === trackId)?.sendB ?? 0;
+      commit(setTrackSendsCommand(trackId, { sendB: current }, { sendB: value }));
+    },
+    [arrangement, commit]
+  );
 
   const onAddTrack = useCallback(
     (kind: TrackKindV2, name: string) => {
@@ -2581,6 +2610,8 @@ export function ArrangementViewV2({ currentSong, songId, capture, bar = 0, playe
         bar={stripBar}
         onChangeGain={(trackId, gainDb) => commit(setTrackGainCommand(trackId, trackFor(trackId)?.gainDb ?? 0, gainDb))}
         onChangePan={(trackId, pan) => commit(setTrackPanCommand(trackId, trackFor(trackId)?.pan ?? 0, pan))}
+        onChangeSendA={commitSendA}
+        onChangeSendB={commitSendB}
         />
         {/**
          * ⭐ **The project's own saved sounds, beside the sounds they were made from.**

@@ -26372,3 +26372,70 @@ GlueCompressor 等已有 DSP 的编辑与使用路径 ✓。
 
 **判据 ✓**：发版前跑过的版本相邻判据 6 个文件全绿 ✓（`changelogSize` ✓、`changelogCategory` ✓、`changelogUpdate` ✓、
   `genreClips` ✓、`genreClipManifestCommitted` ✓、`genreClipWarnings` ✓）＋ `docs:check` ✓ ＋ `redlines` 40 条 ✓。
+
+---
+
+## 四百一十六、🎛️ **编排的发送有了控件；而 A 的拦路虎被量出来是"身份"而不是"存储"**（2026-10-16 ✓）
+
+**业主指令 ✓**："按照你的建议来，你择优决策就可以" ✓ ＋ "**重要性和收益高的先完成**" ✓。
+  ⇒ 我先量后挑 ✓：四项里**收益最高**的是这一条 ✓（用户可见 ✓、且是模型里已有字段却**在界面上完全没有入口** ✓）。
+
+### 一、做了什么 ✓
+
+**`ArrangementV2` 的每条轨现在有混响（A）与延迟（B）两个发送控件** ✓，就在电平与声像旁边 ✓
+  （`TrackListV2` ✓；`ArrangementViewV2` 经 `setTrackSendsCommand` 提交 ✓）。
+
+**为什么它还值得做 ✓ —— 三条都是量出来的 ✓，不是推测 ✓**：
+
+1. ⚠️ **改之前，`sendA`/`sendB` 在 Web 侧一个入口都没有** ✓：除 `arrangementEdits.ts` / `arrangementHistory.ts`
+   之外，**没有任何非测试文件提到这两个字段** ✓（`grep -rn "sendA" src/components/ src/views/` ⇒ 0 命中 ✓，
+   控制台的命中写的是 **v1 pattern** 的 `pattern.tracks[idx].sendA` ✓，不是编排的 ✓）。
+2. ⭐ **于是有一条自相矛盾的现状** ✓：轨道头的 ∿ 选择器**可以画 `sendA` 的包络** ✓
+   （`TrackHeaderV2.tsx:237` ✓ 的四个参数里就有它 ✓），**而这条曲线所调制的那个基准值却无处可设** ✓ ——
+   只能从协议 `set_arrangement_track_sends` 写 ✓。
+3. ⭐ **"未设就是 0"是量出来的，不是我挑的默认值 ✓**：`arrangementCompile` 只在字段是数字时才把它铺到 lane 上 ✓
+   （`:315-320` ✓），`AudioEngine` 的 `state?.sendA !== undefined` 才 ramp ✓，`sendA.gain` 初值就是 0 ✓
+   ⇒ **未设的发送在活引擎与渲染里就是 0** ✓，所以滑杆读 `?? 0` 是**诚实**的 ✓
+   （按 genre mix 的 `sendA` 显示会是在报一个音频路径并不使用的数 ✓）。
+
+### 二、判据 ✓（两个半边，故意不同 ✓）
+
+- `src/test/arrangementSendControl.test.tsx`（4 条 ✓）：
+  **没有 handler 就不画控件** ✓（列表仍可作"报告"用 ✓）、**显示的值就是引擎会用的值**（`0.35` ✓ 与未设的 `0` ✓）、
+  **一次手势只报一条总线** ✓、⭐ 以及**调用点钉子** ✓ —— 组件自己的判据在**任何** handler 下都会通过 ✓
+  （包括空实现 ✓），所以"应用忘了接线"它是永远看不见的 ✓，而那正是本仓出货过一次的缺陷形状 ✓。
+- `src/test/arrangementSendCommand.test.ts` ＋1 条 ✓：**滑杆的第一次手势能撤销回它显示的那个值** ✓。
+  ⚠️ 这条是为一个**看起来对、实际会坏**的写法写的 ✓：`setTrackSends` 是**合并**语义 ✓，
+  before 里给 `undefined` 会被读成"这一项别动" ✓ ⇒ 撤销**什么也不会发生** ✓，滑杆留在拖到的地方 ✓。
+  所以界面提交的是**显式的** `?? 0` ✓，而这条语义钉在模型侧（让界面那个写法正确的正是模型的语义 ✓）。
+- **红证明 ✓**：把 `onChangeSendA={commitSendA}` 临时改成 `undefined` ⇒ 调用点钉子**红了** ✓
+  （`the strip is handed the handlers` ✓），随后还原并复跑绿 ✓。
+- 顺带：`check_component_styling` ✓、`check:skins` ✓（复用声像滑杆已有的类 ⇒ 皮肤表无需重生成 ✓）。
+
+### 三、⭐ A（把编排抬成共享状态）的拦路虎：**两条路由没有共同的轨键** ✓
+
+我原以为"最小第一步 = 抽一个无历史的发送 store" ✓。**一量，前提不成立** ✓：
+
+| 一侧 | 键是什么 | 证据 |
+|---|---|---|
+| studio 控制台（v1） | **下标** ✓ | `SET_TRACK_SENDS` 携带的是 `trackIdx` ✓（`useSequencerStore.ts:134` ✓），`SequencerTrack` 接口**没有 `id` 字段** ✓（只有 `name` ✓，`types/genre.ts:49` 起 ✓） |
+| `/new` 编排（v2） | **`freshId(kind)`** ✓ | `createArrangementFromTemplate` 逐轨 `const id = freshId(kind)` ✓（`arrangementEdits.ts:150` 附近 ✓），产出 `synth-3` 这种 ✓ |
+
+⇒ **一个按 trackId 建的 store，在控制台那侧根本没有 key 可用** ✓ —— 那会是一条**没有车流的通道** ✓，
+  而"一个看起来能用、实际不动的控件"正是本仓拒绝的形状 ✓。
+
+**三条出路 ✓（业主已授权我择优 ✓，但这一条改变的是产品语义，所以我只给判断与代价 ✓）**：
+
+1. **给 `SequencerTrack` 一个稳定 `id`** ✓ —— 之后 A 的 store 才有共同键 ✓。
+   代价要如实说 ✓：v1 轨是**下标寻址** ✓，加 id 会动到分享链接、工程文件与存储 ✓；
+   ⭐ 但**先例已经在** ✓：协议侧的 lane 身份就是 `laneId ?? track_id` ✓（`mcp/pattern.ts` ✓），
+   也就是说**同一条路由在协议上已经用名字当身份** ✓ ⇒ 这一步不是发明概念，是**把协议已有的身份带给 store** ✓。
+2. **按 name＋下标当键** ✗ —— **不建议** ✓：这正是"两处各自表述、迟早分叉"的形状 ✓。
+3. **不做 A，保持按路由各自权威** ✓ —— 业主的 B 裁定本来就是这个 ✓，而**编排这一侧现在也有自己的控件了** ✓
+   ⇒ "两条路由各管自己"从"缺口"变成了**一个可以接受的现状** ✓（代价仍要写明 ✓：控制台设的发送不在渲染里 ✓）。
+
+**我这一轮的取舍 ✓**：先做**编排自己那一半** ✓（确定有收益 ✓、判据完整 ✓），把 A 的**身份决定**留给业主 ✓
+  —— 因为 1 的代价落在分享链接与旧工程上 ✓，那不是"择优"能替业主承担的决定 ✓。
+
+**接下来（已批准的同一批）✓**：② 两张门禁的动词表改成反向白名单 ＋ `duplicateNotesByDelta` 归位 ✓；
+  ④ `rollModel.ts`（57 个导出 ✓、1,293 行 ✓、只有测试引用 ✓）逐能力量清归宿后决定去留 ✓；① 预算与 S-04 注记 ✓（②④ 之后按新的实测值收紧 ✓）。
