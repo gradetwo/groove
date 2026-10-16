@@ -41,8 +41,20 @@ type Measure = { productionFiles: number; exports: number; dead: Entry[]; testOn
  * work-in-progress, and counted rather than wired half-way, because a preview button with no context to build a yard from is a
  * control that looks like it plays and does not. Wiring it into `ArrangementViewV2` put it back to 101. Recorded because the
  * round-trip is the evidence that the number means something.
+ *
+ * ⭐ **`dead` 27 → 26, pinned to the measurement (2026-10-16).** The count had been sitting one below its cap since
+ * `e750004` removed `GROOVE_DB_ARRANGEMENT_STORE_VERSION` — the file's own note said so while the cap stayed at 27. A cap
+ * that is not the measurement is slack nobody can see, and this budget's rule is that the number only moves down.
+ *
+ * ⚠️ **And a limitation of the measurement, worth knowing before reading a low number as health.** The scan classifies an
+ * export by counting its **references in production code**, one of which is its own declaration. So `rollModel.ts`'s
+ * exports — used 27 times *inside `rollModel.ts`* and imported by nothing at all — count as live, and the budget cannot
+ * see the distinctive problem of a whole module with no importer. The audit that established this is recorded in
+ * `docs/OPEN_WORK.md` §四百一十六; making the rule literal ("no reference in **another** file") was measured too and is
+ * useless as a budget: it reports 629 dead / 402 testOnly, because a type or helper used once by a function in its own
+ * file is not dead in any sense a reader cares about.
  */
-const CAP = { dead: 27, testOnly: 101 };
+const CAP = { dead: 26, testOnly: 101 };
 
 function measure(): Measure {
   const out = execFileSync("node", ["scripts/check_dead_exports.mjs"], { encoding: "utf8" });
