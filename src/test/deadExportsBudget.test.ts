@@ -53,6 +53,16 @@ type Measure = { productionFiles: number; exports: number; dead: Entry[]; testOn
  * `docs/OPEN_WORK.md` §四百一十六; making the rule literal ("no reference in **another** file") was measured too and is
  * useless as a budget: it reports 629 dead / 402 testOnly, because a type or helper used once by a function in its own
  * file is not dead in any sense a reader cares about.
+ *
+ * ⚠️ **And the ruler counts words in comments, which lets prose launder a finding — measured on 2026-10-16, by failing CI.**
+ * A ledger note in `webEntryReachability.test.ts` named a dead type while explaining what it does, and the very act of
+ * naming it moved that export from `dead` to `testOnly`: `dead` 26 → 25, `testOnly` 101 → 102, and this file's own cap
+ * failed on the push. The mechanism is the rule above — "only tests mention it" is decided by counting words, and a
+ * comment is words. So a dead export can be made to look tested by writing about it in a test, which is the opposite of
+ * what this budget is for. Two consequences, both applied: the note describes the thing **without its identifier** (the
+ * reading lives in `docs/OPEN_WORK.md` §四百一十六, which the scan does not read), and this paragraph does not repeat the
+ * name either. A future fix would be to strip comments before counting, which changes every number here and needs its own
+ * round.
  */
 const CAP = { dead: 26, testOnly: 101 };
 

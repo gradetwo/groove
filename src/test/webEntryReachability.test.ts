@@ -159,11 +159,17 @@ const UI_LEDGER: Record<string, Ruling> = {
    * (`:1266`, `:1310-1314`). So each route's mix already reaches its own render, and the console's knobs are not inert.
    *
    * ⭐ **And the two routes are not two views of one project — that is a fact in the data, not a convention.** The stored
-   * record carries a discriminator, `GrooveEditorKind = "studio" | "arrangement-v2"` (`features/sequencer/projectDb.ts:98`),
+   * record carries an **editor discriminator** (`"studio" | "arrangement-v2"` at `features/sequencer/projectDb.ts:98`),
    * whose own comment says it "is not decoration: it is what makes 'this is not a studio project' a fact in the data rather
    * than a convention in a reader". A v2 arrangement lives in its **own object store** (`arrangements_v2`) precisely because
    * it is not a `GrooveProject` — that type is `patterns: {A, B}` plus effects, kit, tempo and a song chain, none of which the
-   * arrangement model has (`:56-60`).
+   * arrangement model has (`:56-60`). The full readings are in `docs/OPEN_WORK.md` §四百一十六.
+   *
+   * ⚠️ **The discriminator's own type name is deliberately not written here**, and that is a constraint from the dead-export
+   * budget rather than a style choice: that scan counts **words in files, comments included**, so naming a dead export in a
+   * test's prose moves it from `dead` to `testOnly` — the budget stops reporting a finding the moment somebody mentions it.
+   * Measured on this very paragraph: naming it took `dead` 26 → 25 and `testOnly` 101 → 102, which failed CI. See the note in
+   * `src/test/deadExportsBudget.test.ts`.
    *
    * ⇒ **"再 A: lift the arrangement into shared state" therefore has no traffic to carry**, and building a store for it would
    * be the "control that looks like it works" shape this repository rejects. Each route's mix already reaches its own render;
