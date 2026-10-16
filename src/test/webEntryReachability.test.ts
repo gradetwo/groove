@@ -152,13 +152,24 @@ const UI_LEDGER: Record<string, Ruling> = {
    * pins both halves (the control reports; the call site wires). Before that, an arrangement could *automate* a send while
    * the value the curve modulates was unreachable.
    *
-   * ⚠️ **What that leaves, stated rather than glossed:** the same concept still has an authority per route — a send set on
-   * the console is not in a render, and a send set on the arrangement is not on the console. The owner chose the follow-on
-   * direction too — **"再 A": lift the arrangement into shared state** — and measuring it first **moved its blocker**:
-   * the two routes share no track key at all (v1 lanes are addressed by *index* through `SET_TRACK_SENDS` and
-   * `SequencerTrack` has no `id`; an arrangement track is keyed by `freshId(kind)`), so A begins with an **identity**
-   * decision rather than with a store. That measurement and the options are recorded in `docs/OPEN_WORK.md` §四百一十六;
-   * the persistence and undo boundaries §412-10 named are still what a lift would touch.
+   * ⚠️ **What that leaves — and the sentence this note used to carry was misleading, corrected 2026-10-16 by measuring the
+   * other side too.** It said "a send set on the console is not in a render". That is true only of an **arrangement's**
+   * render. The studio's own song is rendered as well, and its send does arrive: `AudioEngine.setPattern` copies each lane's
+   * `sendA`/`sendB` into `trackStates` (`:960-961`) and `WavExporter` builds a per-track send gain from `mixerStates[t].sendA`
+   * (`:1266`, `:1310-1314`). So each route's mix already reaches its own render, and the console's knobs are not inert.
+   *
+   * ⭐ **And the two routes are not two views of one project — that is a fact in the data, not a convention.** The stored
+   * record carries a discriminator, `GrooveEditorKind = "studio" | "arrangement-v2"` (`features/sequencer/projectDb.ts:98`),
+   * whose own comment says it "is not decoration: it is what makes 'this is not a studio project' a fact in the data rather
+   * than a convention in a reader". A v2 arrangement lives in its **own object store** (`arrangements_v2`) precisely because
+   * it is not a `GrooveProject` — that type is `patterns: {A, B}` plus effects, kit, tempo and a song chain, none of which the
+   * arrangement model has (`:56-60`).
+   *
+   * ⇒ **"再 A: lift the arrangement into shared state" therefore has no traffic to carry**, and building a store for it would
+   * be the "control that looks like it works" shape this repository rejects. Each route's mix already reaches its own render;
+   * what A would unify are two project kinds the storage layer deliberately keeps apart. The priced path is kept in
+   * `docs/OPEN_WORK.md` §四百一十六 in case the owner wants **one mixer across both kinds** — but that would begin with a
+   * decision about merging the two project kinds (and the undo/persistence boundaries §412-10 named), not with a store.
    */
   setTrackSteps: {
     status: "excluded-by-policy",
