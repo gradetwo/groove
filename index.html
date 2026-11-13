@@ -2,6 +2,13 @@
 <html lang="zh-CN" class="dark">
   <head>
     <meta charset="UTF-8" />
+    <!-- Google Tag Manager -->
+    <script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
+    new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
+    j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
+    'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
+    })(window,document,'script','dataLayer','GTM-5WC4DS5B');</script>
+    <!-- End Google Tag Manager -->
     <!--
       `maximum-scale` is deliberately absent. Leaving it in (it was 2.0) re-enables pinch zoom,
       and on iOS pinch zoom also restores the magnifier loupe — which over a grid of small step
@@ -120,6 +127,10 @@
        The same clipping is declared in `src/index.css` as `overflow-x: clip`, which clips the
        pixels without creating a scroll container. -->
   <body class="bg-bg text-text antialiased selection:bg-accent/30 selection:text-accent min-h-screen">
+    <!-- Google Tag Manager (noscript) -->
+    <noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-5WC4DS5B"
+    height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
+    <!-- End Google Tag Manager (noscript) -->
     <!--
       The first frame, drawn by the document: a cold PWA launch showed a black screen for seconds, because `#root` was empty
       until React had run. Inline markup and style, no stylesheet/font/script to wait for, inside `#root` so React's first
