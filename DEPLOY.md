@@ -56,8 +56,27 @@ npm run deploy:preview   # 上传一个 version，并挂到 dev 别名上
 比如给并行的两条改动各一个环境。
 
 确认线上没被碰到：`curl -s https://groove.wangda.today/ | grep -o 'assets/index-[^"]*\.js'`
-应当仍是旧构建的 hash，而预览 URL 上是新的。真正上线仍然只有一条路：
-`npm run deploy`（先跑完整 `verify`）。
+应当仍是旧构建的 hash，而预览 URL 上是新的。真正上线有两条路：本地
+`npm run deploy`（先跑完整 `verify`），或下面这条 Actions 路径。
+
+### 用 GitHub Actions 部署
+
+`.github/workflows/deploy.yml` 是仿 synth 的 `release.yml` 加的 Actions 部署路径
+（2026-11-13）。触发方式两种：在 Actions 页手动派发，或推送 `v*` 标签。它只做部署
+本身：检出、装依赖、构建、上传；不打标签、不做镜像、不发 GitHub Release，发布顺序
+仍归 `scripts/release.sh` 管。上传走的是同一个 `scripts/deploy.mjs`，版本闸门与凭据
+顺序与本地部署一致。
+
+`release.sh` 的流程里标签是在本地部署之后才推的，所以标签触发的那次运行会把相同
+内容再部署一遍，无害但无用；这个触发是给不用 `release.sh`、直接推标签的情况留的。
+
+仓库外要先配三项，缺任何一项时部署步只警告并跳过（退出码 0，不上传）：
+
+- secret `CLOUDFLARE_API_TOKEN`
+- secret `CLOUDFLARE_ACCOUNT_ID`
+- variable `CLOUDFLARE_WORKER_NAME`，用来把 `wrangler.toml.example` 渲染成 `wrangler.toml`
+
+手动派发时可勾选 preview，把构建挂到预览别名而不是线上。
 
 ## 3. 其他静态托管
 

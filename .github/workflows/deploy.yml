@@ -1,0 +1,93 @@
+name: Deploy to Cloudflare
+
+# ⭐ **The Actions deploy path, added 2026-11-13 to mirror synth's `release.yml`.**
+#
+# synth deploys from its Release workflow: a `Deploy to Cloudflare` step running
+# `npx wrangler deploy`, gated on the `CLOUDFLARE_API_TOKEN` secret and warn-and-skip when
+# the secret is absent. groove kept deploy out of Actions on purpose — `scripts/release.sh`
+# owns the release sequence (gate, deploy, tag, mirror, in that order) because on v2.34.25 a
+# failed deploy was followed by steps that published a version the site was not serving.
+# This workflow does **not** take that sequence over:
+#
+#   * It deploys the site and nothing else — no tag, no mirror, no GitHub release.
+#   * The upload still goes through `scripts/deploy.mjs` (`npm run deploy:only`), so the
+#     version gate (`dist/version.json` must match `package.json`) and the credential order
+#     (environment first, then `.env.deploy`) are the same ones a local deploy uses.
+#   * The triggers are the two doors synth uses: a manual dispatch and a pushed `v*` tag.
+#     In the `release.sh` flow the tag is pushed *after* the local deploy, so a tag-triggered
+#     run re-deploys identical content; the trigger exists for tags pushed without
+#     `release.sh`, and for dispatch runs from the Actions tab.
+#
+# Two pieces of configuration live outside the repo, and the deploy step warns and skips
+# (exit 0, nothing uploaded) until both exist — the same inert-until-configured shape as
+# synth's token check:
+#
+#   * secrets `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID`
+#   * variable `CLOUDFLARE_WORKER_NAME` — `wrangler.toml` is git-ignored because it names
+#     the account's worker, so the workflow renders it from `wrangler.toml.example`.
+
+permissions:
+  contents: read
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      deploy:
+        description: 'Deploy to Cloudflare (off = build only, no upload)'
+        required: false
+        type: boolean
+        default: true
+      preview:
+        description: 'Deploy to the preview alias instead of the live site'
+        required: false
+        type: boolean
+        default: false
+
+concurrency:
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Build & Deploy
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version-file: '.nvmrc'
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      - name: Render wrangler.toml from the example
+        if: vars.CLOUDFLARE_WORKER_NAME != ''
+        run: sed "s/your-worker-name/${{ vars.CLOUDFLARE_WORKER_NAME }}/" wrangler.toml.example > wrangler.toml
+
+      - name: Deploy to Cloudflare
+        if: github.event_name != 'workflow_dispatch' || inputs.deploy == true
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          if [ -z "$CLOUDFLARE_API_TOKEN" ]; then
+            echo "::warning ::CLOUDFLARE_API_TOKEN secret is not configured in repository secrets; skipping Cloudflare deployment."
+          elif [ ! -f wrangler.toml ]; then
+            echo "::warning ::CLOUDFLARE_WORKER_NAME variable is not configured; cannot render wrangler.toml, skipping Cloudflare deployment."
+          elif [ "${{ inputs.preview }}" = "true" ]; then
+            echo "Deploying to the preview alias via scripts/deploy.mjs..."
+            npm run deploy:preview
+          else
+            echo "Deploying to Cloudflare Worker via scripts/deploy.mjs..."
+            npm run deploy:only
+          fi
