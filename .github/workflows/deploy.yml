@@ -78,7 +78,17 @@ jobs:
       - name: Install Playwright browser
         run: npx playwright install --with-deps chromium
 
+      # VITE_SAMPLE_ROOT comes from the repository variable of the same name.
+      # deploy.mjs's sample-root gate requires the configured root to be baked
+      # into the built JS (Vite inlines VITE_* at build time), so the value
+      # must be present here, at build time — not on the Deploy step, where
+      # deploy.mjs would read it from the process env and then reject the
+      # build output for not containing the configured root. When the variable
+      # is unset the expression is empty, Vite inlines "", and the build
+      # behaves exactly as before (the runtime treats "" as "no mirror").
       - name: Build
+        env:
+          VITE_SAMPLE_ROOT: ${{ vars.VITE_SAMPLE_ROOT }}
         run: npm run build
 
       - name: Render wrangler.toml from the example
