@@ -67,6 +67,17 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      # deploy.mjs runs scripts/probe_boot.mjs, which launches headless Chromium
+      # (chromium.launch() with no channel). npm ci only installs the playwright
+      # npm package, not the browser binaries — the first manual deploy failed
+      # with "Executable doesn't exist at .../chromium_headless_shell-1243/...".
+      # `install chromium` downloads both the full build and the headless shell
+      # pinned by playwright 1.63. --with-deps is the same command ci.yml,
+      # manual-verify.yml and voice-sweep.yml already use for this probe on
+      # ubuntu-latest, so the browser process also has its system libraries.
+      - name: Install Playwright browser
+        run: npx playwright install --with-deps chromium
+
       - name: Build
         run: npm run build
 
