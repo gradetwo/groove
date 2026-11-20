@@ -43,6 +43,7 @@ import {
   removeScratchDir,
   scratchRootFrom,
 } from "./lib/scratch.mjs";
+import { formatViolations, scanSfzFiles } from "./lib/sfz_content_gate.mjs";
 
 const MANIFEST = path.join(process.cwd(), "public", "samples", "manifest.json");
 const argv = process.argv.slice(2);
@@ -277,6 +278,26 @@ try {
       }
     }
 
+
+    /**
+     * ⭐ **The content gate runs here, before anything is measured, written or copied.**
+     *
+     * The manifest builder cannot run it — it enumerates a tree through the API and deliberately never fetches bytes. This step has the bytes: the checkout (or the unpacked
+     * archive) is on disk, and the manifest write and the copy both happen below, so a refusal here leaves the manifest and the bucket exactly as they were. What the gate
+     * checks is `scripts/lib/sfz_content_gate.mjs`'s subject; the finding that built it is the 2026-11-20 mirror audit — one illegal `loop_mode=normal` in cithara-barbarica,
+     * six out-of-range `tune` values in mtg-solo-sax, both inherited silently from upstream because no step ever read the text.
+     *
+     * ⚠️ **Refusal, not repair.** Clamping a `tune` or rewriting a `loop_mode` here would make the mirror diverge from the pinned upstream it declares, and would do it
+     * silently. The operator fixes the file — or the pin — and re-runs; the gate's job is to make the defect impossible to miss, which is the opposite of fixing it quietly.
+     */
+    const gate = scanSfzFiles(workdir, (entry.files ?? []).map((file) => file.path));
+    if (gate.missing.length > 0) {
+      console.error(`  ⚠️ content gate: ${gate.missing.length} listed text file(s) are not in the tree (${gate.missing.slice(0, 5).join(", ")}${gate.missing.length > 5 ? ", …" : ""}) — the manifest and the checkout disagree`);
+    }
+    if (gate.violations.length > 0) {
+      fail(`  ❌ SFZ content gate — ${gate.violations.length} violation(s) in ${gate.scanned} scanned text file(s); nothing was measured, written or copied:\n${formatViolations(gate.violations)}`);
+    }
+    console.log(`  content gate: ${gate.scanned} text file(s) scanned, no loop_mode/tune violations`);
 
     // ⭐ Durations, measured rather than declared — the same instrument the manifest was built with.
     let measured = 0;
